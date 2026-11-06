@@ -1,0 +1,45 @@
+{
+  "name": "unidata",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3005",
+    "build": "next build",
+    "start": "next start -p 3005",
+    "lint": "eslint",
+    "test": "tsx --test tests/*.test.ts",
+    "test:api": "node scripts/smoke-api.mjs",
+    "format": "prettier --write src tests scripts",
+    "account:create": "tsx scripts/create-account.ts",
+    "account:password": "tsx scripts/create-account.ts --reset-password",
+    "test:auth": "tsx scripts/smoke-auth.ts"
+  },
+  "dependencies": {
+    "@next/env": "16.4.5",
+    "lucide-react": "^1.53.0",
+    "next": "16.4.5",
+    "papaparse": "^5.7.0",
+    "pdf-lib": "^1.17.1",
+    "pg": "8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^24.19.2",
+    "@types/papaparse": "^5.5.2",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
