@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -19,14 +16,12 @@ import {
 import { initialSISRecords } from "../src/lib/data/mockData";
 
 async function main() {
-  const postgres = process.argv.includes("--postgres");
   const testUrl = process.env.EDM_TEST_DATABASE_URL;
-  if (postgres && !testUrl)
+  if (!testUrl || testUrl === process.env.DATABASE_URL)
     throw new Error(
       "Set EDM_TEST_DATABASE_URL to an isolated verification database.",
     );
-  if (postgres) process.env.DATABASE_URL = testUrl;
-  else delete process.env.DATABASE_URL;
+  process.env.DATABASE_URL = testUrl;
   const hosted = process.argv.includes("--hosted");
   const publicOrigin = "https://unidata.example.test";
   // This test exclusively uses 3005 and an isolated database.
@@ -37,9 +32,6 @@ async function main() {
     );
     portCheck.listen(3005, "127.0.0.1", () => portCheck.close(() => resolve()));
   });
-  const directory = await mkdtemp(path.join(tmpdir(), "unidata-auth-api-"));
-  const filename = path.join(directory, "auth.sqlite");
-  process.env.EDM_DATABASE_PATH = filename;
   const password = randomBytes(24).toString("base64url");
   await createAccount({
     email: "advisor@example.edu",
@@ -54,37 +46,35 @@ async function main() {
     role: "STUDENT",
     studentId: "STU-2024-002",
   });
-  if (postgres) {
-    await Promise.all(
-      Array.from({ length: 6 }, (_, index) =>
-        audit(
-          "DEAN_REGISTRAR",
-          "ETL_SYNC_RUN",
-          "Verification",
-          `Concurrent check ${index}`,
-        ),
+  await Promise.all(
+    Array.from({ length: 6 }, (_, index) =>
+      audit(
+        "DEAN_REGISTRAR",
+        "ETL_SYNC_RUN",
+        "Verification",
+        `Concurrent check ${index}`,
       ),
-    );
-    assert.equal((await auditTrail()).valid, true);
-    for (const sql of [
-      "UPDATE audit SET payload='{}'",
-      "DELETE FROM audit",
-      "TRUNCATE audit",
-    ]) {
-      await assert.rejects(() => execute(sql), /append-only/);
-    }
-    await assert.rejects(
-      () =>
-        transaction(async () => {
-          await upsert("SIS", [
-            { ...initialSISRecords[0], studentId: "ROLLBACK-CHECK" },
-          ]);
-          throw new Error("Rollback check");
-        }),
-      /Rollback check/,
-    );
-    assert.equal((await source("SIS")).length, initialSISRecords.length);
+    ),
+  );
+  assert.equal((await auditTrail()).valid, true);
+  for (const sql of [
+    "UPDATE audit SET payload='{}'",
+    "DELETE FROM audit",
+    "TRUNCATE audit",
+  ]) {
+    await assert.rejects(() => execute(sql), /append-only/);
   }
+  await assert.rejects(
+    () =>
+      transaction(async () => {
+        await upsert("SIS", [
+          { ...initialSISRecords[0], studentId: "ROLLBACK-CHECK" },
+        ]);
+        throw new Error("Rollback check");
+      }),
+    /Rollback check/,
+  );
+  assert.equal((await source("SIS")).length, initialSISRecords.length);
   await closeDatabase();
   const child = spawn(
     process.execPath,
@@ -273,16 +263,13 @@ async function main() {
       child.kill();
       await once(child, "exit");
     }
-    await closeDatabase();
-    // Confirm the cleanup target is exactly the generated child of the OS temp directory.
-    assert.equal(path.dirname(path.resolve(directory)), path.resolve(tmpdir()));
-    assert.ok(path.basename(directory).startsWith("unidata-auth-api-"));
-    await rm(directory, { recursive: true, force: true });
   }
 }
-main().catch((e) => {
-  console.error(
-    e instanceof Error ? e.message : "Authentication integration test failed",
-  );
-  process.exitCode = 1;
-});
+main()
+  .finally(closeDatabase)
+  .catch((e) => {
+    console.error(
+      e instanceof Error ? e.message : "Authentication integration test failed",
+    );
+    process.exitCode = 1;
+  });

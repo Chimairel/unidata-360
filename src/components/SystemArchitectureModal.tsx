@@ -58,14 +58,15 @@ export function SystemArchitectureModal({
           Matrix transcribed from the supplied course slides. HR, Alumni CRM,
           Data Fabric and live vendor APIs describe the wider industry model;
           this app implements three synthetic feeds, CSV/JSON ingestion, a
-          Next.js API, and SQLite-backed ETL.
+          Next.js API, and ETL backed by PostgreSQL.
         </p>
         <h3 style={{ marginTop: 28 }}>
           University source and responsibility map
         </h3>
         <p className="small" style={{ margin: "8px 0 16px" }}>
-          The course&apos;s five university sources are mapped below. Implementation
-          status distinguishes the working feeds from proposed connections.
+          The course&apos;s five university sources are mapped below.
+          Implementation status distinguishes the working feeds from proposed
+          connections.
         </p>
         <div className="table-wrap">
           <table>

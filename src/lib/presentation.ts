@@ -51,7 +51,7 @@ export const slides = [
       ],
       [
         "The working application",
-        "A Next.js frontend and server API backed by a persistent SQLite database.",
+        "A Next.js frontend and server API backed by a persistent PostgreSQL database.",
       ],
       [
         "The outcome",
@@ -180,7 +180,7 @@ export const slides = [
       ],
       [
         "Saved follow-ups & reports",
-        "An advisor follow-up persists in SQLite. Download a role-scoped PDF dossier or analytics report and trace exports in the audit trail.",
+        "An advisor follow-up persists in PostgreSQL. Download a role-scoped PDF dossier or analytics report and trace exports in the audit trail.",
       ],
     ],
     notes:

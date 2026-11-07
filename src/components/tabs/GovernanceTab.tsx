@@ -187,8 +187,8 @@ export function GovernanceTab() {
               <li>
                 <CheckCircle2 size={15} />
                 <span>
-                  Audit entries use full UTC timestamps, SHA-256 chaining, and
-                  SQLite triggers that reject edits and deletions.
+                  Audit entries use UTC timestamps and SHA-256 chaining. A
+                  PostgreSQL trigger rejects edits and deletions.
                 </span>
               </li>
               <li>

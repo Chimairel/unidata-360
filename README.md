@@ -6,17 +6,18 @@ A full-stack classroom demonstration of the Education / Universities EDM lifecyc
 
 ## Run locally
 
-Requires **Node.js 24 or newer** (the server uses native `node:sqlite`).
+Requires **Node.js 24 or newer** and a **PostgreSQL 14 or newer** development database. Use a dedicated Neon development database or a PostgreSQL server on your device.
 
 ```powershell
 Copy-Item .env.example .env.local
 npm ci
-npm run dev
 ```
+
+Set `DATABASE_URL` in `.env.local` to your development database's connection string. For Neon, use the pooled connection string. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. Then run `npm run dev`.
 
 Open **http://localhost:3005**. Both `npm run dev` and `npm start` explicitly use port **3005**. Ports 3000 and 5000 are not used.
 
-On a new device, the example configuration starts a local demo and seeds a fresh SQLite database. For hosted account administration, get the Neon connection string through your authorized Neon account and supply it to the server or terminal as `DATABASE_URL`. Keep credentials and real `.env` files outside Git.
+UniData creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Use a development database for demo mode and the hosted sign-in page for access to the shared online system.
 
 For the production build:
 
@@ -33,7 +34,7 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 
 ## What is implemented
 
-- **Persistent SQLite:** source rows, golden master records, ETL run history, sessions, advisor follow-ups and audit history survive reloads and server restarts.
+- **Persistent PostgreSQL:** source rows, golden master records, ETL run history, sessions, advisor follow-ups and audit history survive reloads and server restarts.
 - **Ingestion:** drag-and-drop or file-picker upload for SIS, LMS and Library CSV/JSON files. Download a matching template from the integration tab. Files are limited to 2 MB and 1,000 rows; malformed batches produce row-level errors without partial writes.
 - **ETL:** validate incoming types and ranges, normalize names/emails, deduplicate feed keys, reconcile by `studentId`, record orphan/missing-source notices, and load master records transactionally.
 - **Student 360:** searchable/filterable directory with compact list, sortable table and card views, explicit risk filters and an advisor-attention shortcut, detailed academic and campus dossiers, role-scoped JSON and downloadable printable PDF reports. The statistics column compares permitted students by GPA or LMS attendance and shows source completeness and an attention queue.
@@ -64,14 +65,14 @@ React workspace (EDMProvider fetches server snapshots)
            ↓
   HttpOnly session → server access policy → validation / ETL / reports
            ↓
-  SQLite: sources, master, etl_runs, audit, interventions, sessions, users, login_attempts
+  PostgreSQL: sources, master, etl_runs, audit, interventions, sessions, users, login_attempts
 ```
 
-`src/lib/server/storage.ts` initializes the schema and seeds the selected database on first use. Locally it uses `data/unidata.sqlite`; `EDM_DATABASE_PATH` can override the file path. A configured `DATABASE_URL` selects PostgreSQL for hosting. The local database and its WAL/SHM files are excluded from the deployment package.
+`src/lib/server/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
 
 Source upsert keys are `studentId` for SIS/Library and `studentId:courseCode` for LMS. Repeated keys use the last submitted row. All CSV headers must match the template; JSON must contain an array. Dates use `YYYY-MM-DD`, GPA ranges from 0 to 4, and percentages range from 0 to 100. Orphan LMS/Library rows remain inspectable in their source feed, are excluded from the golden master, and are reported by ETL.
 
-The audit table rejects `UPDATE` and `DELETE` with SQLite triggers. Each event includes a UUID, UTC timestamp and SHA-256 hash linked to the previous event. The UI displays times in Asia/Singapore. This provides application-level append-only, tamper-evident history; it is not an externally anchored or administrator-proof audit service.
+The PostgreSQL audit trigger rejects `UPDATE`, `DELETE`, and `TRUNCATE`. Each event includes a UUID, UTC timestamp, and SHA-256 hash linked to the previous event. The UI displays times in Asia/Singapore. The chain provides application-level evidence of changes to audit history.
 
 ## Demonstration scope
 
@@ -82,9 +83,9 @@ All seed students and records are **synthetic**. The default demo mode permits c
 1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the four role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
 2. Set `EDM_AUTH_MODE=accounts` in `.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the server. Restart the server on port 3005. The default is `demo` when unset; demo mode continues to permit anonymous persona switching even if you sign in to an account.
 3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
-4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load the same `.env*` files as Next.js, including `EDM_DATABASE_PATH`.
+4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the same `.env*` files as Next.js.
 
-Passwords use salted scrypt hashes; random session tokens are stored as SHA-256 hashes in SQLite. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an email trigger a persistent 15-minute lockout. Advisor audit views filter by account identity rather than role alone. Sign-in and sign-out events record the actual display name and account ID.
+Passwords use salted scrypt hashes, and PostgreSQL stores SHA-256 hashes of session tokens. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an email trigger a persistent 15-minute lockout. Advisor audit views filter by account identity. Sign-in and sign-out events record the display name and account ID.
 
 Set `EDM_SECURE_COOKIES=true` when serving over HTTPS; keep it false for local HTTP. There is no public signup, role self-assignment, emailed password reset, MFA, or institutional SSO. Provisioning and password resets are local administrator operations. Disabling an account with `active=0` in the local users table revokes access on subsequent requests.
 
@@ -95,15 +96,15 @@ The supplied course matrix also includes HR, Alumni CRM, Data Fabric, and vendor
 ## Validation
 
 ```powershell
-npm test          # isolated temporary SQLite database; ETL, validation, RBAC, audit and reset tests
-npm run test:api  # live integration checks against localhost:3005
-npm run test:auth # stop the app first; isolated account-mode server/database on 3005
+npm test         # set EDM_TEST_DATABASE_URL to include database checks
+npm run test:api # run against a local demo backed by a disposable database
+npm run test:auth -- --hosted
 npm run lint
 npm run build
 ```
 
 `test:api` is intended for the synthetic local demo: it stages seed rows, creates a follow-up, changes its own session persona, checks reports, and restores seed sources/follow-ups. Its audit and ETL events remain. It saves sample masked PDFs in ignored `tmp/pdfs/` for visual inspection.
 
-`test:auth` requires port 3005 to be free. It creates random test credentials in an OS-temporary database, starts a production account-mode server on 3005, verifies anonymous denial, fixed roles, student scoping, exports, revocation, disablement and throttling, then stops that server and removes its test database. Build first. It does not alter the main demonstration database.
+Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build the app and free port 3005 before running `test:auth`. It starts a local account-mode server, verifies access controls and audit integrity, then stops the server. The test accounts and events are written to the disposable database.
 
 The current dependency audit reports development-tool advisories through the existing Next.js ESLint configuration (`braces` / `micromatch` / `fast-glob`). The suggested automatic fix downgrades Next.js lint tooling across major versions; it has not been applied. `npm audit --omit=dev` checks runtime dependencies separately.

@@ -411,7 +411,7 @@ export function IntegrationPipelineTab() {
         }}
       >
         <p className="small">
-          SQLite stores persist through page reloads and server restarts.
+          PostgreSQL records persist through page reloads and server restarts.
         </p>
         <button
           className="button quiet"

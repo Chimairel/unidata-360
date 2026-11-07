@@ -58,7 +58,7 @@ To use Railway as the Next.js runtime, deploy the Dockerfile on port **3005** an
 
 ### Deploy
 
-Run these commands from the workspace in PowerShell. The generated packages include the application source and the Vercel routing configuration. The local SQLite files, credentials and course documents are excluded.
+Run these commands from the workspace in PowerShell. The generated packages include the application source and the Vercel routing configuration. Local database backups, credentials and course documents are excluded.
 
 ```powershell
 $app = & .\scripts\package-hosted.ps1
@@ -80,4 +80,4 @@ Use the canonical Vercel production domain for sign-in. If Vercel assigns a diff
 
 ## Verify PostgreSQL changes
 
-For an isolated Neon verification branch, set `EDM_TEST_DATABASE_URL` to that branch's pooled connection string, build the app, free local port 3005, and run `npm run test:auth -- --hosted --postgres`. This creates synthetic users and tests audit concurrency, append-only enforcement, transaction rollback, origin checks, role restrictions and sign-in over the configured hosted-origin policy. Run it against a fresh test branch each time.
+For an isolated Neon verification branch, set `EDM_TEST_DATABASE_URL` to that branch's pooled connection string, build the app, free local port 3005, and run `npm run test:auth -- --hosted`. This creates synthetic users and tests audit concurrency, append-only enforcement, transaction rollback, origin checks, role restrictions and sign-in over the configured hosted-origin policy. Run it against a fresh, empty test database each time.
