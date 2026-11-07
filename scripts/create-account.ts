@@ -3,7 +3,8 @@ import { stdin, stdout } from "node:process";
 import { createAccount, resetPassword } from "../backend/auth";
 import { closeDatabase } from "../backend/store";
 import { loadEnvConfig } from "@next/env";
-loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
+import { resolve } from "node:path";
+loadEnvConfig(resolve("backend"), process.env.NODE_ENV !== "production");
 
 // No default passwords and no command-line password argument or password logging.
 async function hiddenPassword(): Promise<string> {

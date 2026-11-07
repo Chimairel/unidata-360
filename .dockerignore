@@ -18,5 +18,4 @@
 !scripts/start-hosted.mjs
 !scripts/create-account.ts
 **/.env*
-**/*.sqlite*
 **/*.pem

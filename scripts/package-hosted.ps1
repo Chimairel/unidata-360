@@ -18,6 +18,7 @@ foreach ($tree in @('app', 'frontend', 'backend', 'shared', 'public')) {
   $queue.Enqueue($source)
   while ($queue.Count -gt 0) {
     foreach ($entry in Get-ChildItem -LiteralPath $queue.Dequeue() -Force) {
+      if (!$entry.PSIsContainer -and $entry.Name -like '.env*') { continue }
       if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) {
         throw "Unexpected link in $tree"
       }

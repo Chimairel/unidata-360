@@ -9,11 +9,11 @@ A full-stack classroom demonstration of the Education / Universities EDM lifecyc
 Requires **Node.js 24 or newer** and a **PostgreSQL 14 or newer** development database. Use a dedicated Neon development database or a PostgreSQL server on your device.
 
 ```powershell
-Copy-Item .env.example .env.local
+Copy-Item backend/.env.example backend/.env.local
 npm ci
 ```
 
-Set `DATABASE_URL` in `.env.local` to your development database's connection string. For Neon, use the pooled connection string. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. Then run `npm run dev`.
+Set `DATABASE_URL` in `backend/.env.local` to your development database's connection string. For Neon, use the pooled connection string. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. If your checkout already has a root `.env.local` or `.env`, move those files into `backend/` to reuse their settings. One `.env.local` file is enough. Then run `npm run dev` from the root.
 
 Open **http://localhost:3005**. Both `npm run dev` and `npm start` explicitly use port **3005**. Ports 3000 and 5000 are not used.
 
@@ -90,9 +90,9 @@ All seed students and records are **synthetic**. The default demo mode permits c
 ## Account mode
 
 1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the four role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
-2. Set `EDM_AUTH_MODE=accounts` in `.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the server. Restart the server on port 3005. The default is `demo` when unset; demo mode continues to permit anonymous persona switching even if you sign in to an account.
+2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the server. Restart the server on port 3005. The default is `demo` when unset; demo mode continues to permit anonymous persona switching even if you sign in to an account.
 3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
-4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the same `.env*` files as Next.js.
+4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the backend environment files.
 
 Passwords use salted scrypt hashes, and PostgreSQL stores SHA-256 hashes of session tokens. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an email trigger a persistent 15-minute lockout. Advisor audit views filter by account identity. Sign-in and sign-out events record the display name and account ID.
 

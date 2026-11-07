@@ -26,10 +26,6 @@
 *.key
 *.p12
 *.pfx
-*.sqlite
-*.sqlite3
-*.sqlite-*
-*.sqlite3-*
 demo-accounts.txt
 
 # debug
@@ -40,7 +36,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-!.env.example
+!/backend/.env.example
 
 # vercel
 .vercel
