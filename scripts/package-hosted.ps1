@@ -32,7 +32,7 @@ foreach ($tree in $trees) {
   while ($queue.Count -gt 0) {
     foreach ($entry in Get-ChildItem -LiteralPath $queue.Dequeue() -Force) {
       if (!$entry.PSIsContainer -and $entry.Name -like '.env*') { continue }
-      if ($entry.Name -in @('.next', 'node_modules', 'next-env.d.ts', 'AGENTS.md') -or $entry.Extension -eq '.tsbuildinfo') { continue }
+      if ($entry.Name -in @('.next', '.local-email', 'node_modules', 'next-env.d.ts', 'AGENTS.md') -or $entry.Extension -eq '.tsbuildinfo') { continue }
       if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) {
         throw "Unexpected link in $tree"
       }

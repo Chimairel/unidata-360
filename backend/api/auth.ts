@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       identity.role,
       "SIGN_IN",
       "Account session",
-      "Signed in with an administrator-provisioned account.",
+      "Signed in with a verified account.",
       "ALLOWED",
       identity,
     );

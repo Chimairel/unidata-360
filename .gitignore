@@ -28,6 +28,7 @@
 *.pfx
 demo-accounts.txt
 /accounts/*.private.txt
+**/.local-email/
 
 # debug
 npm-debug.log*

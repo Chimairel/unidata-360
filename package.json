@@ -13,7 +13,8 @@
     "format": "prettier --write frontend backend shared tests scripts",
     "account:create": "tsx scripts/create-account.ts",
     "account:password": "tsx scripts/create-account.ts --reset-password",
-    "test:auth": "tsx scripts/smoke-auth.ts"
+    "test:auth": "tsx scripts/smoke-auth.ts",
+    "test:registration": "tsx scripts/smoke-registration.ts"
   },
   "dependencies": {
     "@next/env": "16.4.5",

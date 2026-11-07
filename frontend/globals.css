@@ -1488,6 +1488,34 @@ td .badge {
   gap: 20px;
   margin: 24px 0;
 }
+.registration-brand {
+  color: inherit;
+  text-decoration: none;
+}
+.registration-guidance {
+  margin-top: -10px;
+}
+.registration-next {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+.registration-next .button {
+  justify-self: start;
+}
+.registration-finish {
+  margin-top: 24px;
+}
+.registration-restart {
+  margin-top: 20px;
+  min-height: 44px;
+}
+.registration-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
 @media (max-width: 1050px) {
   .sign-in-content {
     gap: 40px;

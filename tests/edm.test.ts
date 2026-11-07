@@ -1,5 +1,17 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import {
+  requestStudentRegistration,
+  verifyStudentRegistration,
+} from "../backend/registration";
+import { emailConfiguration, sendVerificationEmail } from "../backend/email";
+import {
+  POST as register,
+  verify as confirmRegistration,
+} from "../backend/api/register";
 import { parseImport } from "../backend/validation";
 import { runETLPipeline } from "../backend/etl/pipeline";
 import {
@@ -30,6 +42,7 @@ import {
   readSession,
   revokeSession,
   resetPassword,
+  tokenHash,
 } from "../backend/auth";
 
 const testUrl = process.env.EDM_TEST_DATABASE_URL;
@@ -131,6 +144,278 @@ databaseTest(
     assert.equal((await source<SISRecord>("SIS")).length, 8);
   },
 );
+
+databaseTest(
+  "student registration verifies email, consumes links and enforces student-only access",
+  async () => {
+    const directory = await mkdtemp(
+      path.join(tmpdir(), "unidata-registration-"),
+    );
+    const previous = { ...process.env };
+    process.env.EDM_EMAIL_MODE = "preview";
+    process.env.EDM_EMAIL_PREVIEW_DIR = directory;
+    process.env.EDM_PUBLIC_ORIGIN = "http://localhost:3005";
+    delete process.env.VERCEL;
+    delete process.env.RAILWAY_PROJECT_ID;
+    const student = initialSISRecords[5];
+    const details = { studentId: student.studentId, email: student.email };
+    const password = "Verified-student-password-345!";
+    const request = (input: unknown, origin = "http://localhost:3005") =>
+      new Request("http://localhost:3006/api/register", {
+        method: "POST",
+        headers: { origin, "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+    async function latestToken() {
+      const messages = await readdir(directory);
+      const message = await readFile(
+        path.join(directory, messages[messages.length - 1]),
+        "utf8",
+      );
+      return message.match(/#token=([a-f0-9]{64})/)![1];
+    }
+    try {
+      assert.equal(
+        (await register(request({ ...details, role: "DEAN_REGISTRAR" })))
+          .status,
+        400,
+      );
+      assert.equal(
+        (await register(request(details, "https://attacker.example"))).status,
+        400,
+      );
+      const mismatch = await register(
+        request({ studentId: "UNKNOWN-STUDENT", email: "unknown@example.edu" }),
+      );
+      assert.equal(mismatch.status, 200);
+      assert.equal((await readdir(directory)).length, 0);
+      const sent = await register(request(details));
+      assert.equal(sent.status, 200);
+      assert.deepEqual(await sent.json(), await mismatch.json());
+      const token = await latestToken();
+      assert.equal((await authenticate(student.email, password)).ok, false);
+      const pending = await first<{ token_hash: string }>(
+        "SELECT token_hash FROM student_registrations WHERE email=?",
+        student.email,
+      );
+      assert.equal(pending?.token_hash, tokenHash(token));
+      assert.equal((await register(request(details))).status, 429);
+      assert.equal(
+        (
+          await confirmRegistration(
+            request({ token, password, role: "DEAN_REGISTRAR" }),
+          )
+        ).status,
+        400,
+      );
+      assert.equal(
+        (await confirmRegistration(request({ token, password: "short" })))
+          .status,
+        400,
+      );
+      const results = await Promise.allSettled([
+        verifyStudentRegistration({ token, password }),
+        verifyStudentRegistration({ token, password }),
+      ]);
+      assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+      assert.equal(results.filter((r) => r.status === "rejected").length, 1);
+      const login = await authenticate(student.email, password);
+      assert.equal(login.ok, true);
+      if (!login.ok) throw new Error("Expected verified student login");
+      assert.equal(login.role, "STUDENT");
+      const session = await issueSession(login.role, login.userId);
+      const identity = (await readSession(session.token))!;
+      assert.equal(identity.studentId, student.studentId);
+      const view = await snapshot("STUDENT", identity);
+      assert.equal(view.masterRecords.length, 1);
+      assert.equal(view.masterRecords[0].studentId, student.studentId);
+      await assert.rejects(
+        () =>
+          createAccount({
+            ...details,
+            displayName: "Duplicate",
+            password,
+            role: "STUDENT",
+          }),
+        /already exists/,
+      );
+      await execute("DELETE FROM registration_limits");
+      assert.deepEqual(await requestStudentRegistration(details), {
+        ok: true,
+        delivery: "preview",
+      });
+      assert.equal((await readdir(directory)).length, 1);
+      assert.equal((await auditTrail()).valid, true);
+    } finally {
+      process.env = previous;
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+databaseTest(
+  "expired verification, changed roster and failed email never activate accounts",
+  async () => {
+    const previous = { ...process.env };
+    const directory = await mkdtemp(
+      path.join(tmpdir(), "unidata-registration-"),
+    );
+    process.env.EDM_EMAIL_MODE = "preview";
+    process.env.EDM_EMAIL_PREVIEW_DIR = directory;
+    process.env.EDM_PUBLIC_ORIGIN = "http://localhost:3005";
+    delete process.env.VERCEL;
+    delete process.env.RAILWAY_PROJECT_ID;
+    try {
+      const student = initialSISRecords[6];
+      const details = { studentId: student.studentId, email: student.email };
+      await requestStudentRegistration(details);
+      const filename = (await readdir(directory))[0];
+      const token = (
+        await readFile(path.join(directory, filename), "utf8")
+      ).match(/#token=([a-f0-9]{64})/)![1];
+      await execute(
+        "UPDATE student_registrations SET expires_at=0 WHERE token_hash=?",
+        tokenHash(token),
+      );
+      await assert.rejects(
+        () =>
+          verifyStudentRegistration({
+            token,
+            password: "Verified-password-234!",
+          }),
+        /expired/,
+      );
+      await execute(
+        "UPDATE student_registrations SET expires_at=? WHERE token_hash=?",
+        Date.now() + 60000,
+        tokenHash(token),
+      );
+      const original = await first<{ payload: string }>(
+        "SELECT payload FROM master WHERE id=?",
+        student.studentId,
+      );
+      await execute(
+        "UPDATE master SET payload=? WHERE id=?",
+        JSON.stringify({
+          ...JSON.parse(original!.payload),
+          email: "changed@example.edu",
+        }),
+        student.studentId,
+      );
+      await assert.rejects(
+        () =>
+          verifyStudentRegistration({
+            token,
+            password: "Verified-password-234!",
+          }),
+        /expired/,
+      );
+      await execute(
+        "UPDATE master SET payload=? WHERE id=?",
+        original!.payload,
+        student.studentId,
+      );
+      const another = initialSISRecords[7];
+      process.env.EDM_EMAIL_PREVIEW_DIR = path.join(
+        directory,
+        filename,
+        "cannot-create",
+      );
+      assert.deepEqual(
+        await requestStudentRegistration({
+          studentId: another.studentId,
+          email: another.email,
+        }),
+        { ok: true, delivery: "preview" },
+      );
+      assert.equal(
+        await first(
+          "SELECT 1 FROM student_registrations WHERE email=?",
+          another.email,
+        ),
+        undefined,
+      );
+      assert.equal(
+        await first("SELECT 1 FROM users WHERE email=?", another.email),
+        undefined,
+      );
+      const originalFetch = globalThis.fetch;
+      process.env.EDM_EMAIL_MODE = "resend";
+      process.env.RESEND_API_KEY = "test-key-not-real";
+      process.env.EDM_EMAIL_FROM = "UniData <accounts@example.edu>";
+      await execute("DELETE FROM registration_limits");
+      globalThis.fetch = async () => Response.json({}, { status: 403 });
+      try {
+        const request = (studentId: string, email: string) =>
+          new Request("http://localhost:3006/api/register", {
+            method: "POST",
+            headers: { origin: "http://localhost:3005" },
+            body: JSON.stringify({ studentId, email }),
+          });
+        const eligible = await register(
+          request(another.studentId, another.email),
+        );
+        const unknown = await register(
+          request("UNKNOWN-DELIVERY", "unknown-delivery@example.edu"),
+        );
+        assert.equal(eligible.status, unknown.status);
+        assert.deepEqual(await eligible.json(), await unknown.json());
+        assert.equal(
+          await first(
+            "SELECT 1 FROM student_registrations WHERE email=?",
+            another.email,
+          ),
+          undefined,
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    } finally {
+      process.env = previous;
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+test("Resend delivery uses the configured sender; preview mode cannot run on a public origin", async () => {
+  const previous = { ...process.env },
+    originalFetch = globalThis.fetch;
+  try {
+    process.env.EDM_EMAIL_MODE = "preview";
+    process.env.EDM_PUBLIC_ORIGIN = "https://unidata.example.edu";
+    assert.throws(emailConfiguration, /unavailable/);
+    process.env.EDM_PUBLIC_ORIGIN = "http://localhost:3005";
+    process.env.VERCEL = "1";
+    assert.throws(emailConfiguration, /unavailable/);
+    delete process.env.VERCEL;
+    process.env.EDM_EMAIL_MODE = "resend";
+    delete process.env.RESEND_API_KEY;
+    assert.throws(emailConfiguration, /unavailable/);
+    process.env.RESEND_API_KEY = "test-key-not-real";
+    process.env.EDM_EMAIL_FROM = "UniData <accounts@example.edu>";
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, "https://api.resend.com/emails");
+      const body = JSON.parse(String(options?.body));
+      assert.equal(body.from, process.env.EDM_EMAIL_FROM);
+      assert.deepEqual(body.to, ["student@example.edu"]);
+      assert.match(body.text, /http:\/\/localhost:3005\/register#token=/);
+      return Response.json({ id: "test-message" });
+    };
+    await sendVerificationEmail("student@example.edu", "a".repeat(64));
+    globalThis.fetch = async () =>
+      Response.json(
+        { message: "provider failure with internal details" },
+        { status: 403 },
+      );
+    await assert.rejects(
+      () => sendVerificationEmail("student@example.edu", "b".repeat(64)),
+      /Verification email is unavailable/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env = previous;
+  }
+});
 databaseTest(
   "server projections withhold raw feeds and restrict student scope",
   async () => {

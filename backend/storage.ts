@@ -103,6 +103,8 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, role TEXT NOT NULL, expires_at BIGINT NOT NULL, user_id TEXT);
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL, student_id TEXT, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS login_attempts (email TEXT PRIMARY KEY, failures INTEGER NOT NULL, retry_at BIGINT NOT NULL);
+    CREATE TABLE IF NOT EXISTS student_registrations (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, student_id TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS registration_limits (key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_end BIGINT NOT NULL, last_attempt BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS interventions (student_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
     CREATE OR REPLACE FUNCTION reject_unidata_audit_change() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN RAISE EXCEPTION 'Audit records are append-only'; END;

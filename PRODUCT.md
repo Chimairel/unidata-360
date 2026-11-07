@@ -16,7 +16,7 @@ Course demonstration using synthetic SIS, LMS and Library feeds. Presentation mo
 ## Capabilities and Constraints
 Next.js App Router, React, TypeScript and Tailwind. Use port 3005 exclusively. PostgreSQL stores student records and accounts. The workspace supports CSV/JSON ingestion, Student 360, academic analytics, role-based server projections, an audit trail, PDF reports and classroom slides. HR and Alumni CRM are planned extensions in the course's wider industry model.
 
-Local account sign-in is available as an extension. Demo mode keeps classroom persona switching; optional account mode requires administrator-provisioned credentials and fixed roles. Student accounts link to their own student ID. This is local authentication, not institutional SSO.
+Account mode uses email/password sign-in with fixed server-assigned roles. Students self-register using an existing master student ID and matching university email, then verify their email before choosing a password and activating a Student account. The project administrator creates Dean / Registrar, Academic Advisor and Compliance Auditor accounts through the account CLI; there is no separate administrator dashboard. Student accounts link to their own student ID and access only their permitted record. Demo mode keeps classroom persona switching. Authentication is application-managed, not institutional SSO.
 
 ## Brand Commitments
 Preserve UniData's name and university data purpose. The user's latest supplied reference replaces the former navy direction with a light, monochrome learning dashboard: a black navigation rail, white canvas, soft gray rows, bold black actions, and a complementary statistics column.

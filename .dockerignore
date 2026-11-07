@@ -17,3 +17,4 @@
 **/.next/**
 **/node_modules/**
 **/*.tsbuildinfo
+**/.local-email/**

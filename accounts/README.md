@@ -1,5 +1,7 @@
 # UniData 360 demo accounts
 
+Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by the project administrator with the CLI. The Dean / Registrar is an application role, separate from the person who provisions accounts.
+
 The development and online PostgreSQL databases each contain these four synthetic accounts.
 
 | Role | Email | Access |

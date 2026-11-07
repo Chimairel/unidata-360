@@ -8,6 +8,8 @@ The source now has two npm workspaces. The frontend starts on port **3005** and 
 
 The backend's environment contains `DATABASE_URL`, `EDM_PUBLIC_ORIGIN`, `EDM_AUTH_MODE=accounts`, and `EDM_SECURE_COOKIES=true`. Only the backend connects to Neon. The production hostname above currently uses the earlier deployment. Deploying this new two-service source requires configuring the separate backend and frontend services.
 
+Student self-registration also requires backend `EDM_EMAIL_MODE=resend`, `RESEND_API_KEY` and `EDM_EMAIL_FROM` with a verified sender domain. See [student registration setup](STUDENT_REGISTRATION.md). Public student registration activates only the Student role; the account CLI remains the way to create staff accounts. Local email preview is excluded from hosted packages and cannot run on hosted origins.
+
 ### Provision users
 
 From the workspace, run the account CLI in a trusted interactive terminal with `DATABASE_URL` pointing to the production Neon database. The connection string is a server secret. Supply it through the current terminal's environment and clear it after provisioning. If authenticated with Neon CLI, replace the project ID placeholder with the ID shown in your Neon project settings:

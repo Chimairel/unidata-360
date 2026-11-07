@@ -108,7 +108,8 @@ export interface AuditLogEntry {
     | "CREATE_INTERVENTION"
     | "RESET_DEMO"
     | "SIGN_IN"
-    | "SIGN_OUT";
+    | "SIGN_OUT"
+    | "STUDENT_REGISTERED";
   targetResource: string;
   status: "ALLOWED" | "RESTRICTED_MASKED" | "LOGGED";
   details: string;

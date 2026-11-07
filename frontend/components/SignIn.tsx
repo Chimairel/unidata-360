@@ -89,7 +89,8 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
             <LockKeyhole className="text-accent" size={24} />
             <h2>Sign in to UniData</h2>
             <p className="small">
-              Use the account provided by your project administrator.
+              Students can register below. Staff use an account provided by the
+              project administrator.
             </p>
             {error && (
               <div className="message error" role="alert">
@@ -171,7 +172,13 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
               </form>
             )}
             <p className="small sign-in-help">
-              Need an account or a password reset? Contact your project
+              New student?{" "}
+              <Link className="text-link" href="/register">
+                Create your student account
+              </Link>
+            </p>
+            <p className="small sign-in-help muted">
+              Staff accounts and password resets: contact your project
               administrator.
             </p>
             {accountsRequired === false && (
@@ -188,8 +195,8 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       <footer className="sign-in-footer">
         <ShieldCheck size={14} />
         <span>
-          Account roles are assigned by your administrator. Demo mode is
-          separate from account access.
+          Student registration requires a matching university record and email
+          verification.
         </span>
       </footer>
     </main>

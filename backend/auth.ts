@@ -62,6 +62,14 @@ export async function createAccount(input: unknown) {
         "Student ID must exist in the master store. Import it and run ETL first.",
       );
     }
+    if (
+      account.role === "STUDENT" &&
+      (await first(
+        "SELECT 1 FROM users WHERE student_id=?",
+        account.studentId!,
+      ))
+    )
+      throw new Error("A student account already exists for this student ID.");
     await execute(
       "INSERT INTO users(id,email,display_name,password_hash,role,student_id) VALUES(?,?,?,?,?,?)",
       id,
