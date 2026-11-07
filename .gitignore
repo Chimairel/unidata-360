@@ -27,6 +27,7 @@
 *.p12
 *.pfx
 demo-accounts.txt
+/accounts/*.private.txt
 
 # debug
 npm-debug.log*

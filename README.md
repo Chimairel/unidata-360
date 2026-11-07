@@ -104,6 +104,8 @@ All seed students and records are **synthetic**. The default demo mode permits c
 
 ## Account mode
 
+The [demo account guide](accounts/README.md) lists the four synthetic roles and emails. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
+
 1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the four role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
 2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the servers. Restart the backend on port 3006. The default is `demo` when unset.
 3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
