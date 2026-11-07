@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { resolve } from "node:path";
 
 const env = { ...process.env };
 
@@ -37,8 +38,15 @@ try {
 
 const child = spawn(
   process.execPath,
-  ["node_modules/next/dist/bin/next", "start", "-H", "0.0.0.0", "-p", "3005"],
-  { env, stdio: "inherit" },
+  [
+    resolve("node_modules/next/dist/bin/next"),
+    "start",
+    "-H",
+    "0.0.0.0",
+    "-p",
+    "3006",
+  ],
+  { cwd: resolve("backend"), env, stdio: "inherit" },
 );
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.once(signal, () => child.kill(signal));

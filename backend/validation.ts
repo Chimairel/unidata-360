@@ -24,6 +24,13 @@ const date = z
       new Date(v).toISOString().slice(0, 10) === v,
     "Enter a real date as YYYY-MM-DD",
   );
+const activityDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}(?: (?:[01]\d|2[0-3]):[0-5]\d)?$/)
+  .refine(
+    (value) => date.safeParse(value.slice(0, 10)).success,
+    "Enter a real date as YYYY-MM-DD, optionally followed by HH:mm",
+  );
 export const schemas = {
   SIS: z
     .object({
@@ -76,7 +83,7 @@ export const schemas = {
       totalAssignments: number(1000, true),
       currentScorePercentage: number(100),
       letterGrade: text,
-      lastActiveDate: date,
+      lastActiveDate: activityDate,
       missedDeadlines: number(1000, true),
       riskIndicator: z.enum(["Low", "Moderate", "High"]),
     })

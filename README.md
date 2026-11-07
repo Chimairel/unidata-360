@@ -15,7 +15,21 @@ npm ci
 
 Set `DATABASE_URL` in `backend/.env.local` to your development database's connection string. For Neon, use the pooled connection string. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. If your checkout already has a root `.env.local` or `.env`, move those files into `backend/` to reuse their settings. One `.env.local` file is enough. Then run `npm run dev` from the root.
 
-Open **http://localhost:3005**. Both `npm run dev` and `npm start` explicitly use port **3005**. Ports 3000 and 5000 are not used.
+Open **http://localhost:3005**. The frontend runs on **3005**, and its API requests are forwarded to the backend on **3006**. Run `npm run dev` once from the root to start both.
+
+You can also start each service in its own terminal:
+
+```powershell
+cd backend
+npm run dev
+```
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Use either the root command or the two separate terminals. Stop the running servers with Ctrl+C before starting them again.
 
 UniData creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Use a development database for demo mode and the hosted sign-in page for access to the shared online system.
 
@@ -26,7 +40,7 @@ npm run build
 npm start
 ```
 
-Stop the development server before starting production; only one process can listen on 3005.
+The root `npm run build` builds both applications, and `npm start` starts them on the same two ports.
 
 ## Deploy online
 
@@ -58,15 +72,16 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 
 The `EDM-Semifinals` root contains both application layers:
 
-- `frontend/` contains the dashboard, sign-in components, styling, and browser state.
-- `backend/` contains the API handlers, PostgreSQL storage, authentication, ETL, governance, and reports.
+- `frontend/` is a Next.js application with its own package, config, pages, dashboard, sign-in components, styling, and browser state.
+- `backend/` is a separate Next.js application with its own package, config, API routes, PostgreSQL storage, authentication, ETL, governance, and reports.
 - `shared/` defines the data types exchanged between the two.
-- `app/` contains the Next.js route entry points that connect the pages and API paths to those folders.
 
-Run the npm commands from the root. One Next.js process serves the UI and API on port 3005.
+The root is an npm workspace. Install dependencies once from the root with `npm ci`. The frontend uses `BACKEND_URL` from `frontend/.env.local`, defaulting to `http://localhost:3006`. A template is supplied in `frontend/.env.example`. PostgreSQL credentials and account settings belong in `backend/.env.local`.
 
 ```text
-React workspace (EDMProvider fetches server snapshots)
+Frontend Next.js server :3005 (EDMProvider fetches server snapshots)
+           ↓ /api requests forwarded to BACKEND_URL
+Backend Next.js server :3006
   ├─ GET/POST/DELETE /api/auth → access mode / sign-in / sign-out
   ├─ GET /api/edm       → current permitted snapshot
   ├─ POST /api/edm      → role / import / sync / view / intervention / reset
@@ -79,7 +94,7 @@ React workspace (EDMProvider fetches server snapshots)
 
 `backend/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
 
-Source upsert keys are `studentId` for SIS/Library and `studentId:courseCode` for LMS. Repeated keys use the last submitted row. All CSV headers must match the template; JSON must contain an array. Dates use `YYYY-MM-DD`, GPA ranges from 0 to 4, and percentages range from 0 to 100. Orphan LMS/Library rows remain inspectable in their source feed, are excluded from the golden master, and are reported by ETL.
+Source upsert keys are `studentId` for SIS/Library and `studentId:courseCode` for LMS. Repeated keys use the last submitted row. All CSV headers must match the template. JSON contains an array. Dates use `YYYY-MM-DD`, with an optional `HH:mm` time for LMS activity. GPA ranges from 0 to 4, and percentages range from 0 to 100. Orphan LMS/Library rows remain inspectable in their source feed, are excluded from the golden master, and are reported by ETL.
 
 The PostgreSQL audit trigger rejects `UPDATE`, `DELETE`, and `TRUNCATE`. Each event includes a UUID, UTC timestamp, and SHA-256 hash linked to the previous event. The UI displays times in Asia/Singapore. The chain provides application-level evidence of changes to audit history.
 
@@ -90,13 +105,13 @@ All seed students and records are **synthetic**. The default demo mode permits c
 ## Account mode
 
 1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the four role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
-2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the server. Restart the server on port 3005. The default is `demo` when unset; demo mode continues to permit anonymous persona switching even if you sign in to an account.
+2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the servers. Restart the backend on port 3006. The default is `demo` when unset.
 3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
 4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the backend environment files.
 
 Passwords use salted scrypt hashes, and PostgreSQL stores SHA-256 hashes of session tokens. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an email trigger a persistent 15-minute lockout. Advisor audit views filter by account identity. Sign-in and sign-out events record the display name and account ID.
 
-Set `EDM_SECURE_COOKIES=true` when serving over HTTPS; keep it false for local HTTP. There is no public signup, role self-assignment, emailed password reset, MFA, or institutional SSO. Provisioning and password resets are local administrator operations. Disabling an account with `active=0` in the local users table revokes access on subsequent requests.
+Set `EDM_SECURE_COOKIES=true` when serving over HTTPS and false for local HTTP. Set `EDM_PUBLIC_ORIGIN` to the frontend origin in the backend environment. It defaults to `http://localhost:3005` for local runs. The frontend proxies cookies and API responses, so browser requests use the frontend address. Provisioning and password resets use the account CLI. Disabling an account with `active=0` revokes access on subsequent requests.
 
 FERPA and GDPR are the course's governance context; this project demonstrates selected technical controls and does not certify compliance. Risk categories are transparent classroom rules for human review, not predictions or automated student decisions. Current enrollment is a snapshot, not a measured retention rate.
 
@@ -114,6 +129,6 @@ npm run build
 
 `test:api` is intended for the synthetic local demo: it stages seed rows, creates a follow-up, changes its own session persona, checks reports, and restores seed sources/follow-ups. Its audit and ETL events remain. It saves sample masked PDFs in ignored `tmp/pdfs/` for visual inspection.
 
-Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build the app and free port 3005 before running `test:auth`. It starts a local account-mode server, verifies access controls and audit integrity, then stops the server. The test accounts and events are written to the disposable database.
+Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build both applications and free ports 3005 and 3006 before running `test:auth`. It starts both servers, verifies all four roles, imports, ETL, reports, access controls, and audit integrity through the frontend proxy, then stops both process trees. The test accounts and events are written to the disposable database.
 
 The current dependency audit reports development-tool advisories through the existing Next.js ESLint configuration (`braces` / `micromatch` / `fast-glob`). The suggested automatic fix downgrades Next.js lint tooling across major versions; it has not been applied. `npm audit --omit=dev` checks runtime dependencies separately.

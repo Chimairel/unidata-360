@@ -86,6 +86,28 @@ test("invalid import batches reject ranges, missing fields, dates and unknown co
     );
   assert.throws(() => parseImport("SIS", "not json", "json"), /Invalid JSON/);
 });
+
+test("LMS templates accept seeded activity timestamps and reject invalid dates or times", () => {
+  assert.equal(
+    parseImport("LMS", JSON.stringify(initialLMSRecords), "json").length,
+    initialLMSRecords.length,
+  );
+  for (const lastActiveDate of [
+    "2026-02-30 12:00",
+    "2026-10-08 24:00",
+    "2026-10-08 12:60",
+  ]) {
+    assert.throws(
+      () =>
+        parseImport(
+          "LMS",
+          JSON.stringify([{ ...initialLMSRecords[0], lastActiveDate }]),
+          "json",
+        ),
+      /Row 1/,
+    );
+  }
+});
 databaseTest(
   "PostgreSQL seeds once, upserts by feed key and rolls back partial transactions",
   async () => {

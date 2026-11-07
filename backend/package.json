@@ -1,0 +1,12 @@
+{
+  "name": "@unidata/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3006",
+    "build": "next build",
+    "start": "next start -p 3006",
+    "account:create": "tsx ../scripts/create-account.ts",
+    "account:password": "tsx ../scripts/create-account.ts --reset-password"
+  }
+}

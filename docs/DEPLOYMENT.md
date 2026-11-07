@@ -2,19 +2,13 @@
 
 The production deployment uses [unidata-360.vercel.app](https://unidata-360.vercel.app) for the Next.js application and Neon PostgreSQL for persistent storage. Next.js route handlers connect to Neon over verified TLS. Browser requests use a first-party, secure session cookie. Local development continues on port **3005**.
 
-## Deploy directly to Vercel
+## Independent applications
 
-Use the **Next.js** framework preset and **Node.js 24.x**. Configure `DATABASE_URL` as a sensitive production variable with the pooled Neon connection string. Set `EDM_PUBLIC_ORIGIN` to the exact production HTTPS origin without a trailing slash. The Vercel runtime requires account sign-in and PostgreSQL, and issues secure cookies.
+The source now has two npm workspaces. The frontend starts on port **3005** and forwards API requests to the backend on port **3006**. For cloud hosting, deploy the frontend to Vercel and the backend container to Railway. Set the Vercel project's **Root Directory** to `frontend` and enable access to source files outside the root directory so it can use `shared/` and the root lockfile. Set `BACKEND_URL` to the backend HTTPS origin before building the frontend.
 
-```powershell
-$app = & .\scripts\package-hosted.ps1 -Platform Vercel
-vercel link --cwd $app --project unidata-360 --yes
-vercel deploy --cwd $app --prod --yes
-```
+The backend's environment contains `DATABASE_URL`, `EDM_PUBLIC_ORIGIN`, `EDM_AUTH_MODE=accounts`, and `EDM_SECURE_COOKIES=true`. Only the backend connects to Neon. The production hostname above currently uses the earlier deployment. Deploying this new two-service source requires configuring the separate backend and frontend services.
 
-The staging script copies only the build configuration, source and public assets. The app initializes its schema and loads eight synthetic students on first use. Verify `/api/health` returns 200, `/api/edm` returns 401 before sign-in, and `/login` loads in a browser.
-
-### Provision Vercel users
+### Provision users
 
 From the workspace, run the account CLI in a trusted interactive terminal with `DATABASE_URL` pointing to the production Neon database. The connection string is a server secret. Supply it through the current terminal's environment and clear it after provisioning. If authenticated with Neon CLI, replace the project ID placeholder with the ID shown in your Neon project settings:
 
@@ -35,15 +29,15 @@ try {
 
 Choose `DEAN_REGISTRAR` for a registrar. Student accounts require their own existing student ID. The password prompt hides input. Run `npm run account:password` with the same environment to reset a provisioned password and revoke its sessions.
 
-## Optional Railway app server
+## Split the frontend and API with Railway
 
-To use Railway as the Next.js runtime, deploy the Dockerfile on port **3005** and configure Vercel as a reverse proxy to the Railway HTTPS origin. This configuration uses an **Other** Vercel project with rewrite caching disabled for API requests.
+Deploy the Next.js API on Railway using the Dockerfile on port **3006**. Deploy the interface to the **Next.js** project on Vercel. The frontend application serves pages and static assets. It forwards `/api/*` to Railway on the existing Vercel domain and disables rewrite caching for those requests, so session cookies stay first-party.
 
 ### Set up the services
 
-1. Create a dedicated Neon project and database. The server initializes its schema and seeds eight synthetic students on first use. Use the pooled PostgreSQL connection string for the production branch.
-2. Create a Vercel project with the **Other** framework preset and identify its canonical production domain. The origin must be exactly `https://<production-domain>`.
-3. Create a dedicated Railway project and an empty service. Use the Dockerfile in the staged upload and enable a Railway HTTPS domain with target port **3005**. Configure the service's healthcheck path as `/api/health`.
+1. Use the existing Neon database to retain the current accounts and records. The server initializes and seeds the database only if it is empty.
+2. Identify the canonical production domain of the **Next.js** project in Vercel with Root Directory `frontend`. The origin must be exactly `https://<production-domain>`.
+3. Create a dedicated Railway project and an empty service. Use the Dockerfile in the staged upload and enable a Railway HTTPS domain with target port **3006**. Configure the service's healthcheck path as `/api/health`.
 4. Set these service variables in Railway:
 
    | Variable | Value |
@@ -52,9 +46,9 @@ To use Railway as the Next.js runtime, deploy the Dockerfile on port **3005** an
    | `EDM_PUBLIC_ORIGIN` | The Vercel production HTTPS origin, without a trailing slash. |
    | `EDM_AUTH_MODE` | `accounts` (Dockerfile default). |
    | `EDM_SECURE_COOKIES` | `true` (Dockerfile default). |
-   | `PORT` | `3005` (Dockerfile default). |
+   | `PORT` | `3006` (Dockerfile default). |
 
-   The Vercel project only needs the Railway HTTPS address.
+   The split frontend only needs the Railway HTTPS address. Keep the last working Vercel deployment available for rollback.
 
 ### Deploy
 
@@ -64,12 +58,11 @@ Run these commands from the workspace in PowerShell. The generated packages incl
 $app = & .\scripts\package-hosted.ps1
 railway up $app --path-as-root --project <railway-project-id> --service <railway-service> --environment production --detach
 
-$ingress = node scripts/package-ingress.mjs https://<service>.up.railway.app
-vercel link --cwd $ingress --project <vercel-project> --yes
-vercel deploy --cwd $ingress --prod --yes
+# In Vercel, set Root Directory to frontend, BACKEND_URL to the Railway HTTPS
+# origin, and deploy this repository with shared source access enabled.
 ```
 
-Use the canonical Vercel production domain for sign-in. If Vercel assigns a different production domain, update `EDM_PUBLIC_ORIGIN` in Railway and redeploy that service.
+Check Railway's `/api/health` for a 200 response before promoting the frontend with `vercel promote <deployment-url>`. Verify sign-in and an authenticated dashboard request on the canonical domain after promotion. If either check fails, roll back the Vercel deployment while investigating.
 
 ### Provision accounts and verify
 
@@ -80,4 +73,4 @@ Use the canonical Vercel production domain for sign-in. If Vercel assigns a diff
 
 ## Verify PostgreSQL changes
 
-For an isolated Neon verification branch, set `EDM_TEST_DATABASE_URL` to that branch's pooled connection string, build the app, free local port 3005, and run `npm run test:auth -- --hosted`. This creates synthetic users and tests audit concurrency, append-only enforcement, transaction rollback, origin checks, role restrictions and sign-in over the configured hosted-origin policy. Run it against a fresh, empty test database each time.
+For an isolated Neon verification branch, set `EDM_TEST_DATABASE_URL` to that branch's pooled connection string, build the app, free local ports 3005 and 3006, and run `npm run test:auth -- --hosted`. This creates synthetic users and tests audit concurrency, append-only enforcement, transaction rollback, origin checks, role restrictions and sign-in over the configured hosted-origin policy. Run it against a fresh, empty test database each time.

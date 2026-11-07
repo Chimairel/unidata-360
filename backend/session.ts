@@ -10,7 +10,8 @@ export const sessionCookieOptions = {
   httpOnly: true,
   sameSite: "strict" as const,
   path: "/",
-  secure: process.env.VERCEL === "1" || process.env.EDM_SECURE_COOKIES === "true",
+  secure:
+    process.env.VERCEL === "1" || process.env.EDM_SECURE_COOKIES === "true",
 };
 export async function session() {
   const jar = await cookies();
@@ -28,7 +29,11 @@ export function checkOrigin(request: Request) {
   const origin = request.headers.get("origin");
   // Use the configured external origin behind an HTTPS-terminating proxy.
   // Do not derive this allowlist from client-controlled forwarding headers.
-  const publicOrigin = process.env.EDM_PUBLIC_ORIGIN;
+  const publicOrigin =
+    process.env.EDM_PUBLIC_ORIGIN ||
+    (!process.env.VERCEL && !process.env.RAILWAY_PROJECT_ID
+      ? "http://localhost:3005"
+      : undefined);
   if (
     (publicOrigin || process.env.VERCEL === "1"
       ? origin !== publicOrigin

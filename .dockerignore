@@ -2,12 +2,7 @@
 !Dockerfile
 !package.json
 !package-lock.json
-!next.config.ts
 !tsconfig.json
-!public/
-!public/**
-!app/
-!app/**
 !frontend/
 !frontend/**
 !backend/
@@ -19,3 +14,6 @@
 !scripts/create-account.ts
 **/.env*
 **/*.pem
+**/.next/**
+**/node_modules/**
+**/*.tsbuildinfo
