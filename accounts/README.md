@@ -2,24 +2,19 @@
 
 Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by the project administrator with the CLI. The Dean / Registrar is an application role, separate from the person who provisions accounts.
 
-The development and online PostgreSQL databases each contain these four synthetic accounts.
+Local and online UniData use the same PostgreSQL database and these four synthetic accounts.
 
 | Role | Email | Access |
 | --- | --- | --- |
-| Dean / Registrar | registrar@unidata.example | Import data, run ETL, view records, and export reports. |
-| Academic Advisor | advisor@unidata.example | View masked student records and create advisor follow-ups. |
-| Student | student@unidata.example | View and export the linked student record, STU-2024-001. |
-| Compliance Auditor | auditor@unidata.example | View restricted student projections and export audit history. |
+| Dean / Registrar | dean@cpc.edu | Import data, run ETL, view records, and export reports. |
+| Academic Advisor | advisor@cpc.edu | View masked student records and create advisor follow-ups. |
+| Student | student@cpc.edu | View and export the linked student record, STU-2024-001. |
+| Compliance Auditor | auditor@cpc.edu | View restricted student projections and export audit history. |
 
 ## Password files
 
-On the original development device, this folder also contains:
+On the original device, `shared.private.txt` holds the passwords for both http://localhost:3005/login and https://unidata-360.vercel.app/login. This file is excluded from Git; share it privately with your group. The `development.private.txt` and `online.private.txt` files on the original device are also updated copies of the shared credentials; older copies on other devices are no longer current.
 
-- `development.private.txt` for sign-in at http://localhost:3005/login, using the shared development database.
-- `online.private.txt` for sign-in at https://unidata-360.vercel.app/login.
-
-Each database has its own account passwords. These files are excluded from Git. Share the appropriate file privately with your group and save it in this folder on the other device.
-
-For local development, place the shared development connection settings in `backend/.env.local`. An account signs into the database selected by the backend's `DATABASE_URL`.
+For local use, place the shared database connection settings in `backend/.env.local` on each device. The shared `.env.local` is excluded from Git and must be transferred privately. Changes made locally are visible online because they use the same database.
 
 To create accounts in another PostgreSQL database, configure that database connection and run `npm run account:create` from the project root. Run `npm run account:password` to reset a password. Creating or resetting an account updates PostgreSQL. Keep the corresponding private password file current.

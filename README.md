@@ -6,14 +6,14 @@ A full-stack classroom demonstration of the Education / Universities EDM lifecyc
 
 ## Run locally
 
-Requires **Node.js 24 or newer** and a **PostgreSQL 14 or newer** development database. Use a dedicated Neon development database or a PostgreSQL server on your device.
+Requires **Node.js 24 or newer** and a **PostgreSQL 14 or newer** database. The classroom setup uses the shared Neon database for local and online access.
 
 ```powershell
 Copy-Item backend/.env.example backend/.env.local
 npm ci
 ```
 
-Set `DATABASE_URL` in `backend/.env.local` to your development database's connection string. For Neon, use the pooled connection string. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. If your checkout already has a root `.env.local` or `.env`, move those files into `backend/` to reuse their settings. One `.env.local` file is enough. Then run `npm run dev` from the root.
+Set `DATABASE_URL` in `backend/.env.local` to the shared database's connection string. For Neon, use the pooled connection string. Transfer the existing private `backend/.env.local` to each presentation device; Git does not include it. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. Then run `npm run dev` from the root.
 
 Open **http://localhost:3005**. The frontend runs on **3005**, and its API requests are forwarded to the backend on **3006**. Run `npm run dev` once from the root to start both.
 
@@ -31,7 +31,7 @@ npm run dev
 
 Use either the root command or the two separate terminals. Stop the running servers with Ctrl+C before starting them again.
 
-UniData creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Use a development database for demo mode and the hosted sign-in page for access to the shared online system.
+UniData creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Local and hosted applications share accounts and records when configured with the shared database; changes in either appear in both.
 
 For the production build:
 

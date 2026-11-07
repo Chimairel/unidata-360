@@ -5,7 +5,7 @@ export const initialSISRecords: SISRecord[] = [
     studentId: "STU-2024-001",
     firstName: "Marcus",
     lastName: "Vance",
-    email: "marcus.vance@university.edu",
+    email: "student@cpc.edu",
     ssn: "456-22-8910",
     dateOfBirth: "2003-04-12",
     gender: "Male",
