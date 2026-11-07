@@ -1,12 +1,12 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { parseImport } from "../src/lib/server/validation";
-import { runETLPipeline } from "../src/lib/etl/pipeline";
+import { parseImport } from "../backend/validation";
+import { runETLPipeline } from "../backend/etl/pipeline";
 import {
   initialSISRecords,
   initialLMSRecords,
   initialLibraryRecords,
-} from "../src/lib/data/mockData";
+} from "../backend/data/mockData";
 import {
   assignIntervention,
   audit,
@@ -19,8 +19,8 @@ import {
   source,
   transaction,
   upsert,
-} from "../src/lib/server/store";
-import type { SISRecord } from "../src/lib/types";
+} from "../backend/store";
+import type { SISRecord } from "../shared/types";
 import {
   createAccount,
   authenticate,
@@ -30,7 +30,7 @@ import {
   readSession,
   revokeSession,
   resetPassword,
-} from "../src/lib/server/auth";
+} from "../backend/auth";
 
 const testUrl = process.env.EDM_TEST_DATABASE_URL;
 if (testUrl && testUrl === process.env.DATABASE_URL)

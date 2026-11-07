@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
     "test:api": "node scripts/smoke-api.mjs",
-    "format": "prettier --write src tests scripts",
+    "format": "prettier --write app frontend backend shared tests scripts",
     "account:create": "tsx scripts/create-account.ts",
     "account:password": "tsx scripts/create-account.ts --reset-password",
     "test:auth": "tsx scripts/smoke-auth.ts"

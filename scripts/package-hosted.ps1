@@ -9,7 +9,7 @@ if ($Platform -eq 'Railway') {
   $files += @('Dockerfile', '.dockerignore', 'scripts/start-hosted.mjs', 'scripts/create-account.ts')
 }
 
-foreach ($tree in @('src', 'public')) {
+foreach ($tree in @('app', 'frontend', 'backend', 'shared', 'public')) {
   $source = Join-Path $root $tree
   if ((Get-Item -LiteralPath $source).Attributes -band [IO.FileAttributes]::ReparsePoint) {
     throw "Unexpected link at $tree"

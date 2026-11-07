@@ -4,7 +4,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY next.config.ts tsconfig.json ./
-COPY src ./src
+COPY app ./app
+COPY frontend ./frontend
+COPY backend ./backend
+COPY shared ./shared
 COPY public ./public
 RUN npm run build && npm prune --omit=dev --no-audit --no-fund
 
@@ -17,7 +20,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/next.config.ts /app/tsconfig.json ./
-COPY --from=build /app/src/lib ./src/lib
+COPY --from=build /app/backend ./backend
+COPY --from=build /app/shared ./shared
 COPY scripts/start-hosted.mjs scripts/create-account.ts ./scripts/
 USER node
 EXPOSE 3005

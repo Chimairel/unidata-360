@@ -17,7 +17,7 @@ Three feeds are implemented: SIS, LMS and Library. HR/payroll and Alumni CRM are
 
 ## Changes from this review
 
-- Added `src/lib/courseAlignment.ts` with the five-source responsibility map, lifecycle scope and assignment traceability.
+- The five-source responsibility map, lifecycle scope, and assignment traceability are in `frontend/lib/courseAlignment.ts`.
 - Expanded Course matrix with the source/owner, integration, governance/output and implementation boundary.
 - Added two presentation slides covering enrollment-to-alumni scope and integration trade-offs; presentation now contains ten slides.
 - Created the SRS with the reference's college cover, short-bond page geometry, heading hierarchy, sign-off/history/preface, contents and lists, requirements, diagrams, verification and appendices.

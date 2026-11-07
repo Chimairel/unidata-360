@@ -6,8 +6,14 @@
 !tsconfig.json
 !public/
 !public/**
-!src/
-!src/**
+!app/
+!app/**
+!frontend/
+!frontend/**
+!backend/
+!backend/**
+!shared/
+!shared/**
 !scripts/
 !scripts/start-hosted.mjs
 !scripts/create-account.ts

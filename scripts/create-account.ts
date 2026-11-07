@@ -1,7 +1,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
-import { createAccount, resetPassword } from "../src/lib/server/auth";
-import { closeDatabase } from "../src/lib/server/store";
+import { createAccount, resetPassword } from "../backend/auth";
+import { closeDatabase } from "../backend/store";
 import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 

@@ -56,6 +56,15 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 
 ## Architecture
 
+The `EDM-Semifinals` root contains both application layers:
+
+- `frontend/` contains the dashboard, sign-in components, styling, and browser state.
+- `backend/` contains the API handlers, PostgreSQL storage, authentication, ETL, governance, and reports.
+- `shared/` defines the data types exchanged between the two.
+- `app/` contains the Next.js route entry points that connect the pages and API paths to those folders.
+
+Run the npm commands from the root. One Next.js process serves the UI and API on port 3005.
+
 ```text
 React workspace (EDMProvider fetches server snapshots)
   ├─ GET/POST/DELETE /api/auth → access mode / sign-in / sign-out
@@ -68,7 +77,7 @@ React workspace (EDMProvider fetches server snapshots)
   PostgreSQL: sources, master, etl_runs, audit, interventions, sessions, users, login_attempts
 ```
 
-`src/lib/server/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
+`backend/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
 
 Source upsert keys are `studentId` for SIS/Library and `studentId:courseCode` for LMS. Repeated keys use the last submitted row. All CSV headers must match the template; JSON must contain an array. Dates use `YYYY-MM-DD`, GPA ranges from 0 to 4, and percentages range from 0 to 100. Orphan LMS/Library rows remain inspectable in their source feed, are excluded from the golden master, and are reported by ETL.
 

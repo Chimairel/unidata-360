@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createServer } from "node:net";
-import { createAccount } from "../src/lib/server/auth";
+import { createAccount } from "../backend/auth";
 import {
   audit,
   auditTrail,
@@ -12,8 +12,8 @@ import {
   source,
   transaction,
   upsert,
-} from "../src/lib/server/store";
-import { initialSISRecords } from "../src/lib/data/mockData";
+} from "../backend/store";
+import { initialSISRecords } from "../backend/data/mockData";
 
 async function main() {
   const testUrl = process.env.EDM_TEST_DATABASE_URL;
