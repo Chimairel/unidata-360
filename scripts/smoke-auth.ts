@@ -280,6 +280,7 @@ async function main() {
       await request("/api/edm", 200, undefined, auditorCookie)
     ).json();
     assert.equal(audited.currentRole, "COMPLIANCE_AUDITOR");
+    await request("/api/reports?kind=analytics", 403, undefined, auditorCookie);
     assert.ok(
       audited.masterRecords.every((record: { fullName: string }) =>
         record.fullName.startsWith("Student "),
@@ -325,6 +326,22 @@ async function main() {
     assert.equal(advisor.currentRole, "ACADEMIC_ADVISOR");
     assert.equal(advisor.actorName, "Test Advisor");
     assert.equal(advisor.sisRecords.length, 0);
+    const advisorAnalytics = await request(
+      "/api/reports?kind=analytics",
+      200,
+      undefined,
+      advisorCookie,
+    );
+    assert.ok(
+      advisorAnalytics.headers
+        .get("content-type")
+        ?.startsWith("application/pdf"),
+    );
+    assert.ok(
+      (
+        await PDFDocument.load(await advisorAnalytics.arrayBuffer())
+      ).getPageCount() > 0,
+    );
     await request(
       "/api/edm",
       200,
@@ -367,6 +384,7 @@ async function main() {
     assert.equal(own.masterRecords.length, 1);
     assert.equal(own.masterRecords[0].studentId, "STU-2024-002");
     assert.equal(own.auditLogs.length, 0);
+    await request("/api/reports?kind=analytics", 403, undefined, studentCookie);
     await request(
       "/api/edm",
       404,

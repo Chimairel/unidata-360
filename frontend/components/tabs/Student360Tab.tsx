@@ -38,20 +38,40 @@ export function Student360Tab() {
     : 0;
   return (
     <div className="page-stack">
-      <div className="student-dashboard">
+      <div
+        className={`student-dashboard ${currentRole === "COMPLIANCE_AUDITOR" ? "audit-review-dashboard" : ""}`}
+      >
         <div className="student-dashboard-main">
           <section className="welcome-banner">
             <div>
               <h1>
-                Hello,{" "}
-                {currentRole === "STUDENT"
-                  ? masterRecords[0]?.fullName.split(" ")[0] || "there"
-                  : actorName.split(" ").find((n) => !n.includes(".")) ||
-                    "there"}
-                !
+                {currentRole === "COMPLIANCE_AUDITOR"
+                  ? "Masked student summaries"
+                  : "Hello, "}
+                {currentRole !== "COMPLIANCE_AUDITOR" && (
+                  <>
+                    {currentRole === "STUDENT"
+                      ? masterRecords[0]?.fullName.split(" ")[0] || "there"
+                      : actorName.split(" ").find((n) => !n.includes(".")) ||
+                        "there"}
+                    !
+                  </>
+                )}
               </h1>
-              <p>It’s good to see your university connected.</p>
-              <span>Student lifecycle workspace</span>
+              <p>
+                {currentRole === "ACADEMIC_ADVISOR"
+                  ? "Review academic progress and follow up with students who need support."
+                  : currentRole === "COMPLIANCE_AUDITOR"
+                    ? "Inspect permitted student summaries with identifying fields masked."
+                    : "Manage connected student records across the university."}
+              </p>
+              <span>
+                {currentRole === "ACADEMIC_ADVISOR"
+                  ? "Academic advising"
+                  : currentRole === "COMPLIANCE_AUDITOR"
+                    ? "Compliance review"
+                    : "Registrar workspace"}
+              </span>
             </div>
             <div className="welcome-emblem" aria-hidden="true">
               <GraduationCap size={84} strokeWidth={1.2} />
@@ -87,17 +107,19 @@ export function Student360Tab() {
             }}
           />
         </div>
-        <CohortInsights
-          onAttention={() => {
-            setRisk(risk === "attention" ? "ALL" : "attention");
-            document
-              .getElementById("student-directory")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-          onOpen={async (id) => {
-            if (await viewStudent(id)) setSelectedId(id);
-          }}
-        />
+        {currentRole !== "COMPLIANCE_AUDITOR" && (
+          <CohortInsights
+            onAttention={() => {
+              setRisk(risk === "attention" ? "ALL" : "attention");
+              document
+                .getElementById("student-directory")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            onOpen={async (id) => {
+              if (await viewStudent(id)) setSelectedId(id);
+            }}
+          />
+        )}
       </div>
       <div className="inline-note">
         <LockKeyhole size={15} />

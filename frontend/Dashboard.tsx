@@ -2,17 +2,27 @@
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import { EDMProvider, useEDM } from "@/frontend/lib/context/EDMContext";
-import { Navbar, type TabId } from "@/frontend/components/Navbar";
+import { Navbar } from "@/frontend/components/Navbar";
+import {
+  defaultWorkspaceTab,
+  effectiveWorkspaceTab,
+  type TabId,
+} from "@/frontend/lib/workspaceAccess";
 import { Student360Tab } from "@/frontend/components/tabs/Student360Tab";
+import { StudentWorkspace } from "@/frontend/components/StudentWorkspace";
 import { IntegrationPipelineTab } from "@/frontend/components/tabs/IntegrationPipelineTab";
 import { AcademicAnalyticsTab } from "@/frontend/components/tabs/AcademicAnalyticsTab";
 import { GovernanceTab } from "@/frontend/components/tabs/GovernanceTab";
 import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectureModal";
 import { PresentationMode } from "@/frontend/components/PresentationMode";
 import { SignIn } from "@/frontend/components/SignIn";
+import type { UserRole } from "@/shared/types";
 
 function Workspace() {
-  const [tab, setTab] = useState<TabId>("student360");
+  const [selection, setSelection] = useState<{
+    role: UserRole;
+    tab: TabId;
+  } | null>(null);
   const [architecture, setArchitecture] = useState(false);
   const [presentation, setPresentation] = useState(false);
   const {
@@ -26,14 +36,18 @@ function Workspace() {
     requiresSignIn,
   } = useEDM();
   if (requiresSignIn) return <SignIn onSignedIn={() => void refresh()} />;
+  const activeTab =
+    selection?.role === currentRole
+      ? effectiveWorkspaceTab(currentRole, selection.tab)
+      : defaultWorkspaceTab(currentRole);
   return (
     <div className="app-shell">
       <a href="#workspace" className="skip-link">
         Skip to workspace
       </a>
       <Navbar
-        activeTab={tab}
-        setActiveTab={setTab}
+        activeTab={activeTab}
+        setActiveTab={(tab) => setSelection({ role: currentRole, tab })}
         openArchitecture={() => setArchitecture(true)}
         openPresentation={() => setPresentation(true)}
       />
@@ -72,10 +86,15 @@ function Workspace() {
           </div>
         ) : (
           <>
-            {tab === "student360" && <Student360Tab />}
-            {tab === "pipeline" && <IntegrationPipelineTab />}
-            {tab === "analytics" && <AcademicAnalyticsTab />}
-            {tab === "governance" && <GovernanceTab />}
+            {activeTab === "student360" &&
+              (currentRole === "STUDENT" ? (
+                <StudentWorkspace />
+              ) : (
+                <Student360Tab />
+              ))}
+            {activeTab === "pipeline" && <IntegrationPipelineTab />}
+            {activeTab === "analytics" && <AcademicAnalyticsTab />}
+            {activeTab === "governance" && <GovernanceTab />}
           </>
         )}
       </main>
@@ -91,13 +110,13 @@ function Workspace() {
             : actorName.split(" (")[0]}
         </span>
       </footer>
-      {architecture && (
+      {architecture && currentRole !== "STUDENT" && !isLoading && (
         <SystemArchitectureModal
           isOpen
           onClose={() => setArchitecture(false)}
         />
       )}
-      {presentation && (
+      {presentation && currentRole !== "STUDENT" && !isLoading && (
         <PresentationMode onClose={() => setPresentation(false)} />
       )}
     </div>

@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { UserRole } from "@/shared/types";
-export type TabId = "pipeline" | "student360" | "analytics" | "governance";
+import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
+export type { TabId } from "@/frontend/lib/workspaceAccess";
 const tabs = [
   { id: "student360", label: "Student 360", short: "Students", icon: Users },
   {
@@ -58,6 +59,28 @@ export function Navbar({
     accessMode,
     signOut,
   } = useEDM();
+  const allowed = workspaceTabs(currentRole);
+  const visibleTabs = isLoading
+    ? []
+    : allowed.map((id) => {
+        const tab = tabs.find((t) => t.id === id)!;
+        if (id === "student360" && currentRole === "STUDENT")
+          return { ...tab, label: "My student record", short: "My record" };
+        if (id === "student360" && currentRole === "COMPLIANCE_AUDITOR")
+          return {
+            ...tab,
+            label: "Masked student summaries",
+            short: "Summaries",
+          };
+        if (id === "governance" && currentRole === "ACADEMIC_ADVISOR")
+          return {
+            ...tab,
+            label: "My activity & access",
+            short: "My activity",
+          };
+        return tab;
+      });
+  const staff = currentRole !== "STUDENT" && !isLoading;
   const brand = (
     <Link className="brand" href="/" aria-label="UniData home">
       <span className="brand-mark">
@@ -78,7 +101,7 @@ export function Navbar({
           U<span>.</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Workspace navigation">
-          {tabs.map(({ id, label, short, icon: Icon }) => (
+          {visibleTabs.map(({ id, label, short, icon: Icon }) => (
             <button
               key={id}
               className={`sidebar-link ${activeTab === id ? "active" : ""}`}
@@ -93,14 +116,16 @@ export function Navbar({
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <button
-            className="rail-tool"
-            aria-label="Course matrix"
-            title="Course matrix"
-            onClick={openArchitecture}
-          >
-            <Network size={23} />
-          </button>
+          {staff && (
+            <button
+              className="rail-tool"
+              aria-label="Course matrix"
+              title="Course matrix"
+              onClick={openArchitecture}
+            >
+              <Network size={23} />
+            </button>
+          )}
           {accessMode === "account" ? (
             <button
               className="rail-tool"
@@ -128,40 +153,48 @@ export function Navbar({
           <div className="header-brand">{brand}</div>
           <div className="workspace-location">
             <ChevronRight size={13} />
-            <strong>{tabs.find((t) => t.id === activeTab)?.label}</strong>
+            <strong>
+              {visibleTabs.find((t) => t.id === activeTab)?.label}
+            </strong>
           </div>
           <div className="workspace-actions">
-            <button
-              className="button secondary present-action"
-              aria-label="Present"
-              onClick={openPresentation}
-            >
-              <Presentation size={16} />
-              <span>Present</span>
-            </button>
-            <button
-              className="button primary run-action"
-              aria-label={isSyncing ? "Saving changes" : "Run ETL"}
-              disabled={
-                isSyncing || isLoading || currentRole !== "DEAN_REGISTRAR"
-              }
-              title={
-                currentRole !== "DEAN_REGISTRAR"
-                  ? "Registrar access is required to run ETL"
-                  : undefined
-              }
-              onClick={() => void executeETL()}
-            >
-              <RefreshCw size={15} className={isSyncing ? "spin" : ""} />
-              <span>{isSyncing ? "Saving…" : "Run ETL"}</span>
-            </button>
-            <button
-              className="icon-button mobile-matrix"
-              aria-label="Course matrix"
-              onClick={openArchitecture}
-            >
-              <Network size={18} />
-            </button>
+            {staff && (
+              <button
+                className="button secondary present-action"
+                aria-label="Present"
+                onClick={openPresentation}
+              >
+                <Presentation size={16} />
+                <span>Present</span>
+              </button>
+            )}
+            {currentRole === "DEAN_REGISTRAR" && !isLoading && (
+              <button
+                className="button primary run-action"
+                aria-label={isSyncing ? "Saving changes" : "Run ETL"}
+                disabled={
+                  isSyncing || isLoading || currentRole !== "DEAN_REGISTRAR"
+                }
+                title={
+                  currentRole !== "DEAN_REGISTRAR"
+                    ? "Registrar access is required to run ETL"
+                    : undefined
+                }
+                onClick={() => void executeETL()}
+              >
+                <RefreshCw size={15} className={isSyncing ? "spin" : ""} />
+                <span>{isSyncing ? "Saving…" : "Run ETL"}</span>
+              </button>
+            )}
+            {staff && (
+              <button
+                className="icon-button mobile-matrix"
+                aria-label="Course matrix"
+                onClick={openArchitecture}
+              >
+                <Network size={18} />
+              </button>
+            )}
           </div>
           <div className="header-identity">
             <span className="user-initials" aria-hidden="true">
@@ -215,8 +248,14 @@ export function Navbar({
             )}
           </div>
         </div>
-        <nav className="compact-nav" aria-label="Mobile workspace navigation">
-          {tabs.map(({ id, label, short, icon: Icon }) => (
+        <nav
+          className="compact-nav"
+          aria-label="Mobile workspace navigation"
+          style={{
+            gridTemplateColumns: `repeat(${visibleTabs.length || 1}, minmax(0, 1fr))`,
+          }}
+        >
+          {visibleTabs.map(({ id, label, short, icon: Icon }) => (
             <button
               key={id}
               aria-label={label}

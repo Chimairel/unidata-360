@@ -458,7 +458,26 @@ databaseTest(
     await transaction(() =>
       assignIntervention("ACADEMIC_ADVISOR", "STU-2024-003"),
     );
-    assert.equal((await snapshot("DEAN_REGISTRAR")).interventions.length, 1);
+    await transaction(() =>
+      assignIntervention("ACADEMIC_ADVISOR", "STU-2024-001"),
+    );
+    const advisor = await snapshot("ACADEMIC_ADVISOR");
+    assert.equal(advisor.interventions.length, 2);
+    assert.ok(
+      advisor.interventions.some((item) => item.studentId === "STU-2024-001"),
+    );
+    assert.deepEqual((await snapshot("STUDENT")).interventions, []);
+    assert.deepEqual(
+      (
+        await snapshot("STUDENT", {
+          mode: "account",
+          studentId: "STU-2024-001",
+        })
+      ).interventions,
+      [],
+    );
+    assert.deepEqual((await snapshot("COMPLIANCE_AUDITOR")).interventions, []);
+    assert.equal((await snapshot("DEAN_REGISTRAR")).interventions.length, 2);
     const before = await snapshot("DEAN_REGISTRAR");
     await transaction(() => resetDemo("DEAN_REGISTRAR"));
     const after = await snapshot("DEAN_REGISTRAR");

@@ -53,6 +53,7 @@ const labels: Record<string, string> = {
   RESET_DEMO: "Demo restored",
   SIGN_IN: "Account signed in",
   SIGN_OUT: "Account signed out",
+  STUDENT_REGISTERED: "Student account verified",
 };
 export function GovernanceTab() {
   const { currentRole, masterRecords, auditLogs, auditIntegrity, accessMode } =
@@ -63,8 +64,16 @@ export function GovernanceTab() {
   return (
     <div className="page-stack">
       <PageHeading
-        title="Trust is part of the data lifecycle."
-        description="Inspect the access policy, see server-applied masking, and trace the operations that created and accessed your data."
+        title={
+          currentRole === "ACADEMIC_ADVISOR"
+            ? "My activity & access"
+            : "Governance & audit"
+        }
+        description={
+          currentRole === "ACADEMIC_ADVISOR"
+            ? "Review your own activity history and the field restrictions that apply to your advising account."
+            : "Review access policies, field masking, and the system-wide audit history."
+        }
         action={
           currentRole !== "STUDENT" ? (
             <ReportLink kind="audit" label="Export audit CSV" />

@@ -10,10 +10,17 @@ function csv(value: string) {
 export async function GET(request: Request) {
   try {
     const s = await session();
-    const data = await snapshot(s.role, s);
     const url = new URL(request.url);
     const kind = url.searchParams.get("kind");
     const studentId = url.searchParams.get("studentId");
+    if (
+      kind === "analytics" &&
+      !["DEAN_REGISTRAR", "ACADEMIC_ADVISOR"].includes(s.role)
+    )
+      return Response.json(
+        { error: "Academic analytics access denied." },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
     if (kind === "audit") {
       if (
         !["DEAN_REGISTRAR", "COMPLIANCE_AUDITOR", "ACADEMIC_ADVISOR"].includes(
@@ -63,6 +70,7 @@ export async function GET(request: Request) {
     }
     if (!["student", "analytics", "json"].includes(kind || ""))
       return Response.json({ error: "Unknown report." }, { status: 400 });
+    const data = await snapshot(s.role, s);
     const student = studentId
       ? data.masterRecords.find((r) => r.studentId === studentId)
       : undefined;

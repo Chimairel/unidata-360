@@ -226,16 +226,11 @@ export function snapshot(
           sourceCounts[feed] = Number(count);
       }
       const interventions =
-        role === "COMPLIANCE_AUDITOR" || (student && !studentId)
+        role === "COMPLIANCE_AUDITOR" || student
           ? []
-          : (
-              await (student
-                ? rows<Payload>(
-                    "SELECT payload FROM interventions WHERE student_id=?",
-                    studentId!,
-                  )
-                : rows<Payload>("SELECT payload FROM interventions"))
-            ).map((r) => JSON.parse(r.payload) as Intervention);
+          : (await rows<Payload>("SELECT payload FROM interventions")).map(
+              (r) => JSON.parse(r.payload) as Intervention,
+            );
       return {
         accessMode: identity?.mode || "demo",
         currentRole: role,

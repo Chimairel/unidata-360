@@ -61,6 +61,17 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 
 ## A five-minute classroom walkthrough
 
+### Workspaces by role
+
+| Role | Workspace and limits |
+| --- | --- |
+| Dean / Registrar | Student directory, pipeline/imports, analytics and system audit. Can run ETL and save follow-ups. |
+| Academic Advisor | Masked student directory, analytics, follow-ups and their own activity history. No source imports or ETL. |
+| Student | Personal record, courses, attendance, library clearance and own PDF report. No pipeline, cohort analytics, audit trail or internal staff follow-ups. |
+| Compliance Auditor | Starts on governance/audit; may inspect masked student summaries and export permitted reports. No pipeline, academic analytics or data changes. |
+
+Both desktop and mobile navigation follow this policy. Account roles remain fixed; the separate classroom demo mode permits persona switching. Server endpoints independently reject actions and exports outside each role's permissions.
+
 1. Select **Integration pipeline** and **Dean / Registrar**. Inspect SIS, LMS and Library rows.
 2. Download a CSV or JSON template and import it, or use **Add demo student**. Imports update staged source feeds; they do not immediately change Student 360.
 3. **Run pipeline**, inspect its reconciliation report, then open the student dossier in **Student 360**. A student without LMS data is marked incomplete rather than automatically treated as absent.
