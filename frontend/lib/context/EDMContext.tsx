@@ -166,6 +166,7 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
             router.refresh();
           } catch (e) {
             setError(e instanceof Error ? e.message : "Sign-out failed.");
+          } finally {
             setSyncing(false);
           }
         },

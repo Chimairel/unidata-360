@@ -126,6 +126,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                           ? e.message
                           : "Unable to sign in. Try again.",
                       );
+                    } finally {
                       setPending(false);
                     }
                   }}
