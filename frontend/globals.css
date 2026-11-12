@@ -1404,9 +1404,9 @@ td .badge {
   border-bottom: 1px solid var(--line);
 }
 .account-header-inner {
-  max-width: 1280px;
-  min-height: 84px;
-  padding: 16px 40px;
+  max-width: 1440px;
+  min-height: 96px;
+  padding: 20px clamp(24px, 4vw, 64px);
   margin: auto;
   display: flex;
   align-items: center;
@@ -1423,13 +1423,13 @@ td .badge {
 }
 .account-header-brand strong {
   display: block;
-  font-size: 18px;
+  font-size: 20px;
   letter-spacing: -0.03em;
 }
 .account-header-subtitle {
   display: block;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .account-header-nav {
   display: flex;
@@ -1442,7 +1442,7 @@ td .badge {
   display: inline-flex;
   align-items: center;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
   border-radius: 8px;
@@ -1455,9 +1455,9 @@ td .badge {
 .sign-in-shell {
   width: 100%;
   flex: 1;
-  max-width: 1200px;
+  max-width: 1440px;
   margin: auto;
-  padding: 40px;
+  padding: clamp(24px, 4vh, 56px) clamp(24px, 4vw, 64px);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1477,58 +1477,65 @@ td .badge {
 }
 .sign-in-content {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
   align-items: center;
-  gap: 90px;
+  gap: clamp(40px, 6vw, 112px);
 }
 .sign-in-story h1 {
-  font-size: 38px;
+  font-size: clamp(32px, 2.5vw, 48px);
   line-height: 1.2;
   margin-bottom: 16px;
 }
 .sign-in-story > p {
-  font-size: 14px;
+  font-size: 16px;
+  max-width: 56ch;
 }
 .sign-in-benefits {
-  margin: 30px 0;
+  margin: 36px 0;
   display: grid;
-  gap: 20px;
+  gap: 24px;
 }
 .sign-in-benefits dt {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 .sign-in-benefits dd {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin-top: 3px;
 }
 .sign-in-panel .panel-body {
-  padding: 32px;
+  padding: clamp(28px, 2.5vw, 40px);
 }
 .sign-in-panel h2 {
   margin: 16px 0 8px;
-  font-size: 22px;
+  font-size: 26px;
+}
+.sign-in-panel .small,
+.sign-in-panel .text-link {
+  font-size: 14px;
 }
 .sign-in-panel .message {
   margin: 18px 0 0;
 }
 .sign-in-form {
   display: grid;
-  gap: 18px;
-  margin-top: 26px;
+  gap: 20px;
+  margin-top: 28px;
 }
 .sign-in-form label {
   display: grid;
   gap: 7px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .sign-in-form input {
   width: 100%;
-  min-height: 44px;
+  min-height: 52px;
+  font-size: 16px;
 }
 .sign-in-form > .button {
-  min-height: 44px;
+  min-height: 52px;
+  font-size: 14px;
   margin-top: 5px;
 }
 .sign-in-help {
@@ -1544,11 +1551,11 @@ td .badge {
   justify-content: space-between;
 }
 .sign-in-footer {
-  margin-top: 64px;
+  margin-top: 48px;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .sign-in-existing {
@@ -1584,9 +1591,22 @@ td .badge {
   gap: 6px;
   min-height: 44px;
 }
-@media (max-width: 1050px) {
+@media (min-width: 761px) and (max-width: 1050px) {
+  .sign-in-shell {
+    max-width: 720px;
+    padding: 32px;
+  }
   .sign-in-content {
-    gap: 40px;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .sign-in-panel {
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
+  }
+  .sign-in-benefits {
+    display: none;
   }
 }
 @media (max-width: 760px) {
@@ -1603,7 +1623,7 @@ td .badge {
   }
   .account-header-nav a {
     padding: 0 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .sign-in-shell {
     padding: 24px;
