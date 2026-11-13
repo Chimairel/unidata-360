@@ -1400,6 +1400,18 @@ td .badge {
   display: flex;
   flex-direction: column;
 }
+.department-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.department-filter select {
+  max-width: 100%;
+  min-height: 44px;
+}
 .account-header {
   border-bottom: 1px solid var(--line);
 }

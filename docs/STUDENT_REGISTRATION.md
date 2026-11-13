@@ -1,6 +1,6 @@
 # Student registration and verification
 
-Students register themselves at `/register`. Dean / Registrar, Academic Advisor and Compliance Auditor accounts are created by the project administrator using `npm run account:create` from the root. There is no public staff registration or separate administrator dashboard.
+Students register themselves at `/register`. Registrar, department-assigned Dean, Academic Advisor and Compliance Auditor accounts are created by the project administrator using `npm run account:create` from the root. There is no public staff registration or separate administrator dashboard.
 
 ## Student flow
 

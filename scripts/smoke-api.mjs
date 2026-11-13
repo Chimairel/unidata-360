@@ -94,7 +94,7 @@ assert.equal(auditor.auditIntegrity, true);
 const csv = await (await call("/api/reports?kind=audit")).text();
 assert.ok(csv.includes("SHA256"));
 assert.ok(csv.includes("EXPORT_DATA"));
-await call("/api/edm", { type: "role", role: "DEAN_REGISTRAR" });
+await call("/api/edm", { type: "role", role: "REGISTRAR" });
 await call("/api/edm", { type: "reset" });
 const cross = await fetch(base + "/api/edm", {
   method: "POST",

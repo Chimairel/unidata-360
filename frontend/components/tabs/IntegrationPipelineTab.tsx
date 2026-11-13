@@ -16,6 +16,11 @@ import {
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { Feed, SISRecord } from "@/shared/types";
 import {
+  DEPARTMENTS,
+  DEPARTMENT_NAMES,
+  type Department,
+} from "@/shared/school";
+import {
   Badge,
   EmptyState,
   formatTime,
@@ -45,7 +50,7 @@ export function IntegrationPipelineTab() {
   const [filename, setFilename] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const report = etlReports[0];
-  const canWrite = currentRole === "DEAN_REGISTRAR";
+  const canWrite = currentRole === "REGISTRAR";
   const upload = async (file?: File) => {
     if (file) {
       if (await importFile(feed, file)) setFilename(file.name);
@@ -145,9 +150,8 @@ export function IntegrationPipelineTab() {
         <div className="inline-note">
           <ShieldCheck size={16} />
           <span>
-            Source ingestion and ETL execution require the Dean / Registrar
-            persona. The server withholds raw source rows from your current
-            persona.
+            Source ingestion and ETL execution require the Registrar persona.
+            The server withholds raw source rows from your current persona.
           </span>
         </div>
       )}
@@ -397,8 +401,8 @@ export function IntegrationPipelineTab() {
           </div>
         ) : (
           <EmptyState title="Raw feed access restricted">
-            Switch the demo persona to Dean / Registrar to inspect or import
-            source records.
+            Switch the demo persona to Registrar to inspect or import source
+            records.
           </EmptyState>
         )}
       </section>
@@ -480,8 +484,9 @@ export function IntegrationPipelineTab() {
                   ssn: "999-00-0000",
                   dateOfBirth: "2004-01-01",
                   gender: "Not specified",
-                  major: String(f.get("major")),
-                  department: "Demonstration department",
+                  major:
+                    DEPARTMENT_NAMES[String(f.get("department")) as Department],
+                  department: String(f.get("department")),
                   yearLevel: "Freshman",
                   cumulativeGpa: gpa,
                   totalCredits: 15,
@@ -505,12 +510,11 @@ export function IntegrationPipelineTab() {
                   <input name="lastName" required maxLength={100} />
                 </label>
                 <label>
-                  Program
-                  <select name="major">
-                    <option>Computer Science</option>
-                    <option>Data Science & Analytics</option>
-                    <option>Software Engineering</option>
-                    <option>Cybersecurity</option>
+                  Department
+                  <select name="department">
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
                   </select>
                 </label>
                 <label>

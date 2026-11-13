@@ -124,7 +124,7 @@ test("LMS templates accept seeded activity timestamps and reject invalid dates o
 databaseTest(
   "PostgreSQL seeds once, upserts by feed key and rolls back partial transactions",
   async () => {
-    assert.equal((await snapshot("DEAN_REGISTRAR")).masterRecords.length, 8);
+    assert.equal((await snapshot("REGISTRAR")).masterRecords.length, 8);
     await transaction(() =>
       upsert("SIS", [
         initialSISRecords[0],
@@ -176,7 +176,7 @@ databaseTest(
     }
     try {
       assert.equal(
-        (await register(request({ ...details, role: "DEAN_REGISTRAR" })))
+        (await register(request({ ...details, role: "REGISTRAR" })))
           .status,
         400,
       );
@@ -203,7 +203,7 @@ databaseTest(
       assert.equal(
         (
           await confirmRegistration(
-            request({ token, password, role: "DEAN_REGISTRAR" }),
+            request({ token, password, role: "REGISTRAR" }),
           )
         ).status,
         400,
@@ -440,7 +440,7 @@ databaseTest(
 databaseTest(
   "audit history is chained and PostgreSQL rejects mutation",
   async () => {
-    await audit("DEAN_REGISTRAR", "ETL_SYNC_RUN", "Test", "Test event");
+    await audit("REGISTRAR", "ETL_SYNC_RUN", "Test", "Test event");
     assert.equal((await auditTrail()).valid, true);
     await assert.rejects(
       () => execute("UPDATE audit SET payload='{}'"),
@@ -477,10 +477,10 @@ databaseTest(
       [],
     );
     assert.deepEqual((await snapshot("COMPLIANCE_AUDITOR")).interventions, []);
-    assert.equal((await snapshot("DEAN_REGISTRAR")).interventions.length, 2);
-    const before = await snapshot("DEAN_REGISTRAR");
-    await transaction(() => resetDemo("DEAN_REGISTRAR"));
-    const after = await snapshot("DEAN_REGISTRAR");
+    assert.equal((await snapshot("REGISTRAR")).interventions.length, 2);
+    const before = await snapshot("REGISTRAR");
+    await transaction(() => resetDemo("REGISTRAR"));
+    const after = await snapshot("REGISTRAR");
     assert.equal(after.interventions.length, 0);
     assert.equal(after.masterRecords.length, 8);
     assert.ok(after.auditLogs.length > before.auditLogs.length);
@@ -511,7 +511,7 @@ databaseTest(
     });
     const login = await authenticate("SOPHIA@example.edu", password);
     assert.equal(login.ok, true);
-    const issued = await issueSession("DEAN_REGISTRAR", account.id);
+    const issued = await issueSession("REGISTRAR", account.id);
     const identity = (await readSession(issued.token))!;
     assert.equal(identity.role, "STUDENT");
     assert.equal(identity.mode, "account");
@@ -555,7 +555,7 @@ databaseTest(
       password: "Test-only-password-234!",
       role: "ACADEMIC_ADVISOR",
     });
-    const demo = await issueSession("DEAN_REGISTRAR");
+    const demo = await issueSession("REGISTRAR");
     assert.equal((await readSession(demo.token))?.mode, "demo");
     process.env.EDM_AUTH_MODE = "accounts";
     try {

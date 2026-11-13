@@ -1,5 +1,7 @@
+import type { Department } from "./school";
+
 export type UserRole =
-  "DEAN_REGISTRAR" | "ACADEMIC_ADVISOR" | "STUDENT" | "COMPLIANCE_AUDITOR";
+  "REGISTRAR" | "DEAN" | "ACADEMIC_ADVISOR" | "STUDENT" | "COMPLIANCE_AUDITOR";
 
 // 1. DATA SOURCE: Student Information System (SIS)
 export interface SISRecord {
@@ -96,7 +98,7 @@ export interface UnifiedStudentRecord {
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
-  userRole: UserRole;
+  userRole: UserRole | "DEAN_REGISTRAR"; // Historical audit entries remain unchanged.
   actorName: string;
   action:
     | "READ_STUDENT_360"
@@ -122,6 +124,7 @@ export interface AccessIdentity {
   userId?: string;
   displayName?: string;
   studentId?: string;
+  department?: Department;
 }
 
 export type Feed = "SIS" | "LMS" | "LIBRARY";
@@ -136,6 +139,7 @@ export interface EDMSnapshot {
   accessMode?: "demo" | "account";
   currentRole: UserRole;
   actorName: string;
+  departmentScope?: Department;
   sisRecords: SISRecord[];
   lmsRecords: LMSRecord[];
   libraryRecords: LibraryRecord[];

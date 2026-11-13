@@ -90,16 +90,18 @@ export function Modal({
 export function ReportLink({
   kind,
   studentId,
+  department,
   label = "Download PDF",
 }: {
   kind: "student" | "analytics" | "audit" | "json";
   studentId?: string;
+  department?: string;
   label?: string;
 }) {
   return (
     <a
       className="button secondary"
-      href={`/api/reports?kind=${kind}${studentId ? `&studentId=${encodeURIComponent(studentId)}` : ""}`}
+      href={`/api/reports?kind=${kind}${studentId ? `&studentId=${encodeURIComponent(studentId)}` : ""}${department ? `&department=${encodeURIComponent(department)}` : ""}`}
       download
     >
       <Download size={16} />

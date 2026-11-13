@@ -4,6 +4,7 @@ import { createServer } from "node:net";
 import { PDFDocument } from "pdf-lib";
 import { startServices } from "./services.mjs";
 import { createAccount } from "../backend/auth";
+import { DEPARTMENTS } from "../shared/school";
 import {
   audit,
   auditTrail,
@@ -42,11 +43,19 @@ async function main() {
     });
   }
   const password = randomBytes(24).toString("base64url");
+  for (const department of DEPARTMENTS)
+    await createAccount({
+      email: `dean-${department}@example.edu`,
+      displayName: `${department} Test Dean`,
+      password,
+      role: "DEAN",
+      department,
+    });
   await createAccount({
     email: "registrar@example.edu",
     displayName: "Test Registrar",
     password,
-    role: "DEAN_REGISTRAR",
+    role: "REGISTRAR",
   });
   await createAccount({
     email: "auditor@example.edu",
@@ -70,7 +79,7 @@ async function main() {
   await Promise.all(
     Array.from({ length: 6 }, (_, index) =>
       audit(
-        "DEAN_REGISTRAR",
+        "REGISTRAR",
         "ETL_SYNC_RUN",
         "Verification",
         `Concurrent check ${index}`,
@@ -310,6 +319,133 @@ async function main() {
       8,
     );
     await request("/api/auth", 200, undefined, registrarCookie, "DELETE");
+    for (const department of DEPARTMENTS) {
+      const deanCookie = cookie(
+        await request("/api/auth", 200, {
+          email: `dean-${department}@example.edu`,
+          password,
+        }),
+      );
+      const dean = await (
+        await request("/api/edm", 200, undefined, deanCookie)
+      ).json();
+      assert.equal(dean.currentRole, "DEAN");
+      assert.equal(dean.departmentScope, department);
+      assert.equal(dean.masterRecords.length, 2);
+      assert.ok(
+        dean.masterRecords.every(
+          (s: { department: string; ssn: string }) =>
+            s.department === department && s.ssn.startsWith("•••"),
+        ),
+      );
+      assert.equal(
+        dean.sisRecords.length +
+          dean.lmsRecords.length +
+          dean.libraryRecords.length +
+          dean.etlReports.length,
+        0,
+      );
+      const ownId = initialSISRecords.find(
+        (s) => s.department === department,
+      )!.studentId;
+      const outside = initialSISRecords.find(
+        (s) => s.department !== department,
+      )!;
+      await request(
+        "/api/edm",
+        200,
+        { type: "view", studentId: ownId },
+        deanCookie,
+      );
+      await request(
+        "/api/edm",
+        200,
+        { type: "intervention", studentId: ownId },
+        deanCookie,
+      );
+      await request(
+        "/api/edm",
+        404,
+        { type: "view", studentId: outside.studentId },
+        deanCookie,
+      );
+      await request(
+        "/api/edm",
+        404,
+        { type: "intervention", studentId: outside.studentId },
+        deanCookie,
+      );
+      await request("/api/edm", 403, { type: "sync" }, deanCookie);
+      await request("/api/edm", 403, { type: "reset" }, deanCookie);
+      await request(
+        "/api/edm",
+        403,
+        {
+          type: "import",
+          feed: "SIS",
+          format: "json",
+          content: JSON.stringify(initialSISRecords),
+        },
+        deanCookie,
+      );
+      await request(
+        "/api/edm",
+        403,
+        { type: "role", role: "REGISTRAR", department: outside.department },
+        deanCookie,
+      );
+      const json = await request(
+        `/api/reports?kind=json&studentId=${ownId}`,
+        200,
+        undefined,
+        deanCookie,
+      );
+      assert.equal((await json.json()).department, department);
+      await request(
+        `/api/reports?kind=json&studentId=${outside.studentId}`,
+        404,
+        undefined,
+        deanCookie,
+      );
+      await request(
+        `/api/reports?kind=student&studentId=${outside.studentId}`,
+        404,
+        undefined,
+        deanCookie,
+      );
+      await request(
+        `/api/reports?kind=analytics&department=${outside.department}`,
+        403,
+        undefined,
+        deanCookie,
+      );
+      const pdf = await request(
+        `/api/reports?kind=analytics&department=${department}`,
+        200,
+        undefined,
+        deanCookie,
+      );
+      assert.ok(
+        (await PDFDocument.load(await pdf.arrayBuffer())).getPageCount() > 0,
+      );
+      const fresh = await (
+        await request("/api/edm", 200, undefined, deanCookie)
+      ).json();
+      assert.ok(
+        fresh.interventions.every((i: { studentId: string }) =>
+          fresh.masterRecords.some(
+            (s: { studentId: string }) => s.studentId === i.studentId,
+          ),
+        ),
+      );
+      assert.ok(
+        fresh.auditLogs.every(
+          (e: { actorName: string }) =>
+            e.actorName === `${department} Test Dean`,
+        ),
+      );
+      await request("/api/auth", 200, undefined, deanCookie, "DELETE");
+    }
     await request("/api/auth", 401, {
       email: "advisor@example.edu",
       password: "incorrect",
@@ -359,7 +495,7 @@ async function main() {
     await request(
       "/api/edm",
       403,
-      { type: "role", role: "DEAN_REGISTRAR" },
+      { type: "role", role: "REGISTRAR" },
       advisorCookie,
     );
     await request("/api/edm", 403, { type: "sync" }, advisorCookie);
@@ -430,7 +566,7 @@ async function main() {
       password: "wrong",
     });
     console.log(
-      `PASS: ${checks} API checks through frontend 3005 to backend 3006. All four roles, CSV/JSON imports, ETL, follow-ups, PDF/CSV/JSON reports, origin checks, logout, disablement and throttling verified.`,
+      `PASS: ${checks} API checks through frontend 3005 to backend 3006. All five roles and four Dean departments, CSV/JSON imports, ETL, follow-ups, PDF/CSV/JSON reports, origin checks, logout, disablement and throttling verified.`,
     );
   } finally {
     await services.stop();

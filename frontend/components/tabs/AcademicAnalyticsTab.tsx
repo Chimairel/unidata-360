@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { DEPARTMENTS } from "@/shared/school";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import {
@@ -15,8 +17,12 @@ export function AcademicAnalyticsTab() {
     assignAdvisor,
     currentRole,
     isSyncing,
+    departmentScope,
   } = useEDM();
-  const students = masterRecords;
+  const [department, setDepartment] = useState("ALL");
+  const students = masterRecords.filter(
+    (s) => department === "ALL" || s.department === department,
+  );
   const total = students.length;
   const avg = total
     ? students.reduce((n, s) => n + s.cumulativeGpa, 0) / total
@@ -54,20 +60,42 @@ export function AcademicAnalyticsTab() {
       count: students.filter((s) => s.cumulativeGpa < 2).length,
     },
   ];
-  const canAssign = ["DEAN_REGISTRAR", "ACADEMIC_ADVISOR"].includes(
+  const canAssign = ["REGISTRAR", "DEAN", "ACADEMIC_ADVISOR"].includes(
     currentRole,
   );
   return (
     <div className="page-stack">
       <PageHeading
         title={
-          currentRole === "STUDENT"
-            ? "Your academic snapshot"
+          currentRole === "DEAN"
+            ? `${departmentScope} academic overview`
             : "See progress. Spot who needs support."
         }
         description="A current view of academic performance and engagement, with explainable early-warning indicators and saved advisor follow-ups."
-        action={<ReportLink kind="analytics" label="Download analytics PDF" />}
+        action={
+          <ReportLink
+            kind="analytics"
+            department={department === "ALL" ? departmentScope : department}
+            label="Download analytics PDF"
+          />
+        }
       />
+      <label className="department-filter">
+        Department
+        <select
+          aria-label="Analytics department"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+        >
+          <option value="ALL">
+            {departmentScope
+              ? `${departmentScope} department`
+              : "All departments"}
+          </option>
+          {!departmentScope &&
+            DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+        </select>
+      </label>
       <dl className="summary-strip">
         <div className="summary-item">
           <dt>Students in scope</dt>

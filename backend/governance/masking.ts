@@ -5,12 +5,12 @@ export function applyFERPAMasking(
   role: UserRole,
 ): UnifiedStudentRecord {
   // Classroom application policy: registrar persona receives full demonstration fields.
-  if (role === "DEAN_REGISTRAR") {
+  if (role === "REGISTRAR") {
     return { ...student };
   }
 
   // Academic Advisor: Allowed to see academic performance, but PII & financial data are protected under FERPA
-  if (role === "ACADEMIC_ADVISOR") {
+  if (role === "ACADEMIC_ADVISOR" || role === "DEAN") {
     return {
       ...student,
       ssn: maskSSN(student.ssn),

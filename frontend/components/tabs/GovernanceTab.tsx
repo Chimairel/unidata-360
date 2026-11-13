@@ -11,12 +11,20 @@ import {
 } from "@/frontend/components/ui";
 const permissions = [
   [
-    "Dean / Registrar",
+    "Registrar",
     "Full records",
     "Unmasked",
     "Full view",
     "All events",
     "Ingest, ETL & follow-up",
+  ],
+  [
+    "Dean",
+    "Assigned department only",
+    "Last four only",
+    "Restricted",
+    "Own account events",
+    "Department follow-up",
   ],
   [
     "Academic Advisor",
@@ -59,19 +67,17 @@ export function GovernanceTab() {
   const { currentRole, masterRecords, auditLogs, auditIntegrity, accessMode } =
     useEDM();
   const [filter, setFilter] = useState("ALL");
+  const personalActivity =
+    currentRole === "ACADEMIC_ADVISOR" || currentRole === "DEAN";
   const sample = masterRecords[0];
   const logs = auditLogs.filter((l) => filter === "ALL" || l.action === filter);
   return (
     <div className="page-stack">
       <PageHeading
-        title={
-          currentRole === "ACADEMIC_ADVISOR"
-            ? "My activity & access"
-            : "Governance & audit"
-        }
+        title={personalActivity ? "My activity & access" : "Governance & audit"}
         description={
-          currentRole === "ACADEMIC_ADVISOR"
-            ? "Review your own activity history and the field restrictions that apply to your advising account."
+          personalActivity
+            ? "Review your own activity history and the field restrictions that apply to your account."
             : "Review access policies, field masking, and the system-wide audit history."
         }
         action={
@@ -110,7 +116,8 @@ export function GovernanceTab() {
                   style={{
                     background:
                       [
-                        "DEAN_REGISTRAR",
+                        "REGISTRAR",
+                        "DEAN",
                         "ACADEMIC_ADVISOR",
                         "STUDENT",
                         "COMPLIANCE_AUDITOR",
@@ -230,8 +237,8 @@ export function GovernanceTab() {
           <div>
             <h2>Audit trail</h2>
             <p>
-              {currentRole === "ACADEMIC_ADVISOR"
-                ? "Events for the advisor persona"
+              {personalActivity
+                ? "Events for your account"
                 : currentRole === "STUDENT"
                   ? "Audit records are restricted to staff"
                   : "Timestamped, append-only event history"}{" "}

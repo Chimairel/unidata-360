@@ -80,6 +80,7 @@ export async function makeReport(
   }
   line(student ? "Student 360 dossier" : "Academic analytics summary", true);
   line(`Generated: ${new Date().toISOString()} | Persona: ${data.currentRole}`);
+  line(`Department scope: ${data.departmentScope || "All permitted records"}`);
   line(
     "Synthetic classroom demonstration data. Field permissions applied on the server.",
   );

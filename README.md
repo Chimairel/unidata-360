@@ -59,20 +59,23 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 - **Presentation:** ten classroom slides, the supplied comparative industry matrix, a five-source university responsibility map, enrollment-to-alumni scope, integration trade-offs, speaker notes, previous/next controls, direct slide selection, arrow/PageUp/PageDown/Home/End keys and optional fullscreen.
 - **UI:** reference-inspired light workspace with a black navigation rail, full-viewport white workspace, soft gray student rows and black actions; compact mobile navigation and single-column records, keyboard-accessible dialogs, visible focus states, loading/error/empty feedback and reduced-motion support. Ingestion, analytics, governance, sign-in and presentation share the monochrome theme.
 
+The school configuration includes **BSIT, BEED, BSED and BSHM**. Registrar and Dean are separate roles. See [school setup](docs/SCHOOL_SETUP.md) for the account upgrade and department policy.
+
 ## A five-minute classroom walkthrough
 
 ### Workspaces by role
 
 | Role | Workspace and limits |
 | --- | --- |
-| Dean / Registrar | Student directory, pipeline/imports, analytics and system audit. Can run ETL and save follow-ups. |
+| Registrar | Student directory, pipeline/imports, analytics and system audit. Can run ETL and save follow-ups. |
+| Dean | Assigned department’s masked student records, analytics, follow-ups and own activity. No imports, ETL or access to other departments. |
 | Academic Advisor | Masked student directory, analytics, follow-ups and their own activity history. No source imports or ETL. |
 | Student | Personal record, courses, attendance, library clearance and own PDF report. No pipeline, cohort analytics, audit trail or internal staff follow-ups. |
 | Compliance Auditor | Starts on governance/audit; may inspect masked student summaries and export permitted reports. No pipeline, academic analytics or data changes. |
 
 Both desktop and mobile navigation follow this policy. Account roles remain fixed; the separate classroom demo mode permits persona switching. Server endpoints independently reject actions and exports outside each role's permissions.
 
-1. Select **Integration pipeline** and **Dean / Registrar**. Inspect SIS, LMS and Library rows.
+1. Select **Integration pipeline** and **Registrar**. Inspect SIS, LMS and Library rows.
 2. Download a CSV or JSON template and import it, or use **Add demo student**. Imports update staged source feeds; they do not immediately change Student 360.
 3. **Run pipeline**, inspect its reconciliation report, then open the student dossier in **Student 360**. A student without LMS data is marked incomplete rather than automatically treated as absent.
 4. Switch **Demo persona** to Academic Advisor and open the same dossier to see restricted fields. Download a PDF with those restrictions applied. Student mode can access only Marcus Vance's demonstration record.
@@ -116,7 +119,7 @@ All seed students and records are **synthetic**. The default demo mode permits c
 
 ## Account mode
 
-The [demo account guide](accounts/README.md) lists the four synthetic roles and emails. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
+The [demo account guide](accounts/README.md) lists the five application roles and emails. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
 
 1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the four role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
 2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the servers. Restart the backend on port 3006. The default is `demo` when unset.
@@ -143,6 +146,6 @@ npm run build
 
 `test:api` is intended for the synthetic local demo: it stages seed rows, creates a follow-up, changes its own session persona, checks reports, and restores seed sources/follow-ups. Its audit and ETL events remain. It saves sample masked PDFs in ignored `tmp/pdfs/` for visual inspection.
 
-Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build both applications and free ports 3005 and 3006 before running `test:auth`. It starts both servers, verifies all four roles, imports, ETL, reports, access controls, and audit integrity through the frontend proxy, then stops both process trees. The test accounts and events are written to the disposable database.
+Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build both applications and free ports 3005 and 3006 before running `test:auth`. It starts both servers, verifies all five roles, imports, ETL, reports, access controls, and audit integrity through the frontend proxy, then stops both process trees. The test accounts and events are written to the disposable database.
 
 The current dependency audit reports development-tool advisories through the existing Next.js ESLint configuration (`braces` / `micromatch` / `fast-glob`). The suggested automatic fix downgrades Next.js lint tooling across major versions; it has not been applied. `npm audit --omit=dev` checks runtime dependencies separately.

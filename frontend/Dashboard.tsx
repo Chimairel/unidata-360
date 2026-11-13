@@ -90,10 +90,12 @@ function Workspace() {
               (currentRole === "STUDENT" ? (
                 <StudentWorkspace />
               ) : (
-                <Student360Tab />
+                <Student360Tab key={currentRole} />
               ))}
             {activeTab === "pipeline" && <IntegrationPipelineTab />}
-            {activeTab === "analytics" && <AcademicAnalyticsTab />}
+            {activeTab === "analytics" && (
+              <AcademicAnalyticsTab key={currentRole} />
+            )}
             {activeTab === "governance" && <GovernanceTab />}
           </>
         )}

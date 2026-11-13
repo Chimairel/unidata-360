@@ -23,7 +23,7 @@ interface EDMContextType extends EDMSnapshot {
 }
 const Context = createContext<EDMContextType | undefined>(undefined);
 const empty: EDMSnapshot = {
-  currentRole: "DEAN_REGISTRAR",
+  currentRole: "REGISTRAR",
   actorName: "Loading session",
   sisRecords: [],
   lmsRecords: [],

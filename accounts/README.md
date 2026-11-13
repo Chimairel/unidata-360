@@ -1,15 +1,21 @@
 # UniData 360 demo accounts
 
-Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by the project administrator with the CLI. The Dean / Registrar is an application role, separate from the person who provisions accounts.
+Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by the project administrator with the CLI. Registrar and Dean are application roles, separate from the person who provisions accounts.
 
-Local and online UniData use the same PostgreSQL database and these four synthetic accounts.
+Local and online UniData use the same PostgreSQL database and these eight synthetic accounts across five roles.
 
 | Role | Email | Access |
 | --- | --- | --- |
-| Dean / Registrar | dean@cpc.edu | Import data, run ETL, view records, and export reports. |
+| Registrar | registrar@cpc.edu | School-wide records, imports, ETL and system audits. |
+| BSIT Dean | dean@cpc.edu | BSIT academic records, analytics and follow-ups. |
+| BEED Dean | dean.beed@cpc.edu | BEED academic records, analytics and follow-ups. |
+| BSED Dean | dean.bsed@cpc.edu | BSED academic records, analytics and follow-ups. |
+| BSHM Dean | dean.bshm@cpc.edu | BSHM academic records, analytics and follow-ups. |
 | Academic Advisor | advisor@cpc.edu | View masked student records and create advisor follow-ups. |
 | Student | student@cpc.edu | View and export the linked student record, STU-2024-001. |
 | Compliance Auditor | auditor@cpc.edu | View restricted student projections and export audit history. |
+
+Run `npm run school:setup` once against the shared database to upgrade the classroom accounts and synthetic departments. Existing passwords are preserved; new passwords are written only to the private files below. The existing `dean@cpc.edu` becomes the BSIT Dean. See [school setup](../docs/SCHOOL_SETUP.md).
 
 ## Password files
 

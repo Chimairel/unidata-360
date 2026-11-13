@@ -142,8 +142,12 @@ export const slides = [
       "The same stored record produces different projections for each persona, including PDF and JSON exports.",
     items: [
       [
-        "Dean / Registrar",
+        "Registrar",
         "Inspect source feeds and full records; import files, run ETL, and create advisor follow-ups.",
+      ],
+      [
+        "Dean",
+        "Review masked academic records and analytics for the assigned BSIT, BEED, BSED or BSHM department. No imports or ETL; follow-ups stay within that department.",
       ],
       [
         "Academic Advisor",

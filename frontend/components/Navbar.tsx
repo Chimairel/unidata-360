@@ -58,6 +58,7 @@ export function Navbar({
     isLoading,
     accessMode,
     signOut,
+    departmentScope,
   } = useEDM();
   const allowed = workspaceTabs(currentRole);
   const visibleTabs = isLoading
@@ -72,7 +73,10 @@ export function Navbar({
             label: "Masked student summaries",
             short: "Summaries",
           };
-        if (id === "governance" && currentRole === "ACADEMIC_ADVISOR")
+        if (
+          id === "governance" &&
+          ["DEAN", "ACADEMIC_ADVISOR"].includes(currentRole)
+        )
           return {
             ...tab,
             label: "My activity & access",
@@ -168,15 +172,13 @@ export function Navbar({
                 <span>Present</span>
               </button>
             )}
-            {currentRole === "DEAN_REGISTRAR" && !isLoading && (
+            {currentRole === "REGISTRAR" && !isLoading && (
               <button
                 className="button primary run-action"
                 aria-label={isSyncing ? "Saving changes" : "Run ETL"}
-                disabled={
-                  isSyncing || isLoading || currentRole !== "DEAN_REGISTRAR"
-                }
+                disabled={isSyncing || isLoading || currentRole !== "REGISTRAR"}
                 title={
-                  currentRole !== "DEAN_REGISTRAR"
+                  currentRole !== "REGISTRAR"
                     ? "Registrar access is required to run ETL"
                     : undefined
                 }
@@ -220,7 +222,8 @@ export function Navbar({
                 }
                 title={actorName}
               >
-                <option value="DEAN_REGISTRAR">Dean / Registrar</option>
+                <option value="REGISTRAR">Registrar</option>
+                <option value="DEAN">Dean · {departmentScope || "BSIT"}</option>
                 <option value="ACADEMIC_ADVISOR">Academic Advisor</option>
                 <option value="STUDENT">
                   {accessMode === "account" ? "Student" : "Student · Marcus"}

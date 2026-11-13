@@ -7,6 +7,12 @@ import {
 } from "./data/mockData";
 import { runETLPipeline } from "./etl/pipeline";
 import { applyFERPAMasking } from "./governance/masking";
+import {
+  canAccessStudent,
+  canFollowUp,
+  departmentScope,
+  ownAuditOnly,
+} from "./access";
 import type {
   AuditLogEntry,
   EDMSnapshot,
@@ -22,7 +28,8 @@ import type {
 } from "@/shared/types";
 
 export const actors: Record<UserRole, string> = {
-  DEAN_REGISTRAR: "Dr. Arthur Vance (University Registrar)",
+  REGISTRAR: "Dr. Arthur Vance (University Registrar)",
+  DEAN: "Dr. Maria Santos (BSIT Dean)",
   ACADEMIC_ADVISOR: "Dr. Evelyn Reed (Senior Academic Advisor)",
   STUDENT: "Marcus Vance (Enrolled Student #001)",
   COMPLIANCE_AUDITOR: "Elena Cruz (Compliance Auditor)",
@@ -47,7 +54,7 @@ async function seedDatabase() {
   await seed();
   await sync();
   await audit(
-    "DEAN_REGISTRAR",
+    "REGISTRAR",
     "ETL_SYNC_RUN",
     "Initial seed",
     "Synthetic university feeds initialized.",
@@ -196,12 +203,14 @@ export function snapshot(
       const studentId =
         identity?.mode === "account" ? identity.studentId : "STU-2024-001";
       const student = role === "STUDENT";
-      const registrar = role === "DEAN_REGISTRAR";
+      const registrar = role === "REGISTRAR";
       const permitted = (
         student && !studentId
           ? []
           : await masters(student ? studentId : undefined)
-      ).map((s) => applyFERPAMasking(s, role));
+      )
+        .filter((s) => canAccessStudent(role, identity, s))
+        .map((s) => applyFERPAMasking(s, role));
       const trail = await auditTrail();
       const sourceCounts: Record<Feed, number> = { SIS: 0, LMS: 0, LIBRARY: 0 };
       const sisRecords = registrar ? await source<SISRecord>("SIS") : [];
@@ -218,6 +227,15 @@ export function snapshot(
         );
         for (const { feed, count } of counts)
           sourceCounts[feed] = Number(count);
+      } else if (role === "DEAN") {
+        for (const { feed, count } of await rows<{
+          feed: Feed;
+          count: string | number;
+        }>(
+          "SELECT s.feed,COUNT(*) AS count FROM sources s JOIN master m ON m.id=split_part(s.record_key,':',1) WHERE m.payload::jsonb->>'department'=? GROUP BY s.feed",
+          departmentScope(role, identity) || "",
+        ))
+          sourceCounts[feed] = Number(count);
       } else if (!student) {
         for (const { feed, count } of await rows<{
           feed: Feed;
@@ -228,29 +246,33 @@ export function snapshot(
       const interventions =
         role === "COMPLIANCE_AUDITOR" || student
           ? []
-          : (await rows<Payload>("SELECT payload FROM interventions")).map(
-              (r) => JSON.parse(r.payload) as Intervention,
-            );
+          : (await rows<Payload>("SELECT payload FROM interventions"))
+              .map((r) => JSON.parse(r.payload) as Intervention)
+              .filter((entry) =>
+                permitted.some((s) => s.studentId === entry.studentId),
+              );
       return {
         accessMode: identity?.mode || "demo",
         currentRole: role,
         actorName: identity?.displayName || actors[role],
+        departmentScope: departmentScope(role, identity),
         masterRecords: permitted,
         sisRecords,
         lmsRecords,
         libraryRecords,
-        etlReports: student
-          ? []
-          : (
-              await rows<Payload>(
-                "SELECT payload FROM etl_runs ORDER BY seq DESC LIMIT 30",
-              )
-            ).map((r) => JSON.parse(r.payload) as ETLRunReport),
+        etlReports:
+          !registrar && role !== "COMPLIANCE_AUDITOR"
+            ? []
+            : (
+                await rows<Payload>(
+                  "SELECT payload FROM etl_runs ORDER BY seq DESC LIMIT 30",
+                )
+              ).map((r) => JSON.parse(r.payload) as ETLRunReport),
         auditLogs: student
           ? []
           : trail.entries.filter(
               (e) =>
-                role !== "ACADEMIC_ADVISOR" ||
+                !ownAuditOnly(role) ||
                 (identity?.mode === "account"
                   ? e.actorId === identity.userId
                   : e.userRole === role),
@@ -283,7 +305,12 @@ export async function assignIntervention(
   identity?: AccessIdentity,
 ) {
   const [student] = await masters(studentId);
-  if (!student) throw new Error("Student not found");
+  if (
+    !canFollowUp(role) ||
+    !student ||
+    !canAccessStudent(role, identity, student)
+  )
+    throw new Error("Record unavailable to this account");
   const existing = await first<Payload>(
     "SELECT payload FROM interventions WHERE student_id=?",
     studentId,

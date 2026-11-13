@@ -27,6 +27,7 @@ export async function GET() {
             mode: current.mode,
             displayName: current.displayName,
             role: current.role,
+            department: current.department,
           }
         : null,
     },

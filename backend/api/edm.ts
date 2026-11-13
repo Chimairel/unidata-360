@@ -19,12 +19,14 @@ import {
 } from "@/backend/store";
 import { parseImport } from "@/backend/validation";
 import type { UserRole } from "@/shared/types";
+import { canAccessStudent, canImport, canFollowUp } from "@/backend/access";
 
 const command = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("role"),
     role: z.enum([
-      "DEAN_REGISTRAR",
+      "REGISTRAR",
+      "DEAN",
       "ACADEMIC_ADVISOR",
       "STUDENT",
       "COMPLIANCE_AUDITOR",
@@ -89,10 +91,8 @@ export async function POST(request: Request) {
     let role: UserRole = s.role;
     let message = "Saved";
     if (
-      (["sync", "reset", "import"].includes(cmd.type) &&
-        role !== "DEAN_REGISTRAR") ||
-      (cmd.type === "intervention" &&
-        !["DEAN_REGISTRAR", "ACADEMIC_ADVISOR"].includes(role))
+      (["sync", "reset", "import"].includes(cmd.type) && !canImport(role)) ||
+      (cmd.type === "intervention" && !canFollowUp(role))
     ) {
       await audit(
         role,
@@ -106,6 +106,14 @@ export async function POST(request: Request) {
         { error: "This action requires a permitted persona." },
         { status: 403 },
       );
+    }
+    if (cmd.type === "view" || cmd.type === "intervention") {
+      const [student] = await masters(cmd.studentId);
+      if (!student || !canAccessStudent(role, s, student))
+        return Response.json(
+          { error: "Record unavailable to this account." },
+          { status: 404 },
+        );
     }
     if (cmd.type === "role") {
       if (s.mode === "account") {

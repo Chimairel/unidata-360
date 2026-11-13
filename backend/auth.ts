@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { execute, first, transaction } from "./store";
 import type { AccessIdentity, UserRole } from "@/shared/types";
 import { z } from "zod";
+import { DEPARTMENTS, isDepartment } from "@/shared/school";
 
 const derive = promisify(scrypt);
 export const accountSchema = z
@@ -17,7 +18,8 @@ export const accountSchema = z
     displayName: z.string().trim().min(1).max(100),
     password: z.string().min(12).max(128),
     role: z.enum([
-      "DEAN_REGISTRAR",
+      "REGISTRAR",
+      "DEAN",
       "ACADEMIC_ADVISOR",
       "STUDENT",
       "COMPLIANCE_AUDITOR",
@@ -26,10 +28,16 @@ export const accountSchema = z
       .string()
       .regex(/^[A-Za-z0-9_-]{1,60}$/)
       .optional(),
+    department: z.enum(DEPARTMENTS).optional(),
   })
   .refine((v) => v.role !== "STUDENT" || !!v.studentId, {
     message: "A student account requires a linked student ID",
     path: ["studentId"],
+  })
+  .refine((v) => v.role !== "DEAN" || !!v.department, {
+    message:
+      "A Dean account requires BSIT, BEED, BSED or BSHM department assignment",
+    path: ["department"],
   });
 export type SessionIdentity = AccessIdentity & { id: string; role: UserRole };
 export function accountsRequired() {
@@ -71,13 +79,14 @@ export async function createAccount(input: unknown) {
     )
       throw new Error("A student account already exists for this student ID.");
     await execute(
-      "INSERT INTO users(id,email,display_name,password_hash,role,student_id) VALUES(?,?,?,?,?,?)",
+      "INSERT INTO users(id,email,display_name,password_hash,role,student_id,department) VALUES(?,?,?,?,?,?,?)",
       id,
       account.email,
       account.displayName,
       hash,
       account.role,
       account.role === "STUDENT" ? account.studentId! : null,
+      account.role === "DEAN" ? account.department! : null,
     );
   });
   return { id, email: account.email, role: account.role };
@@ -126,15 +135,18 @@ export async function readSession(
     account_role: UserRole | null;
     display_name: string | null;
     student_id: string | null;
+    department: string | null;
     active: number | null;
   }>(
-    "SELECT s.id,s.role,s.user_id,u.role AS account_role,u.display_name,u.student_id,u.active FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.expires_at>?",
+    "SELECT s.id,s.role,s.user_id,u.role AS account_role,u.display_name,u.student_id,u.department,u.active FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.expires_at>?",
     tokenHash(token),
     Date.now(),
   );
   if (!row) return null;
   if (row.user_id) {
     if (!row.active || !row.account_role) return null;
+    if (row.account_role === "DEAN" && !isDepartment(row.department))
+      return null;
     return {
       id: row.id,
       role: row.account_role,
@@ -142,6 +154,7 @@ export async function readSession(
       userId: row.user_id,
       displayName: row.display_name!,
       ...(row.student_id ? { studentId: row.student_id } : {}),
+      ...(isDepartment(row.department) ? { department: row.department } : {}),
     };
   }
   return accountsRequired()

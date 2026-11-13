@@ -13,6 +13,7 @@
     "format": "prettier --write frontend backend shared tests scripts",
     "account:create": "tsx scripts/create-account.ts",
     "account:password": "tsx scripts/create-account.ts --reset-password",
+    "school:setup": "tsx scripts/setup-school.ts",
     "test:auth": "tsx scripts/smoke-auth.ts",
     "test:registration": "tsx scripts/smoke-registration.ts"
   },

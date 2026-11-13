@@ -1,6 +1,7 @@
 import { z } from "zod";
 import Papa from "papaparse";
 import type { Feed } from "@/shared/types";
+import { DEPARTMENTS } from "@/shared/school";
 
 const text = z.string().trim().min(1).max(200);
 const id = z
@@ -42,7 +43,9 @@ export const schemas = {
       dateOfBirth: date,
       gender: text,
       major: text,
-      department: text,
+      department: z.enum(DEPARTMENTS, {
+        error: "Choose BSIT, BEED, BSED or BSHM",
+      }),
       yearLevel: z.enum([
         "Freshman",
         "Sophomore",

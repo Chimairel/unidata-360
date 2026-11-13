@@ -10,7 +10,8 @@ import type { UserRole } from "../shared/types";
 
 test("each role has its own permitted workspace and starting page", () => {
   const expected: Record<UserRole, readonly TabId[]> = {
-    DEAN_REGISTRAR: ["student360", "pipeline", "analytics", "governance"],
+    REGISTRAR: ["student360", "pipeline", "analytics", "governance"],
+    DEAN: ["analytics", "student360", "governance"],
     ACADEMIC_ADVISOR: ["student360", "analytics", "governance"],
     STUDENT: ["student360"],
     COMPLIANCE_AUDITOR: ["governance", "student360"],

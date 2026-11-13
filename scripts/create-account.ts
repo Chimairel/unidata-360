@@ -61,15 +61,20 @@ async function main() {
   let email: string,
     displayName: string,
     role: string,
-    studentId: string | undefined;
+    studentId: string | undefined,
+    department: string | undefined;
   try {
     email = await rl.question("Account email: ");
     displayName = await rl.question("Display name: ");
     role = await rl.question(
-      "Role (DEAN_REGISTRAR / ACADEMIC_ADVISOR / STUDENT / COMPLIANCE_AUDITOR): ",
+      "Role (REGISTRAR / DEAN / ACADEMIC_ADVISOR / STUDENT / COMPLIANCE_AUDITOR): ",
     );
     if (role === "STUDENT")
       studentId = await rl.question("Linked student ID: ");
+    if (role === "DEAN")
+      department = await rl.question(
+        "Department (BSIT / BEED / BSED / BSHM): ",
+      );
   } finally {
     rl.close();
   }
@@ -79,6 +84,7 @@ async function main() {
     displayName,
     role,
     studentId,
+    department,
     password,
   });
   const origin =

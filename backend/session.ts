@@ -18,7 +18,7 @@ export async function session() {
   const existing = await readSession(jar.get("unidata_session")?.value);
   if (existing) return existing;
   if (accountsRequired()) throw new AuthenticationRequired();
-  const issued = await issueSession("DEAN_REGISTRAR");
+  const issued = await issueSession("REGISTRAR");
   jar.set("unidata_session", issued.token, {
     ...sessionCookieOptions,
     maxAge: issued.maxAge,

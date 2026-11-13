@@ -29,7 +29,7 @@ try {
 }
 ```
 
-Choose `DEAN_REGISTRAR` for a registrar. Student accounts require their own existing student ID. The password prompt hides input. Run `npm run account:password` with the same environment to reset a provisioned password and revoke its sessions.
+Choose `REGISTRAR` for a registrar. Student accounts require their own existing student ID. The password prompt hides input. Run `npm run account:password` with the same environment to reset a provisioned password and revoke its sessions.
 
 ## Split the frontend and API with Railway
 
@@ -68,7 +68,7 @@ Check Railway's `/api/health` for a 200 response before promoting the frontend w
 
 ### Provision accounts and verify
 
-1. Open an interactive terminal to the running Railway service with `railway ssh` and run `cd /app && npm run account:create`. Enter the user's email, name, role and password when prompted. For a registrar, choose `DEAN_REGISTRAR`. Each student account requires its own existing student ID.
+1. Open an interactive terminal to the running Railway service with `railway ssh` and run `cd /app && npm run account:create`. Enter the user's email, name, role and password when prompted. For a registrar, choose `REGISTRAR`. Each student account requires its own existing student ID.
 2. Open `/api/health` on the Vercel domain. Expect HTTP 200 and `{"status":"ok"}`. An unauthenticated request to `/api/edm` should return HTTP 401. Use `/login` to sign in with the provisioned account.
 3. With a class test account, verify its access to Student 360 and its allowed reports. Check a small synthetic upload, run ETL as registrar, and confirm the change persists after a reload.
 4. To reset a password, run `cd /app && npm run account:password` in the Railway shell. This revokes that user's sessions.

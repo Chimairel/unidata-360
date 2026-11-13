@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { UnifiedStudentRecord } from "@/shared/types";
 import { EmptyState, RiskBadge, formatTime } from "./ui";
+import { DEPARTMENTS } from "@/shared/school";
 export function StudentDirectory({
   students,
   risk,
@@ -27,16 +28,16 @@ export function StudentDirectory({
   busy: boolean;
 }) {
   const [search, setSearch] = useState("");
-  const [program, setProgram] = useState("ALL");
+  const [department, setDepartment] = useState("ALL");
   const [sort, setSort] = useState("name");
   const [view, setView] = useState<"list" | "table" | "cards">("list");
   const records = students
     .filter(
       (s) =>
-        `${s.fullName} ${s.studentId} ${s.major}`
+        `${s.fullName} ${s.studentId} ${s.major} ${s.department}`
           .toLowerCase()
           .includes(search.trim().toLowerCase()) &&
-        (program === "ALL" || s.major === program) &&
+        (department === "ALL" || s.department === department) &&
         (risk === "ALL" ||
           (risk === "attention"
             ? s.overallRiskCategory !== "Safe"
@@ -58,10 +59,10 @@ export function StudentDirectory({
     );
   const clear = () => {
     setSearch("");
-    setProgram("ALL");
+    setDepartment("ALL");
     setRisk("ALL");
   };
-  const filtered = !!search || program !== "ALL" || risk !== "ALL";
+  const filtered = !!search || department !== "ALL" || risk !== "ALL";
   const latest = students
     .map((s) => s.lastSyncedAt)
     .sort()
@@ -136,13 +137,15 @@ export function StudentDirectory({
           )}
         </div>
         <select
-          aria-label="Filter by program"
-          value={program}
-          onChange={(e) => setProgram(e.target.value)}
+          aria-label="Filter by department"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
         >
-          <option value="ALL">All programs</option>
-          {[...new Set(students.map((s) => s.major))].sort().map((p) => (
-            <option key={p}>{p}</option>
+          <option value="ALL">All permitted departments</option>
+          {DEPARTMENTS.filter((d) =>
+            students.some((s) => s.department === d),
+          ).map((d) => (
+            <option key={d}>{d}</option>
           ))}
         </select>
         <label className="sort-control">
@@ -428,7 +431,7 @@ export function StudentDirectory({
           </>
         ) : (
           <EmptyState title="No students match these filters">
-            Try another name or student ID, or clear the program and risk
+            Try another name or student ID, or clear the department and risk
             filters.{" "}
             <button className="text-link" onClick={clear}>
               Clear filters

@@ -1,5 +1,17 @@
 # UniData 360 MVP journeys
 
+## Department and role upgrade — 14 November 2026
+
+Registrar and Dean are now separate roles, with BSIT, BEED, BSED and BSHM departments. The earlier four-role walkthrough below records the prior version; use [school setup](SCHOOL_SETUP.md) for the current role policy and upgrade instructions.
+
+- Passed 22 automated tests with PostgreSQL checks enabled in an isolated schema, including department-assigned sessions, fail-closed scope, masked projections and validation of all four departments.
+- Passed 117 end-to-end API checks through frontend 3005 and backend 3006. Each of the four Dean accounts accessed its own students/reports and was denied imports, ETL, reset, role escalation, other departments' dossiers, follow-ups and exports.
+- Verified the repeatable school upgrade against legacy fixtures: existing password/GPA preserved, eight synthetic accounts provisioned, old course keys replaced without duplicates, and audit hashes retained.
+- Browser checks: BSHM Dean starts in department analytics, sees only two BSHM students and has no pipeline controls. Registrar sees all four department filters; BEED filtering shows its two students and sets the analytics PDF scope. The Dean directory also fits a 390px mobile viewport without horizontal overflow.
+- Applied the school upgrade to the shared classroom database without resetting student performance or audit history. The hosted application still needs a separate deployment of the new code.
+
+## Earlier verification
+
 Verified on 12 November 2026 using isolated PostgreSQL databases and the local production build (frontend 3005, backend 3006). These checks did not modify the shared presentation database. Synthetic test accounts were used; passwords and connection strings are excluded from this guide.
 
 ## Dean / Registrar

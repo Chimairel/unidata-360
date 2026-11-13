@@ -90,7 +90,7 @@ async function main() {
     const student = initialSISRecords[3];
     const password = randomBytes(24).toString("base64url");
     const details = { studentId: student.studentId, email: student.email };
-    await post("/api/register", { ...details, role: "DEAN_REGISTRAR" }, 400);
+    await post("/api/register", { ...details, role: "REGISTRAR" }, 400);
     const missing = await post(
       "/api/register",
       { studentId: "UNKNOWN", email: "unknown@example.edu" },
@@ -108,7 +108,7 @@ async function main() {
     ).match(/#token=([a-f0-9]{64})/)![1];
     await post(
       "/api/register/verify",
-      { token, password, role: "DEAN_REGISTRAR" },
+      { token, password, role: "REGISTRAR" },
       400,
     );
     await post("/api/register/verify", { token, password }, 200);

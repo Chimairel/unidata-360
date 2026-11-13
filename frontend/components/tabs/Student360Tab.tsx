@@ -26,6 +26,7 @@ export function Student360Tab() {
     isSyncing,
     accessMode,
     actorName,
+    departmentScope,
   } = useEDM();
   const [risk, setRisk] = useState("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,8 +48,14 @@ export function Student360Tab() {
               <h1>
                 {currentRole === "COMPLIANCE_AUDITOR"
                   ? "Masked student summaries"
-                  : "Hello, "}
-                {currentRole !== "COMPLIANCE_AUDITOR" && (
+                  : currentRole === "DEAN"
+                    ? `${departmentScope} student overview`
+                    : currentRole === "REGISTRAR"
+                      ? "School student records"
+                      : "Hello, "}
+                {!["COMPLIANCE_AUDITOR", "DEAN", "REGISTRAR"].includes(
+                  currentRole,
+                ) && (
                   <>
                     {currentRole === "STUDENT"
                       ? masterRecords[0]?.fullName.split(" ")[0] || "there"
@@ -63,14 +70,18 @@ export function Student360Tab() {
                   ? "Review academic progress and follow up with students who need support."
                   : currentRole === "COMPLIANCE_AUDITOR"
                     ? "Inspect permitted student summaries with identifying fields masked."
-                    : "Manage connected student records across the university."}
+                    : currentRole === "DEAN"
+                      ? `Review academic progress and student support in ${departmentScope}.`
+                      : "Manage connected student records across the school."}
               </p>
               <span>
                 {currentRole === "ACADEMIC_ADVISOR"
                   ? "Academic advising"
                   : currentRole === "COMPLIANCE_AUDITOR"
                     ? "Compliance review"
-                    : "Registrar workspace"}
+                    : currentRole === "DEAN"
+                      ? `${departmentScope} · Dean workspace`
+                      : "Registrar workspace"}
               </span>
             </div>
             <div className="welcome-emblem" aria-hidden="true">
@@ -91,7 +102,7 @@ export function Student360Tab() {
               </span>
             </div>
             <Badge tone="info">
-              {currentRole === "DEAN_REGISTRAR"
+              {currentRole === "REGISTRAR"
                 ? "Registrar access"
                 : "Server-masked access"}
             </Badge>
