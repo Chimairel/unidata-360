@@ -103,6 +103,7 @@ export async function resetPassword(email: string, password: string) {
     if (!user) throw new Error("Account not found.");
     await execute("UPDATE users SET password_hash=? WHERE id=?", hash, user.id);
     await execute("DELETE FROM sessions WHERE user_id=?", user.id);
+    await execute("DELETE FROM password_resets WHERE user_id=?", user.id);
     await execute("DELETE FROM login_attempts WHERE email=?", normalized);
   });
 }
@@ -166,23 +167,28 @@ export async function revokeSession(token?: string) {
 }
 const dummyHash = "scrypt:00000000000000000000000000000000:" + "00".repeat(64);
 type LoginAttempt = { failures: number; retry_at: string | number };
-export async function authenticate(email: string, password: string) {
-  const normalized = email.trim().toLowerCase();
-  const attempt = await first<LoginAttempt>(
-    "SELECT failures,retry_at FROM login_attempts WHERE email=?",
-    normalized,
-  );
-  if (attempt && attempt.failures >= 5 && Number(attempt.retry_at) > Date.now())
-    return { ok: false as const, locked: true };
+export async function authenticate(identifier: string, password: string) {
+  const normalized = identifier.trim().toLowerCase();
   const user = await first<{
     id: string;
+    email: string;
     password_hash: string;
     role: UserRole;
     active: number;
   }>(
-    "SELECT id,password_hash,role,active FROM users WHERE email=?",
+    normalized.includes("@")
+      ? "SELECT id,email,password_hash,role,active FROM users WHERE email=? AND role<>'STUDENT'"
+      : "SELECT id,email,password_hash,role,active FROM users WHERE lower(student_id)=? AND role='STUDENT'",
     normalized,
   );
+  // Keep one lockout key per account, including existing email-keyed lockouts.
+  const attemptKey = user?.email || normalized;
+  const attempt = await first<LoginAttempt>(
+    "SELECT failures,retry_at FROM login_attempts WHERE email=?",
+    attemptKey,
+  );
+  if (attempt && attempt.failures >= 5 && Number(attempt.retry_at) > Date.now())
+    return { ok: false as const, locked: true };
   const verified = await verifyPassword(
     password,
     user?.password_hash || dummyHash,
@@ -192,13 +198,13 @@ export async function authenticate(email: string, password: string) {
       const now = Date.now();
       const latest = await first<LoginAttempt>(
         "SELECT failures,retry_at FROM login_attempts WHERE email=?",
-        normalized,
+        attemptKey,
       );
       const failures =
         latest && Number(latest.retry_at) > now ? latest.failures + 1 : 1;
       await execute(
         "INSERT INTO login_attempts(email,failures,retry_at) VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET failures=excluded.failures,retry_at=excluded.retry_at",
-        normalized,
+        attemptKey,
         failures,
         now + 15 * 60 * 1000,
       );
@@ -206,6 +212,6 @@ export async function authenticate(email: string, password: string) {
     });
     return { ok: false as const, locked: false };
   }
-  await execute("DELETE FROM login_attempts WHERE email=?", normalized);
+  await execute("DELETE FROM login_attempts WHERE email=?", attemptKey);
   return { ok: true as const, userId: user.id, role: user.role };
 }

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 export class EmailUnavailable extends Error {
   constructor() {
     super(
-      "Verification email is unavailable. Contact your project administrator or try again later.",
+      "Account email is unavailable. Contact your project administrator or try again later.",
     );
   }
 }
@@ -38,10 +38,27 @@ export function emailConfiguration() {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
+  return sendAccountEmail(email, token, "verification");
+}
+export async function sendPasswordResetEmail(email: string, token: string) {
+  return sendAccountEmail(email, token, "recovery");
+}
+async function sendAccountEmail(
+  email: string,
+  token: string,
+  purpose: "verification" | "recovery",
+) {
   const config = emailConfiguration();
   // Fragment tokens never enter HTTP access logs or Referer headers.
-  const link = `${config.origin}/register#token=${token}`;
-  const text = `Verify your UniData 360 student account\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. No account is activated until verification is complete.`;
+  const link = `${config.origin}/${purpose === "recovery" ? "reset-password" : "register"}#token=${token}`;
+  const subject =
+    purpose === "recovery"
+      ? "Reset your UniData 360 student password"
+      : "Verify your UniData 360 student account";
+  const text =
+    purpose === "recovery"
+      ? `${subject}\n\nOpen this link to choose a new password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request this reset, ignore this email; your password stays unchanged. After resetting, sign in with your school ID and new password.`
+      : `${subject}\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. After verification, sign in with your school ID and password.`;
   if (config.mode === "preview") {
     const directory =
       process.env.EDM_EMAIL_PREVIEW_DIR ||
@@ -49,7 +66,7 @@ export async function sendVerificationEmail(email: string, token: string) {
     await mkdir(directory, { recursive: true });
     await writeFile(
       path.join(directory, `${randomUUID()}.txt`),
-      `To: ${email}\nSubject: Verify your UniData 360 student account\n\n${text}\n`,
+      `To: ${email}\nSubject: ${subject}\n\n${text}\n`,
       { mode: 0o600, flag: "wx" },
     );
     return;
@@ -64,7 +81,7 @@ export async function sendVerificationEmail(email: string, token: string) {
       body: JSON.stringify({
         from: process.env.EDM_EMAIL_FROM,
         to: [email],
-        subject: "Verify your UniData 360 student account",
+        subject,
         text,
       }),
       signal: AbortSignal.timeout(10000),

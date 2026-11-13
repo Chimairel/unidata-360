@@ -13,7 +13,10 @@ import {
 import { AccountHeader } from "./AccountHeader";
 
 type Stage = "request" | "sent" | "password" | "complete";
-export function StudentRegistration() {
+export function StudentRegistration({
+  purpose = "registration",
+}: { purpose?: "registration" | "recovery" } = {}) {
+  const recovery = purpose === "recovery";
   const [stage, setStage] = useState<Stage>("request");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
@@ -37,10 +40,7 @@ export function StudentRegistration() {
       if (/^[a-f0-9]{64}$/.test(value)) {
         setToken(value);
         setStage("password");
-      } else
-        setError(
-          "This verification link is invalid. Request a new link below.",
-        );
+      } else setError("This link is invalid. Request a new link below.");
     };
     window.addEventListener("hashchange", readFragment);
     queueMicrotask(readFragment);
@@ -54,54 +54,63 @@ export function StudentRegistration() {
   }, [stage]);
 
   const titles = {
-    request: "Create your student account",
-    sent: "Check your university email",
-    password: "Choose your password",
-    complete: "Your account is ready",
+    request: recovery
+      ? "Reset your student password"
+      : "Create your student account",
+    sent: "Check your email",
+    password: recovery ? "Choose a new password" : "Choose your password",
+    complete: recovery ? "Your password is updated" : "Your account is ready",
   };
   const descriptions = {
-    request:
-      "Use the student ID and email address recorded in your university’s Student Information System.",
-    sent: "If these details match an eligible student record, a verification link is on its way. The link expires in 30 minutes.",
-    password:
-      "Complete email verification by setting a password for your student account.",
-    complete:
-      "Your email is verified. Sign in to view your own student record and academic progress.",
+    request: recovery
+      ? "Enter your school ID and the email registered to your student account."
+      : "Use the school ID and email address recorded in your school’s Student Information System. A Gmail address is fine if it matches your school record.",
+    sent: recovery
+      ? "If these details match a registered student account, a password reset link is on its way. The link expires in 30 minutes."
+      : "If these details match an eligible school record, a verification link is on its way. The link expires in 30 minutes.",
+    password: recovery
+      ? "Choose a new password. This will sign out your existing account sessions."
+      : "Complete email verification by setting a password for your student account.",
+    complete: recovery
+      ? "Sign in with your school ID and new password. Previous sessions have been signed out."
+      : "Your email is verified. Sign in with your school ID and password to view your own student record.",
   };
   return (
     <div className="account-page">
-      <AccountHeader current="register" />
+      <AccountHeader current={recovery ? "login" : "register"} />
       <main className="sign-in-shell">
         <section className="sign-in-content">
           <div className="sign-in-story">
             <h1>
-              Your student record.
-              <br /> Your own access.
+              {recovery ? "Back to your record." : "Your student record."}
+              <br /> {recovery ? "Recover your access." : "Your own access."}
             </h1>
             <p>
-              Set up your account using the university record that already
-              belongs to you.
+              {recovery
+                ? "Recover your student account through the email you verified when you registered."
+                : "Set up your account using the school record that already belongs to you."}
             </p>
             <dl className="sign-in-benefits">
               <div>
-                <dt>Match your university record</dt>
-                <dd>Enter the student ID and email held by the registrar.</dd>
+                <dt>Use your school ID</dt>
+                <dd>Enter your school ID and the email on your record.</dd>
               </div>
               <div>
                 <dt>Verify your email</dt>
-                <dd>
-                  Open your personal verification link, then choose a password.
-                </dd>
+                <dd>Open your personal email link, then choose a password.</dd>
               </div>
               <div>
                 <dt>Sign in as a student</dt>
                 <dd>
-                  See your academic profile, engagement, and library clearance.
+                  Use your school ID and password to see your own student
+                  record.
                 </dd>
               </div>
             </dl>
             <p className="small">
-              Staff member? Your project administrator creates staff accounts.
+              {recovery
+                ? "Staff member? Ask your project administrator to reset your password."
+                : "Staff member? Your project administrator creates staff accounts."}
             </p>
           </div>
           <div className="panel sign-in-panel">
@@ -136,9 +145,7 @@ export function StudentRegistration() {
                     setPending(true);
                     try {
                       const response = await fetch(
-                        stage === "request"
-                          ? "/api/register"
-                          : "/api/register/verify",
+                        `${recovery ? "/api/password-reset" : "/api/register"}${stage === "request" ? "" : "/verify"}`,
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -175,7 +182,7 @@ export function StudentRegistration() {
                   {stage === "request" ? (
                     <>
                       <label htmlFor="register-student">
-                        Student ID
+                        School ID
                         <input
                           id="register-student"
                           name="studentId"
@@ -189,13 +196,13 @@ export function StudentRegistration() {
                         />
                       </label>
                       <label htmlFor="register-email">
-                        University email
+                        Email on your school record
                         <input
                           id="register-email"
                           name="email"
                           type="email"
                           autoComplete="email"
-                          placeholder="you@university.edu"
+                          placeholder="you@gmail.com"
                           required
                           maxLength={200}
                           value={email}
@@ -250,8 +257,12 @@ export function StudentRegistration() {
                     {pending
                       ? "Please wait…"
                       : stage === "request"
-                        ? "Send verification link"
-                        : "Verify and create account"}
+                        ? recovery
+                          ? "Send password reset link"
+                          : "Send verification link"
+                        : recovery
+                          ? "Reset password"
+                          : "Verify and create account"}
                     <ArrowRight size={16} />
                   </button>
                 </form>
@@ -261,13 +272,13 @@ export function StudentRegistration() {
                   {preview && (
                     <p className="small">
                       Local email preview is enabled. Ask the presenter to open
-                      the verification message saved on this computer.
+                      the email message saved on this computer.
                     </p>
                   )}
                   <p className="small">
-                    Already registered? Sign in instead. If no message arrives,
-                    check spam or ask the registrar to confirm your university
-                    details.
+                    {recovery
+                      ? "If no message arrives, check spam or ask the registrar to confirm the email registered to your student account."
+                      : "Already registered? Sign in instead. If no message arrives, check spam or ask the registrar to confirm your school details."}
                   </p>
                   <button
                     className="button secondary"
@@ -315,8 +326,9 @@ export function StudentRegistration() {
         <footer className="sign-in-footer">
           <ShieldCheck size={14} />
           <span>
-            Self-registration creates Student accounts only. Your access is
-            limited to your own record.
+            {recovery
+              ? "Student recovery uses your registered email. Staff should contact the project administrator."
+              : "Self-registration creates Student accounts only. Your access is limited to your own record."}
           </span>
         </footer>
       </main>

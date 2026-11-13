@@ -176,8 +176,7 @@ databaseTest(
     }
     try {
       assert.equal(
-        (await register(request({ ...details, role: "REGISTRAR" })))
-          .status,
+        (await register(request({ ...details, role: "REGISTRAR" }))).status,
         400,
       );
       assert.equal(
@@ -193,7 +192,7 @@ databaseTest(
       assert.equal(sent.status, 200);
       assert.deepEqual(await sent.json(), await mismatch.json());
       const token = await latestToken();
-      assert.equal((await authenticate(student.email, password)).ok, false);
+      assert.equal((await authenticate(student.studentId, password)).ok, false);
       const pending = await first<{ token_hash: string }>(
         "SELECT token_hash FROM student_registrations WHERE email=?",
         student.email,
@@ -219,7 +218,7 @@ databaseTest(
       ]);
       assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
       assert.equal(results.filter((r) => r.status === "rejected").length, 1);
-      const login = await authenticate(student.email, password);
+      const login = await authenticate(student.studentId, password);
       assert.equal(login.ok, true);
       if (!login.ok) throw new Error("Expected verified student login");
       assert.equal(login.role, "STUDENT");
@@ -409,7 +408,7 @@ test("Resend delivery uses the configured sender; preview mode cannot run on a p
       );
     await assert.rejects(
       () => sendVerificationEmail("student@example.edu", "b".repeat(64)),
-      /Verification email is unavailable/,
+      /Account email is unavailable/,
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -509,7 +508,7 @@ databaseTest(
       role: "STUDENT",
       studentId: "STU-2024-002",
     });
-    const login = await authenticate("SOPHIA@example.edu", password);
+    const login = await authenticate(" stu-2024-002 ", password);
     assert.equal(login.ok, true);
     const issued = await issueSession("REGISTRAR", account.id);
     const identity = (await readSession(issued.token))!;

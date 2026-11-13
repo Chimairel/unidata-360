@@ -12,7 +12,7 @@ import { AccountHeader } from "./AccountHeader";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -84,8 +84,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
               <LockKeyhole className="text-accent" size={24} />
               <h2>Sign in to UniData</h2>
               <p className="small">
-                Students can register below. Staff use an account provided by
-                the project administrator.
+                Students use their school ID. Staff use their assigned email.
               </p>
               {error && (
                 <div className="message error" role="alert">
@@ -110,7 +109,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                       const response = await fetch("/api/auth", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email, password }),
+                        body: JSON.stringify({ identifier, password }),
                       });
                       const result = await response.json();
                       if (!response.ok) throw new Error(result.error);
@@ -132,18 +131,20 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                   }}
                   className="sign-in-form"
                 >
-                  <label htmlFor="account-email">
-                    Email address
+                  <label htmlFor="account-identifier">
+                    School ID or staff email
                     <input
-                      id="account-email"
-                      name="email"
-                      type="email"
+                      id="account-identifier"
+                      name="identifier"
+                      type="text"
                       autoComplete="username"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       required
                       maxLength={200}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@university.edu"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="STU-2024-001 or staff@cpc.edu"
                       disabled={pending}
                     />
                   </label>
@@ -171,6 +172,11 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                 New student?{" "}
                 <Link className="text-link" href="/register">
                   Create your student account
+                </Link>
+              </p>
+              <p className="small sign-in-help muted">
+                <Link className="text-link" href="/reset-password">
+                  Forgot your student password?
                 </Link>
               </p>
               <p className="small sign-in-help muted">

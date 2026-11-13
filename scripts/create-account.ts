@@ -93,7 +93,7 @@ async function main() {
       `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`) ||
     "http://localhost:3005";
   stdout.write(
-    `Created ${created.email} (${created.role}). Sign in at ${origin}/login\n`,
+    `Created ${created.email} (${created.role}). Sign in with ${role === "STUDENT" ? studentId : created.email} at ${origin}/login\n`,
   );
 }
 main()

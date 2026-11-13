@@ -62,6 +62,7 @@ const labels: Record<string, string> = {
   SIGN_IN: "Account signed in",
   SIGN_OUT: "Account signed out",
   STUDENT_REGISTERED: "Student account verified",
+  PASSWORD_RESET: "Student password reset",
 };
 export function GovernanceTab() {
   const { currentRole, masterRecords, auditLogs, auditIntegrity, accessMode } =

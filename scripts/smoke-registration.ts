@@ -76,14 +76,16 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     assert.ok(ready, "Both production services must start");
-    for (const route of ["/login", "/register"]) {
+    for (const route of ["/login", "/register", "/reset-password"]) {
       const response = await fetch(origin + route);
       assert.equal(response.status, 200);
       assert.match(
         await response.text(),
         route === "/register"
           ? /Create your student account/
-          : /Sign in to UniData/,
+          : route === "/reset-password"
+            ? /Reset your student password/
+            : /Sign in to UniData/,
       );
       checks++;
     }
@@ -99,7 +101,7 @@ async function main() {
     const sent = await post("/api/register", details, 200);
     assert.deepEqual(await sent.json(), await missing.json());
     assert.equal(sent.headers.get("cache-control"), "no-store");
-    await post("/api/auth", { email: student.email, password }, 401);
+    await post("/api/auth", { identifier: student.studentId, password }, 401);
     await post("/api/register", details, 429);
     const messages = await readdir(directory);
     assert.equal(messages.length, 1);
@@ -115,10 +117,16 @@ async function main() {
     await post("/api/register/verify", { token, password }, 400);
     const signedIn = await post(
       "/api/auth",
-      { email: student.email, password },
+      { identifier: student.studentId, password },
       200,
     );
     const cookie = signedIn.headers.get("set-cookie")!.split(";")[0];
+    await post("/api/auth", { identifier: student.email, password }, 401);
+    await post(
+      "/api/auth",
+      { identifier: student.studentId, password, role: "REGISTRAR" },
+      400,
+    );
     const identity = await (
       await fetch(origin + "/api/auth", { headers: { cookie } })
     ).json();
@@ -137,6 +145,45 @@ async function main() {
     });
     assert.equal(forbidden.status, 403);
     checks++;
+    const recovery = await post("/api/password-reset", details, 200);
+    const unknownReset = await post(
+      "/api/password-reset",
+      { studentId: "UNKNOWN-RESET", email: "unknown-reset@example.edu" },
+      200,
+    );
+    assert.deepEqual(await recovery.json(), await unknownReset.json());
+    await post("/api/password-reset", details, 429);
+    await post("/api/password-reset", { ...details, role: "REGISTRAR" }, 400);
+    const resetMessages = await Promise.all(
+      (await readdir(directory)).map((name) =>
+        readFile(path.join(directory, name), "utf8"),
+      ),
+    );
+    const resetToken = resetMessages
+      .find((body) => body.includes("/reset-password#token="))!
+      .match(/#token=([a-f0-9]{64})/)![1];
+    await post("/api/password-reset/verify", { token, password }, 400);
+    await post("/api/register/verify", { token: resetToken, password }, 400);
+    const newPassword = randomBytes(24).toString("base64url");
+    await post(
+      "/api/password-reset/verify",
+      { token: resetToken, password: newPassword },
+      200,
+    );
+    await post(
+      "/api/password-reset/verify",
+      { token: resetToken, password: newPassword },
+      400,
+    );
+    const stale = await fetch(origin + "/api/edm", { headers: { cookie } });
+    assert.equal(stale.status, 401);
+    checks++;
+    await post("/api/auth", { identifier: student.studentId, password }, 401);
+    await post(
+      "/api/auth",
+      { identifier: student.studentId.toLowerCase(), password: newPassword },
+      200,
+    );
     const logout = await fetch(origin + "/api/auth", {
       method: "DELETE",
       headers: { cookie, origin },
@@ -144,7 +191,7 @@ async function main() {
     assert.equal(logout.status, 200);
     checks++;
     console.log(
-      `Student registration HTTP smoke passed: ${checks} checks; frontend 3005, backend 3006, no real email sent.`,
+      `Student registration, school ID login and password recovery HTTP smoke passed: ${checks} checks; frontend 3005, backend 3006, no real email sent.`,
     );
   } finally {
     await services.stop();

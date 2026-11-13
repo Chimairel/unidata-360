@@ -4,7 +4,7 @@ Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using a
 
 Local and online UniData use the same PostgreSQL database and these eight synthetic accounts across five roles.
 
-| Role | Email | Access |
+| Role | Sign-in | Access |
 | --- | --- | --- |
 | Registrar | registrar@cpc.edu | School-wide records, imports, ETL and system audits. |
 | BSIT Dean | dean@cpc.edu | BSIT academic records, analytics and follow-ups. |
@@ -12,10 +12,14 @@ Local and online UniData use the same PostgreSQL database and these eight synthe
 | BSED Dean | dean.bsed@cpc.edu | BSED academic records, analytics and follow-ups. |
 | BSHM Dean | dean.bshm@cpc.edu | BSHM academic records, analytics and follow-ups. |
 | Academic Advisor | advisor@cpc.edu | View masked student records and create advisor follow-ups. |
-| Student | student@cpc.edu | View and export the linked student record, STU-2024-001. |
+| Student | **School ID: STU-2024-001** (recovery email: student@cpc.edu) | View and export the linked student record, STU-2024-001. |
 | Compliance Auditor | auditor@cpc.edu | View restricted student projections and export audit history. |
 
 Run `npm run school:setup` once against the shared database to upgrade the classroom accounts and synthetic departments. Existing passwords are preserved; new passwords are written only to the private files below. The existing `dean@cpc.edu` becomes the BSIT Dean. See [school setup](../docs/SCHOOL_SETUP.md).
+
+Students sign in with their **school ID and existing password**. Staff sign in with the listed email and password. A student email address is for verification/recovery and is no longer accepted as the sign-in name. No accounts need to be recreated.
+
+Students who forget their password can use `/reset-password`; staff contact the project administrator. Recovery requires working email delivery or the local classroom preview.
 
 ## Password files
 

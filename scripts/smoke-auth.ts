@@ -510,7 +510,7 @@ async function main() {
     );
     const studentCookie = cookie(
       await request("/api/auth", 200, {
-        email: "sophia@example.edu",
+        identifier: "STU-2024-002",
         password,
       }),
     );

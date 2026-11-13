@@ -10,10 +10,23 @@ import {
 import { checkOrigin, sessionCookieOptions } from "@/backend/session";
 import { audit } from "@/backend/store";
 
-const login = z.object({
-  email: z.email().max(200),
-  password: z.string().min(1).max(128),
-});
+const identifier = z
+  .string()
+  .trim()
+  .min(1)
+  .max(200)
+  .refine(
+    (value) =>
+      z.email().safeParse(value).success || /^[A-Za-z0-9_-]{1,60}$/.test(value),
+  );
+export const loginSchema = z.union([
+  z.object({ identifier, password: z.string().min(1).max(128) }).strict(),
+  // Retain the previous request shape for staff integrations only.
+  z
+    .object({ email: z.email().max(200), password: z.string().min(1).max(128) })
+    .strict()
+    .transform(({ email, password }) => ({ identifier: email, password })),
+]);
 const headers = { "Cache-Control": "no-store" };
 export async function GET() {
   const jar = await cookies();
@@ -43,19 +56,22 @@ export async function POST(request: Request) {
         { error: "Sign-in request is too large." },
         { status: 413, headers },
       );
-    const parsed = login.safeParse(JSON.parse(body));
+    const parsed = loginSchema.safeParse(JSON.parse(body));
     if (!parsed.success)
       return Response.json(
-        { error: "Enter a valid email and password." },
+        { error: "Enter your school ID or staff email, and password." },
         { status: 400, headers },
       );
-    const result = await authenticate(parsed.data.email, parsed.data.password);
+    const result = await authenticate(
+      parsed.data.identifier,
+      parsed.data.password,
+    );
     if (!result.ok)
       return Response.json(
         {
           error: result.locked
             ? "Too many attempts. Try again in 15 minutes."
-            : "Email or password is incorrect.",
+            : "School ID, staff email or password is incorrect.",
         },
         { status: result.locked ? 429 : 401, headers },
       );

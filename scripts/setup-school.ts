@@ -166,6 +166,7 @@ async function main() {
     "UniData 360 | Private synthetic classroom accounts",
     "Use the same shared PostgreSQL database locally and online. Hosting must run the current application version.",
     "Keep this file private; it is excluded from Git.",
+    "Students sign in with school ID + password; staff use assigned email + password. Student email is for verification/recovery.",
     ...accounts.flatMap((account) => [
       "",
       `${account.displayName} (${account.role}${account.department ? ` / ${account.department}` : ""})`,

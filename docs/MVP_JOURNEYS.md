@@ -1,5 +1,15 @@
 # UniData 360 MVP journeys
 
+## Student school ID sign-in and recovery — 14 November 2026
+
+Students now use school ID + their existing password; staff continue using assigned email + password. Student email is used for activation and recovery, including Gmail addresses that match the school record. School IDs alone do not authenticate a student.
+
+- Passed all 25 automated tests with PostgreSQL checks enabled in an isolated schema. New checks cover ID/email request validation, role injection, case/whitespace normalization, account lockout, hashed recovery tokens, expiry, email changes, replay rejection and revocation of sessions/recovery links.
+- Passed 28 HTTP checks through the production frontend/backend proxy, including registration → school ID login → reset request → single-use reset → new-password login. Old sessions and old passwords were rejected, and registration links could not be used as recovery links or vice versa.
+- Student email sign-in is rejected. Staff email sign-in remains supported, including the previous staff API request shape.
+- Browser checks confirmed the existing shared student account signs in with `STU-2024-001` and its unchanged password, sees only its own record, and signs out. The Registrar signs in by email and retains its staff workspace. The recovery form was checked at 390px mobile width without horizontal overflow.
+- Recovery uses the existing Resend configuration or private localhost email previews. Tests used isolated synthetic accounts and temporary previews; no real email was sent and shared account passwords were not reset.
+
 ## Department and role upgrade — 14 November 2026
 
 Registrar and Dean are now separate roles, with BSIT, BEED, BSED and BSHM departments. The earlier four-role walkthrough below records the prior version; use [school setup](SCHOOL_SETUP.md) for the current role policy and upgrade instructions.
