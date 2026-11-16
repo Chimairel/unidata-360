@@ -1,6 +1,6 @@
 # Student registration, school ID sign-in and recovery
 
-Students register themselves at `/register`. Registrar, department-assigned Dean, Academic Advisor and Compliance Auditor accounts are created by the project administrator using `npm run account:create` from the root. There is no public staff registration or separate administrator dashboard.
+Students register themselves at `/register`. Registrar, department-assigned Dean, Academic Advisor and Compliance Auditor accounts are created by System Admin in the Accounts dashboard. The CLI remains available for initial setup and recovery. There is no public staff registration.
 
 ## Student flow
 
@@ -19,7 +19,7 @@ A personal Gmail address is accepted for registration when it matches the email 
 3. Open the emailed link and choose a new 12–128-character password. The link expires after 30 minutes and can be used once.
 4. Sign in with the school ID and new password. All previous sessions are revoked, login lockouts are cleared, and a password-reset audit event is appended.
 
-Recovery tokens are hashed and bound to the registered account email. An expired, undelivered, consumed or registration-verification token cannot reset a password. Changing the registered email invalidates pending recovery links. Administrator password resets also clear pending recovery tokens. Requests have a 60-second cooldown and a five-request/15-minute limit per school ID/email. Staff recovery stays with the project administrator.
+Recovery tokens are hashed and bound to the registered account email. An expired, undelivered, consumed or registration-verification token cannot reset a password. Changing the registered email invalidates pending recovery links. Administrator password resets also clear pending recovery tokens. Requests have a 60-second cooldown and a five-request/15-minute limit per school ID/email. Staff recovery stays with System Admin through the Accounts dashboard; protected Admin accounts use the local CLI.
 
 The database stores a hash of the verification token. The browser clears the token fragment from its address bar. Activation rechecks the record, prevents duplicate accounts for a student ID, consumes pending links, and appends an audit event in one transaction. Requests have a 60-second cooldown and a limit of five per email/student ID every 15 minutes.
 

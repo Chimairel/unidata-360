@@ -2,7 +2,10 @@
   "name": "unidata",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["frontend", "backend"],
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "dev": "node scripts/services.mjs dev",
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
@@ -14,8 +17,10 @@
     "account:create": "tsx scripts/create-account.ts",
     "account:password": "tsx scripts/create-account.ts --reset-password",
     "school:setup": "tsx scripts/setup-school.ts",
+    "admin:setup": "tsx scripts/setup-admin.ts",
     "test:auth": "tsx scripts/smoke-auth.ts",
-    "test:registration": "tsx scripts/smoke-registration.ts"
+    "test:registration": "tsx scripts/smoke-registration.ts",
+    "test:admin": "tsx scripts/smoke-admin.ts"
   },
   "dependencies": {
     "@next/env": "16.4.5",

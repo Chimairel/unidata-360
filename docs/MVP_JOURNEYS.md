@@ -1,5 +1,15 @@
 # UniData 360 MVP journeys
 
+## System Admin staff accounts — 17 November 2026
+
+System Admin now has a dedicated Accounts workspace. Students continue to self-register; Admin can create Registrar, Dean, Academic Advisor and Compliance Auditor accounts. Dean accounts require one of BSIT, BEED, BSED or BSHM. Admin has no student records, imports, ETL, academic analytics or academic reports.
+
+- Passed all 27 automated tests with PostgreSQL checks enabled in an isolated schema and 58 Admin HTTP checks through frontend 3005/backend 3006. Checks cover all six roles, anonymous and unauthorized access, staff creation/access updates, activation/disable, password reset, session revocation, protected Admin/Student targets and audit integrity.
+- Browser verification: Admin signs in to Accounts only; search filters the directory; create/edit forms expose the four Dean departments; password reset and disable dialogs identify the target account. Shared staff accounts were not changed during browser checks.
+- Checked the Accounts workspace and stacked staff form at 390px mobile width without document horizontal overflow. Tables scroll within their own container. Admin sign-out returns to an enabled sign-in form.
+- Provisioned `admin@cpc.edu` in the shared classroom PostgreSQL database. Repeating `npm run admin:setup` preserves its password. Credentials remain in ignored private account guides, including `accounts/admin.private.txt`.
+- Both production builds, TypeScript and ESLint passed. Hosting remains paused; these results describe the local application and shared database.
+
 ## Student school ID sign-in and recovery — 14 November 2026
 
 Students now use school ID + their existing password; staff continue using assigned email + password. Student email is used for activation and recovery, including Gmail addresses that match the school record. School IDs alone do not authenticate a student.

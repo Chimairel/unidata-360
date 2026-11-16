@@ -12,6 +12,14 @@ function csv(value: string) {
 export async function GET(request: Request) {
   try {
     const s = await session();
+    if (s.role === "SYSTEM_ADMIN")
+      return Response.json(
+        {
+          error:
+            "Student and governance reports are outside the System Admin workspace.",
+        },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
     const url = new URL(request.url);
     const kind = url.searchParams.get("kind");
     const studentId = url.searchParams.get("studentId");

@@ -12,12 +12,14 @@ import {
   LogIn,
   LogOut,
   ChevronRight,
+  UserCog,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { UserRole } from "@/shared/types";
 import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
 export type { TabId } from "@/frontend/lib/workspaceAccess";
 const tabs = [
+  { id: "accounts", label: "Staff accounts", short: "Accounts", icon: UserCog },
   { id: "student360", label: "Student 360", short: "Students", icon: Users },
   {
     id: "pipeline",
@@ -84,7 +86,8 @@ export function Navbar({
           };
         return tab;
       });
-  const staff = currentRole !== "STUDENT" && !isLoading;
+  const staff =
+    !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) && !isLoading;
   const brand = (
     <Link className="brand" href="/" aria-label="UniData home">
       <span className="brand-mark">
@@ -222,6 +225,9 @@ export function Navbar({
                 }
                 title={actorName}
               >
+                {currentRole === "SYSTEM_ADMIN" && (
+                  <option value="SYSTEM_ADMIN">System Admin</option>
+                )}
                 <option value="REGISTRAR">Registrar</option>
                 <option value="DEAN">Dean · {departmentScope || "BSIT"}</option>
                 <option value="ACADEMIC_ADVISOR">Academic Advisor</option>

@@ -79,6 +79,17 @@ async function main() {
     },
   ];
   let upgraded = 0;
+  if (
+    await first(
+      "SELECT 1 FROM users WHERE email=? AND role='SYSTEM_ADMIN'",
+      "admin@cpc.edu",
+    )
+  )
+    accounts.push({
+      email: "admin@cpc.edu",
+      displayName: "CPC System Administrator",
+      role: "SYSTEM_ADMIN",
+    });
   await transaction(async () => {
     const rows = await source<SISRecord>("SIS");
     for (const row of rows) {
@@ -186,7 +197,7 @@ async function main() {
       mode: 0o600,
     });
   console.log(
-    `School setup complete: four departments, eight synthetic accounts, ${upgraded} source rows upgraded. Passwords saved privately in accounts/shared.private.txt.`,
+    `School setup complete: four departments, ${accounts.length} synthetic accounts, ${upgraded} source rows upgraded. Passwords saved privately in accounts/shared.private.txt.`,
   );
 }
 main()

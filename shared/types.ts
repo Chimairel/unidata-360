@@ -1,7 +1,21 @@
 import type { Department } from "./school";
 
 export type UserRole =
-  "REGISTRAR" | "DEAN" | "ACADEMIC_ADVISOR" | "STUDENT" | "COMPLIANCE_AUDITOR";
+  | "SYSTEM_ADMIN"
+  | "REGISTRAR"
+  | "DEAN"
+  | "ACADEMIC_ADVISOR"
+  | "STUDENT"
+  | "COMPLIANCE_AUDITOR";
+
+export interface StaffAccount {
+  id: string;
+  email: string;
+  displayName: string;
+  role: Exclude<UserRole, "STUDENT">;
+  department?: Department;
+  active: boolean;
+}
 
 // 1. DATA SOURCE: Student Information System (SIS)
 export interface SISRecord {
@@ -112,7 +126,11 @@ export interface AuditLogEntry {
     | "SIGN_IN"
     | "SIGN_OUT"
     | "STUDENT_REGISTERED"
-    | "PASSWORD_RESET";
+    | "PASSWORD_RESET"
+    | "ACCOUNT_CREATED"
+    | "ACCOUNT_UPDATED"
+    | "ACCOUNT_STATUS_CHANGED"
+    | "STAFF_PASSWORD_RESET";
   targetResource: string;
   status: "ALLOWED" | "RESTRICTED_MASKED" | "LOGGED";
   details: string;

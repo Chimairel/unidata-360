@@ -1,8 +1,10 @@
 import type { UserRole } from "@/shared/types";
 
-export type TabId = "pipeline" | "student360" | "analytics" | "governance";
+export type TabId =
+  "accounts" | "pipeline" | "student360" | "analytics" | "governance";
 
 const roleTabs: Record<UserRole, readonly TabId[]> = {
+  SYSTEM_ADMIN: ["accounts"],
   REGISTRAR: ["student360", "pipeline", "analytics", "governance"],
   DEAN: ["analytics", "student360", "governance"],
   ACADEMIC_ADVISOR: ["student360", "analytics", "governance"],

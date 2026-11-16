@@ -7,6 +7,7 @@ import {
 } from "./data/mockData";
 import { runETLPipeline } from "./etl/pipeline";
 import { applyFERPAMasking } from "./governance/masking";
+import { ACCOUNT_ACTIONS } from "@/shared/accounts";
 import {
   canAccessStudent,
   canFollowUp,
@@ -28,6 +29,7 @@ import type {
 } from "@/shared/types";
 
 export const actors: Record<UserRole, string> = {
+  SYSTEM_ADMIN: "CPC System Administrator",
   REGISTRAR: "Dr. Arthur Vance (University Registrar)",
   DEAN: "Dr. Maria Santos (BSIT Dean)",
   ACADEMIC_ADVISOR: "Dr. Evelyn Reed (Senior Academic Advisor)",
@@ -200,6 +202,30 @@ export function snapshot(
   return withStorage(
     seedDatabase,
     async () => {
+      if (role === "SYSTEM_ADMIN") {
+        const trail = await auditTrail();
+        return {
+          accessMode: identity?.mode || "demo",
+          currentRole: role,
+          actorName: identity?.displayName || actors[role],
+          sisRecords: [],
+          lmsRecords: [],
+          libraryRecords: [],
+          masterRecords: [],
+          etlReports: [],
+          interventions: [],
+          sourceCounts: { SIS: 0, LMS: 0, LIBRARY: 0 },
+          auditLogs: trail.entries.filter(
+            (entry) =>
+              (ACCOUNT_ACTIONS as readonly string[]).includes(entry.action) ||
+              (entry.userRole === "SYSTEM_ADMIN" &&
+                ["SIGN_IN", "SIGN_OUT", "MASKING_OVERRIDE_ATTEMPT"].includes(
+                  entry.action,
+                )),
+          ),
+          auditIntegrity: trail.valid,
+        };
+      }
       const studentId =
         identity?.mode === "account" ? identity.studentId : "STU-2024-001";
       const student = role === "STUDENT";

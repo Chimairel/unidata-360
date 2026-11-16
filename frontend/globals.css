@@ -1400,6 +1400,85 @@ td .badge {
   display: flex;
   flex-direction: column;
 }
+.accounts-workspace .summary-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.account-scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 75ch;
+}
+.account-scope svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.account-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto;
+  gap: 12px;
+  padding: 20px 24px;
+}
+.account-filters .search-field {
+  max-width: none;
+  min-width: 0;
+}
+.account-filters select,
+.account-filters input {
+  min-height: 44px;
+  width: 100%;
+}
+.account-fields {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.account-fields label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.account-fields input,
+.account-fields select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+}
+.accounts-table {
+  min-width: 920px;
+}
+.account-email {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.account-actions .button {
+  min-height: 40px;
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .account-filters,
+  .account-fields {
+    grid-template-columns: 1fr;
+  }
+  .account-filters {
+    padding: 20px;
+  }
+  .accounts-workspace .summary-strip {
+    grid-template-columns: 1fr;
+  }
+}
 .department-filter {
   display: flex;
   align-items: center;

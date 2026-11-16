@@ -13,6 +13,7 @@ Program names and sample courses are classroom examples, not a verified school c
 
 ## Responsibilities
 
+- **System Admin:** manages staff accounts through the Accounts dashboard, without student data access. Provision the first Admin with `npm run admin:setup`.
 - **Registrar:** school-wide student records, SIS/LMS/Library ingestion, ETL, analytics, follow-ups and system audit. This is separate from the project administrator who provisions accounts.
 - **Dean:** one assigned department. Starts in department analytics and may open that department's masked student dossiers, download its reports, save follow-ups and inspect their own activity. No imports, ETL, demo reset, raw source feeds or school-wide ETL reports.
 - **Academic Advisor:** academic records, analytics, follow-ups and personal activity across the current permitted school dataset. Advisors have not been given department restrictions in this version.
@@ -45,7 +46,7 @@ Keep the existing shared PostgreSQL connection in `backend/.env.local`. Stop run
 
 Only one device needs to run the upgrade against the shared database. Transfer the refreshed private account guide to the presentation device; Git carries the code and public email list. The hosted application needs the current code before these new roles are used online. Hosting deployment remains a separate step.
 
-For additional staff, run `npm run account:create`; a `DEAN` requires a department code. Students continue to self-register using their matching existing student ID and email.
+For additional staff, use System Admin → Accounts, or run `npm run account:create`; a `DEAN` requires a department code. Students continue to self-register using their matching existing student ID and email.
 
 ## Classroom demo mode
 

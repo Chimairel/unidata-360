@@ -67,7 +67,7 @@ async function main() {
     email = await rl.question("Account email: ");
     displayName = await rl.question("Display name: ");
     role = await rl.question(
-      "Role (REGISTRAR / DEAN / ACADEMIC_ADVISOR / STUDENT / COMPLIANCE_AUDITOR): ",
+      "Role (SYSTEM_ADMIN / REGISTRAR / DEAN / ACADEMIC_ADVISOR / STUDENT / COMPLIANCE_AUDITOR): ",
     );
     if (role === "STUDENT")
       studentId = await rl.question("Linked student ID: ");

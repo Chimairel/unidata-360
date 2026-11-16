@@ -1,11 +1,12 @@
 # UniData 360 demo accounts
 
-Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by the project administrator with the CLI. Registrar and Dean are application roles, separate from the person who provisions accounts.
+Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by System Admin in the Accounts dashboard; the CLI remains available for initial setup. Registrar and Dean are application roles, separate from the person who provisions accounts.
 
-Local and online UniData use the same PostgreSQL database and these eight synthetic accounts across five roles.
+Local and online UniData use the same PostgreSQL database and these nine synthetic accounts across six roles.
 
 | Role | Sign-in | Access |
 | --- | --- | --- |
+| System Admin | admin@cpc.edu | Manage staff accounts and account activity; no student records. |
 | Registrar | registrar@cpc.edu | School-wide records, imports, ETL and system audits. |
 | BSIT Dean | dean@cpc.edu | BSIT academic records, analytics and follow-ups. |
 | BEED Dean | dean.beed@cpc.edu | BEED academic records, analytics and follow-ups. |
@@ -20,6 +21,8 @@ Run `npm run school:setup` once against the shared database to upgrade the class
 Students sign in with their **school ID and existing password**. Staff sign in with the listed email and password. A student email address is for verification/recovery and is no longer accepted as the sign-in name. No accounts need to be recreated.
 
 Students who forget their password can use `/reset-password`; staff contact the project administrator. Recovery requires working email delivery or the local classroom preview.
+
+Run `npm run admin:setup` once to provision the System Admin. The generated credential is saved in `admin.private.txt` and appended to the shared private account guides; no existing password is changed. The command is repeatable. See [Admin guide](../docs/ADMIN_ACCOUNTS.md).
 
 ## Password files
 

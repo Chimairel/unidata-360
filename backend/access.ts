@@ -15,6 +15,7 @@ export function canAccessStudent(
   identity: AccessIdentity | undefined,
   student: Pick<UnifiedStudentRecord, "studentId" | "department">,
 ) {
+  if (role === "SYSTEM_ADMIN") return false;
   if (role === "STUDENT")
     return (
       student.studentId ===

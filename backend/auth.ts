@@ -18,6 +18,7 @@ export const accountSchema = z
     displayName: z.string().trim().min(1).max(100),
     password: z.string().min(12).max(128),
     role: z.enum([
+      "SYSTEM_ADMIN",
       "REGISTRAR",
       "DEAN",
       "ACADEMIC_ADVISOR",

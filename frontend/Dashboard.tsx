@@ -16,6 +16,7 @@ import { GovernanceTab } from "@/frontend/components/tabs/GovernanceTab";
 import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectureModal";
 import { PresentationMode } from "@/frontend/components/PresentationMode";
 import { SignIn } from "@/frontend/components/SignIn";
+import { AccountsTab } from "@/frontend/components/tabs/AccountsTab";
 import type { UserRole } from "@/shared/types";
 
 function Workspace() {
@@ -86,6 +87,9 @@ function Workspace() {
           </div>
         ) : (
           <>
+            {activeTab === "accounts" && currentRole === "SYSTEM_ADMIN" && (
+              <AccountsTab />
+            )}
             {activeTab === "student360" &&
               (currentRole === "STUDENT" ? (
                 <StudentWorkspace />
@@ -112,15 +116,19 @@ function Workspace() {
             : actorName.split(" (")[0]}
         </span>
       </footer>
-      {architecture && currentRole !== "STUDENT" && !isLoading && (
-        <SystemArchitectureModal
-          isOpen
-          onClose={() => setArchitecture(false)}
-        />
-      )}
-      {presentation && currentRole !== "STUDENT" && !isLoading && (
-        <PresentationMode onClose={() => setPresentation(false)} />
-      )}
+      {architecture &&
+        !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) &&
+        !isLoading && (
+          <SystemArchitectureModal
+            isOpen
+            onClose={() => setArchitecture(false)}
+          />
+        )}
+      {presentation &&
+        !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) &&
+        !isLoading && (
+          <PresentationMode onClose={() => setPresentation(false)} />
+        )}
     </div>
   );
 }

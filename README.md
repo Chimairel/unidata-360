@@ -61,6 +61,10 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 
 The school configuration includes **BSIT, BEED, BSED and BSHM**. Registrar and Dean are separate roles. See [school setup](docs/SCHOOL_SETUP.md) for the account upgrade and department policy.
 
+## System Admin
+
+Run `npm run admin:setup` once against the shared classroom database to create `admin@cpc.edu`. Its generated password is written only to Git-ignored `accounts/admin.private.txt` and appended to the private classroom guides. Sign in by email and use **Accounts** to create staff, assign roles/Dean departments, activate or disable access, and set new staff passwords. Admin accounts are protected from changes in that screen. System Admin cannot view student records, sources or academic reports. See [Admin guide](docs/ADMIN_ACCOUNTS.md).
+
 ## A five-minute classroom walkthrough
 
 ### Workspaces by role
@@ -68,6 +72,7 @@ The school configuration includes **BSIT, BEED, BSED and BSHM**. Registrar and D
 | Role | Workspace and limits |
 | --- | --- |
 | Registrar | Student directory, pipeline/imports, analytics and system audit. Can run ETL and save follow-ups. |
+| System Admin | Staff account creation, access updates, activation/disablement, password resets and account activity. No student-data workspace. |
 | Dean | Assigned department’s masked student records, analytics, follow-ups and own activity. No imports, ETL or access to other departments. |
 | Academic Advisor | Masked student directory, analytics, follow-ups and their own activity history. No source imports or ETL. |
 | Student | Personal record, courses, attendance, library clearance and own PDF report. No pipeline, cohort analytics, audit trail or internal staff follow-ups. |
@@ -119,16 +124,16 @@ All seed students and records are **synthetic**. The default demo mode permits c
 
 ## Account mode
 
-The [demo account guide](accounts/README.md) lists the five application roles and sign-in details. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
+The [demo account guide](accounts/README.md) lists the six application roles and sign-in details. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
 
-1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the five role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
+1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the six role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
 2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the servers. Restart the backend on port 3006. The default is `demo` when unset.
 3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
 4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the backend environment files.
 
 Passwords use salted scrypt hashes, and PostgreSQL stores SHA-256 hashes of session tokens. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an account trigger a persistent 15-minute lockout. Advisor audit views filter by account identity. Sign-in and sign-out events record the display name and account ID.
 
-Set `EDM_SECURE_COOKIES=true` when serving over HTTPS and false for local HTTP. Set `EDM_PUBLIC_ORIGIN` to the frontend origin in the backend environment. It defaults to `http://localhost:3005` for local runs. The frontend proxies cookies and API responses, so browser requests use the frontend address. Provisioning and staff password resets use the account CLI. Students can recover their password through `/reset-password` using their school ID and registered email. Disabling an account with `active=0` revokes access on subsequent requests.
+Set `EDM_SECURE_COOKIES=true` when serving over HTTPS and false for local HTTP. Set `EDM_PUBLIC_ORIGIN` to the frontend origin in the backend environment. It defaults to `http://localhost:3005` for local runs. The frontend proxies cookies and API responses, so browser requests use the frontend address. System Admin manages staff accounts and password resets in the Accounts screen; the CLI remains available for bootstrap and recovery. Students can recover their password through `/reset-password` using their school ID and registered email. Disabling an account with `active=0` revokes access on subsequent requests.
 
 FERPA and GDPR are the course's governance context; this project demonstrates selected technical controls and does not certify compliance. Risk categories are transparent classroom rules for human review, not predictions or automated student decisions. Current enrollment is a snapshot, not a measured retention rate.
 

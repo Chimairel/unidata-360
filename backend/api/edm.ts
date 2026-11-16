@@ -91,6 +91,7 @@ export async function POST(request: Request) {
     let role: UserRole = s.role;
     let message = "Saved";
     if (
+      role === "SYSTEM_ADMIN" ||
       (["sync", "reset", "import"].includes(cmd.type) && !canImport(role)) ||
       (cmd.type === "intervention" && !canFollowUp(role))
     ) {

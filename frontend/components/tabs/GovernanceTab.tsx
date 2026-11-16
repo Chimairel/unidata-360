@@ -11,6 +11,14 @@ import {
 } from "@/frontend/components/ui";
 const permissions = [
   [
+    "System Admin",
+    "No student records",
+    "No access",
+    "No access",
+    "Account events",
+    "Staff accounts only",
+  ],
+  [
     "Registrar",
     "Full records",
     "Unmasked",
@@ -63,6 +71,10 @@ const labels: Record<string, string> = {
   SIGN_OUT: "Account signed out",
   STUDENT_REGISTERED: "Student account verified",
   PASSWORD_RESET: "Student password reset",
+  ACCOUNT_CREATED: "Staff account created",
+  ACCOUNT_UPDATED: "Staff access updated",
+  ACCOUNT_STATUS_CHANGED: "Staff status changed",
+  STAFF_PASSWORD_RESET: "Staff password reset",
 };
 export function GovernanceTab() {
   const { currentRole, masterRecords, auditLogs, auditIntegrity, accessMode } =
@@ -117,6 +129,7 @@ export function GovernanceTab() {
                   style={{
                     background:
                       [
+                        "SYSTEM_ADMIN",
                         "REGISTRAR",
                         "DEAN",
                         "ACADEMIC_ADVISOR",

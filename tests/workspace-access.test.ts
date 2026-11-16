@@ -10,6 +10,7 @@ import type { UserRole } from "../shared/types";
 
 test("each role has its own permitted workspace and starting page", () => {
   const expected: Record<UserRole, readonly TabId[]> = {
+    SYSTEM_ADMIN: ["accounts"],
     REGISTRAR: ["student360", "pipeline", "analytics", "governance"],
     DEAN: ["analytics", "student360", "governance"],
     ACADEMIC_ADVISOR: ["student360", "analytics", "governance"],
@@ -20,6 +21,7 @@ test("each role has its own permitted workspace and starting page", () => {
     assert.deepEqual(workspaceTabs(role), expected[role]);
     assert.equal(defaultWorkspaceTab(role), expected[role][0]);
     for (const tab of [
+      "accounts",
       "student360",
       "pipeline",
       "analytics",
