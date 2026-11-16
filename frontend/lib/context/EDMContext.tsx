@@ -56,6 +56,7 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
   const refresh = async () => {
     setLoading(true);
     setError(null);
+    setNotice(null);
     try {
       setData(await fetchSnapshot());
       setRequiresSignIn(false);
@@ -73,7 +74,11 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     void fetchSnapshot()
       .then((result) => {
-        if (active) setData(result);
+        if (active) {
+          setData(result);
+          setRequiresSignIn(false);
+          setError(null);
+        }
       })
       .catch((e) => {
         if (active && e instanceof Error && e.name === "AuthenticationRequired")
@@ -162,6 +167,9 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
             const response = await fetch("/api/auth", { method: "DELETE" });
             if (!response.ok) throw new Error("Sign-out failed. Try again.");
             setData(empty);
+            setNotice(null);
+            setError(null);
+            setRequiresSignIn(true);
             router.replace("/login");
             router.refresh();
           } catch (e) {

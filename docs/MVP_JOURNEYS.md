@@ -1,5 +1,32 @@
 # UniData 360 MVP journeys
 
+## Full six-role MVP regression — 17 November 2026
+
+Completed against the local production frontend on 3005 and backend on 3006, using disposable PostgreSQL schemas and synthetic accounts. The shared classroom accounts and student data were not modified.
+
+| Role | Browser journey verified | Result |
+| --- | --- | --- |
+| System Admin | Sign in to Accounts only; edit a staff display name without changing access scope; save, inspect feedback/activity, reload and confirm persistence; sign out. | Passed |
+| Registrar | Search/filter school records, open a dossier, download PDF, stage a synthetic SIS record, run ETL and find the ninth master record; open and advance classroom slides; sign out. | Passed |
+| Dean | BEED analytics and its two students only; masked dossier; save a department follow-up and confirm it after reload; download department analytics; inspect own activity; sign out. | Passed |
+| Academic Advisor | School academic directory and radar; save Kofi's follow-up and confirm it after reload; inspect masked SSN, birth date and financial aid; no pipeline controls; sign out. | Passed |
+| Student | School ID/password sign-in; personal record, courses and library clearance only; own PDF download; 390px mobile layout without document horizontal overflow; sign out. | Passed |
+| Compliance Auditor | Governance landing page, verified audit chain, audit CSV download, pseudonymized directory and restricted dossier; no pipeline or academic analytics controls; sign out. | Passed |
+
+Automated evidence: **27 tests passed, none skipped**, plus **203 production HTTP checks**: 117 staff/department checks, 28 student registration/recovery checks and 58 Admin checks. These exercise CSV/JSON ingestion, ETL, all four Dean departments, role escalation/forbidden actions, student record isolation, registration/activation/recovery, staff creation/access/status/password changes, session revocation, protected Admin/Student targets and audit integrity. Anonymous account requests return 401; forbidden role actions return 403, while inaccessible student records return 404 to avoid revealing their existence.
+
+Downloaded browser artifacts: three valid PDFs (Registrar dossier, Dean analytics and Student report), with page counts and report/student metadata checked, and an audit CSV with the expected columns, hashes, ETL and follow-up events. The final browser console reported no errors. The production frontend build, TypeScript and ESLint passed after corrections.
+
+Corrections made during this pass:
+
+- Clear success/error messages when signing out or refreshing so a previous user's operation notice does not appear in the next user's workspace.
+- Clear the authentication-required state after a successful snapshot fetch, including when a cached workspace resumes after sign-in.
+- Give each SignIn instance unique React-generated input IDs so the inline form and cached `/login` page retain unambiguous labels.
+
+Repeated Registrar → Dean → Advisor → Student → Auditor → Admin sign-in/sign-out checks passed after these corrections. The Registrar ETL notice was absent in the subsequent Dean session, and exact sign-in field labels remained usable through cached navigation.
+
+Limitations: email flows used private local previews and mocked Resend tests, not a real inbox. Hosting remains paused; this is a local MVP verification, not a new hosted deployment. Disposable browser test data is removed after verification and the normal shared-database development servers are restored.
+
 ## System Admin staff accounts — 17 November 2026
 
 System Admin now has a dedicated Accounts workspace. Students continue to self-register; Admin can create Registrar, Dean, Academic Advisor and Compliance Auditor accounts. Dean accounts require one of BSIT, BEED, BSED or BSHM. Admin has no student records, imports, ETL, academic analytics or academic reports.

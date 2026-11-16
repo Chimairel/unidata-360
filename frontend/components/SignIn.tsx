@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,9 @@ import { AccountHeader } from "./AccountHeader";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const router = useRouter();
+  const formId = useId();
+  const identifierId = `${formId}-identifier`;
+  const passwordId = `${formId}-password`;
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -131,10 +134,10 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                   }}
                   className="sign-in-form"
                 >
-                  <label htmlFor="account-identifier">
+                  <label htmlFor={identifierId}>
                     School ID or staff email
                     <input
-                      id="account-identifier"
+                      id={identifierId}
                       name="identifier"
                       type="text"
                       autoComplete="username"
@@ -148,10 +151,10 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                       disabled={pending}
                     />
                   </label>
-                  <label htmlFor="account-password">
+                  <label htmlFor={passwordId}>
                     Password
                     <input
-                      id="account-password"
+                      id={passwordId}
                       name="password"
                       type="password"
                       autoComplete="current-password"
