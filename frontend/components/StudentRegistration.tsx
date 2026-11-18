@@ -8,7 +8,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Mail,
-  ShieldCheck,
 } from "lucide-react";
 import { AccountHeader } from "./AccountHeader";
 
@@ -64,55 +63,22 @@ export function StudentRegistration({
   const descriptions = {
     request: recovery
       ? "Enter your school ID and the email registered to your student account."
-      : "Use the school ID and email address recorded in your school’s Student Information System. A Gmail address is fine if it matches your school record.",
+      : "Enter the school ID and email on your school record.",
     sent: recovery
-      ? "If these details match a registered student account, a password reset link is on its way. The link expires in 30 minutes."
-      : "If these details match an eligible school record, a verification link is on its way. The link expires in 30 minutes.",
+      ? "If your details match, you’ll receive a reset link valid for 30 minutes."
+      : "If your record is eligible, you’ll receive a verification link valid for 30 minutes.",
     password: recovery
       ? "Choose a new password. This will sign out your existing account sessions."
-      : "Complete email verification by setting a password for your student account.",
+      : "Set a password to activate your student account.",
     complete: recovery
       ? "Sign in with your school ID and new password. Previous sessions have been signed out."
-      : "Your email is verified. Sign in with your school ID and password to view your own student record.",
+      : "Sign in with your school ID and password.",
   };
   return (
     <div className="account-page">
       <AccountHeader current={recovery ? "login" : "register"} />
       <main className="sign-in-shell">
         <section className="sign-in-content">
-          <div className="sign-in-story">
-            <h1>
-              {recovery ? "Back to your record." : "Your student record."}
-              <br /> {recovery ? "Recover your access." : "Your own access."}
-            </h1>
-            <p>
-              {recovery
-                ? "Recover your student account through the email you verified when you registered."
-                : "Set up your account using the school record that already belongs to you."}
-            </p>
-            <dl className="sign-in-benefits">
-              <div>
-                <dt>Use your school ID</dt>
-                <dd>Enter your school ID and the email on your record.</dd>
-              </div>
-              <div>
-                <dt>Verify your email</dt>
-                <dd>Open your personal email link, then choose a password.</dd>
-              </div>
-              <div>
-                <dt>Sign in as a student</dt>
-                <dd>
-                  Use your school ID and password to see your own student
-                  record.
-                </dd>
-              </div>
-            </dl>
-            <p className="small">
-              {recovery
-                ? "Staff member? Ask your project administrator to reset your password."
-                : "Staff member? Your project administrator creates staff accounts."}
-            </p>
-          </div>
           <div className="panel sign-in-panel">
             <div className="panel-body">
               {stage === "complete" ? (
@@ -120,9 +86,9 @@ export function StudentRegistration({
               ) : (
                 <Mail size={24} />
               )}
-              <h2 ref={heading} tabIndex={-1}>
+              <h1 ref={heading} tabIndex={-1}>
                 {titles[stage]}
-              </h2>
+              </h1>
               <p className="small">{descriptions[stage]}</p>
               {error && (
                 <div className="message error" role="alert">
@@ -271,14 +237,13 @@ export function StudentRegistration({
                 <div className="registration-next" role="status">
                   {preview && (
                     <p className="small">
-                      Local email preview is enabled. Ask the presenter to open
-                      the email message saved on this computer.
+                      Demo email: ask the presenter to open the local preview.
                     </p>
                   )}
                   <p className="small">
                     {recovery
-                      ? "If no message arrives, check spam or ask the registrar to confirm the email registered to your student account."
-                      : "Already registered? Sign in instead. If no message arrives, check spam or ask the registrar to confirm your school details."}
+                      ? "No email? Check spam or confirm your registered email with the registrar."
+                      : "No email? Check spam or confirm your school details with the registrar."}
                   </p>
                   <button
                     className="button secondary"
@@ -296,7 +261,7 @@ export function StudentRegistration({
                   className="button primary registration-finish"
                   href="/login"
                 >
-                  Sign in to your account <ArrowRight size={16} />
+                  Sign in <ArrowRight size={16} />
                 </Link>
               )}
               {stage === "password" && (
@@ -320,17 +285,14 @@ export function StudentRegistration({
                   </Link>
                 </p>
               )}
+              {stage === "request" && (
+                <p className="small sign-in-help muted">
+                  Staff access: contact your administrator.
+                </p>
+              )}
             </div>
           </div>
         </section>
-        <footer className="sign-in-footer">
-          <ShieldCheck size={14} />
-          <span>
-            {recovery
-              ? "Student recovery uses your registered email. Staff should contact the project administrator."
-              : "Self-registration creates Student accounts only. Your access is limited to your own record."}
-          </span>
-        </footer>
       </main>
     </div>
   );

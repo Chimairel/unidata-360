@@ -331,7 +331,7 @@ At 760px, the frame fills the viewport, with no outer padding, radius or shadow.
 
 Panels retain 24px body padding and 20px by 22px heading padding. Split panels and forms stack at 760px; pipeline connectors turn downward. Standard dialogs are limited to 640px wide, wide dialogs to 1050px, with 16px viewport gutters and internal scrolling. Presentation reaches 1440px wide and 94dvh high, switching to 8px gutters and 96dvh on narrow screens. Mobile slides start at the top; comparative tables keep local scrolling.
 
-Sign-in retains a 1200px maximum width, 40px padding and 100dvh minimum height. Introduction and form have a 1.15-to-1 column ratio and 90px gap, reduced to 40px at 1050px. At 760px, content stacks with a 28px gap and 24px padding; benefits hide and the forced heading break clears. Brand/content spacing changes from 64px to 36px and the footer gap from 64px to 28px.
+Sign-in, registration and recovery use one compact form below the shared account header. The shell has a 560px maximum width and 32px by 24px padding, centered vertically when space allows. At 760px it uses 24px padding and starts at the top. Keep the task heading, labeled fields, state feedback and account-help links; omit promotional introductions and benefit lists.
 
 ## Elevation & Depth
 

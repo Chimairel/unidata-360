@@ -53,7 +53,6 @@ export function QualityTab() {
     <div className="page-stack workflow-page">
       <PageHeading
         title="Data quality"
-        description="Find broken source relationships, assign a steward and verify corrections when ETL republishes the master."
         action={
           accessMode === "account" &&
           canWrite && (
@@ -70,11 +69,8 @@ export function QualityTab() {
       />
       {accessMode !== "account" ? (
         <section className="panel panel-body">
-          <h2>Use a staff account to inspect quality work</h2>
-          <p>
-            Sign in as Registrar to manage issues, or Compliance Auditor to
-            inspect quality history.
-          </p>
+          <h2>Staff sign-in required</h2>
+          <p>Registrar: manage issues. Auditor: view history.</p>
           <Link className="button primary" href="/login">
             Sign in
           </Link>
@@ -106,18 +102,12 @@ export function QualityTab() {
                 {data.checkedAt
                   ? `Last source check: ${formatTime(data.checkedAt)}.`
                   : "Run ETL to initialize the source checks."}{" "}
-                {canWrite
-                  ? "Corrections are staged; the master changes only after ETL."
-                  : "Auditor access is read-only. Raw source values are withheld."}
+                {canWrite ? "Changes publish after ETL." : "Read-only."}
               </p>
               <section className="panel">
                 <div className="panel-header">
                   <div>
                     <h2>Quality issue queue</h2>
-                    <p>
-                      Missing feeds and source identities that cannot be
-                      reconciled.
-                    </p>
                   </div>
                   <button
                     className="button secondary"
@@ -251,10 +241,7 @@ export function QualityTab() {
                   <div className="panel-header">
                     <div>
                       <h2>Stage a source correction</h2>
-                      <p>
-                        Upload a corrected CSV or JSON feed. The same validation
-                        and atomic import rules apply as in Pipeline.
-                      </p>
+                      <p>CSV/JSON · 2 MB · 1,000 rows</p>
                     </div>
                     <Upload size={20} />
                   </div>
@@ -286,9 +273,8 @@ export function QualityTab() {
                       />
                     </label>
                     <p className="small muted">
-                      Use the source templates from Pipeline. Importing stages
-                      the correction; run ETL above to publish it and
-                      automatically resolve passed checks.
+                      Use a Pipeline template. Run ETL after uploading to
+                      recheck issues.
                     </p>
                   </div>
                 </section>
@@ -332,11 +318,8 @@ export function QualityTab() {
                 <div className="panel-body">
                   <h3>Field lineage</h3>
                   <p className="small muted">
-                    Published identity, enrollment and GPA come from SIS;
-                    learning metrics from LMS; clearance from Library. Risk
-                    combines those fields using the published rules. Receipt
-                    metadata describes staged records; it is not a snapshot of
-                    every previous field value.
+                    SIS: identity and GPA. LMS: learning. Library: clearance.
+                    Receipts track staged imports, not field history.
                   </p>
                   <label>
                     Lineage student
@@ -354,9 +337,8 @@ export function QualityTab() {
                   <p className="small">
                     Master last published:{" "}
                     {published ? formatTime(published) : "Not published"}.
-                    Source coverage is the fraction of the three feeds present:
-                    1/3 = 33%, 2/3 = 67%, 3/3 = 100%. It does not measure
-                    accuracy or predict a student outcome.
+                    Coverage: feeds present ÷ 3. This measures completeness, not
+                    accuracy.
                   </p>
                   <div className="table-wrap">
                     <table>
@@ -557,9 +539,8 @@ function QualityDetail({
               >
                 <h3>Correct the source identity</h3>
                 <p className="small muted">
-                  Relink this staged record to an existing SIS student. A
-                  destination key collision is rejected. The published master
-                  stays unchanged until ETL.
+                  Choose an existing SIS student. Duplicate destination keys are
+                  rejected. Run ETL to publish.
                 </p>
                 <label>
                   Correct student
@@ -600,8 +581,7 @@ function QualityDetail({
               ))
           ) : (
             <p className="muted">
-              No steward updates yet. Resolution is recorded automatically after
-              the source check passes.
+              No updates yet. ETL resolves issues when checks pass.
             </p>
           )}
         </div>

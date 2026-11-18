@@ -87,8 +87,8 @@ export function IntegrationPipelineTab() {
   return (
     <div className="page-stack">
       <PageHeading
-        title="From siloed feeds to a trusted record."
-        description="Validate source data, reconcile student identities, and publish a unified master store. Imports are staged until the next ETL run."
+        title="Integration pipeline"
+        description="Run ETL to publish imported records."
         action={
           <>
             <button
@@ -149,10 +149,7 @@ export function IntegrationPipelineTab() {
       {!canWrite && (
         <div className="inline-note">
           <ShieldCheck size={16} />
-          <span>
-            Source ingestion and ETL execution require the Registrar persona.
-            The server withholds raw source rows from your current persona.
-          </span>
+          <span>Registrar access required for imports and ETL.</span>
         </div>
       )}
       <div className="split-layout">
@@ -418,9 +415,6 @@ export function IntegrationPipelineTab() {
           alignItems: "center",
         }}
       >
-        <p className="small">
-          PostgreSQL records persist through page reloads and server restarts.
-        </p>
         <button
           className="button quiet"
           disabled={!canWrite || isSyncing}

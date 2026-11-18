@@ -2,12 +2,7 @@
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  LockKeyhole,
-  AlertCircle,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, LockKeyhole, AlertCircle } from "lucide-react";
 import { AccountHeader } from "./AccountHeader";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
@@ -51,44 +46,10 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       <AccountHeader current="login" />
       <main className="sign-in-shell">
         <section className="sign-in-content">
-          <div className="sign-in-story">
-            <h1>
-              Your role.
-              <br /> Your permitted workspace.
-            </h1>
-            <p>
-              Connect the student lifecycle through trusted records, clear
-              insights, and accountable access.
-            </p>
-            <dl className="sign-in-benefits">
-              <div>
-                <dt>One connected record</dt>
-                <dd>SIS, learning activity, and library clearance.</dd>
-              </div>
-              <div>
-                <dt>Permissions that follow you</dt>
-                <dd>
-                  Your account determines the records and fields you can access.
-                </dd>
-              </div>
-              <div>
-                <dt>An inspectable history</dt>
-                <dd>
-                  Sign-ins, data changes, and exports leave an audit trail.
-                </dd>
-              </div>
-            </dl>
-            <p className="small">
-              Education / Universities · Synthetic course dataset
-            </p>
-          </div>
           <div className="panel sign-in-panel">
             <div className="panel-body">
               <LockKeyhole className="text-accent" size={24} />
-              <h2>Sign in to UniData</h2>
-              <p className="small">
-                Students use their school ID. Staff use their assigned email.
-              </p>
+              <h1>Sign in</h1>
               {error && (
                 <div className="message error" role="alert">
                   <AlertCircle size={17} />
@@ -97,7 +58,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
               )}
               {signedIn ? (
                 <div className="sign-in-existing">
-                  <p>You already have an active account session.</p>
+                  <p>You’re signed in.</p>
                   <Link className="button primary" href="/">
                     Open workspace <ArrowRight size={16} />
                   </Link>
@@ -172,38 +133,28 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                 </form>
               )}
               <p className="small sign-in-help">
-                New student?{" "}
                 <Link className="text-link" href="/register">
-                  Create your student account
+                  Create student account
                 </Link>
               </p>
               <p className="small sign-in-help muted">
                 <Link className="text-link" href="/reset-password">
-                  Forgot your student password?
+                  Forgot student password?
                 </Link>
               </p>
               <p className="small sign-in-help muted">
-                Staff accounts and password resets: contact your project
-                administrator.
+                Staff access: contact your administrator.
               </p>
               {accountsRequired === false && (
                 <div className="sign-in-demo">
-                  <span className="small muted">Presenting in class?</span>
                   <Link className="text-link" href="/">
-                    Open the demo workspace
+                    Open demo
                   </Link>
                 </div>
               )}
             </div>
           </div>
         </section>
-        <footer className="sign-in-footer">
-          <ShieldCheck size={14} />
-          <span>
-            Student registration requires a matching university record and email
-            verification.
-          </span>
-        </footer>
       </main>
     </div>
   );

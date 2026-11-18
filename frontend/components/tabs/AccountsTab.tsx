@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Plus,
   Search,
-  ShieldCheck,
   RefreshCw,
 } from "lucide-react";
 import { STAFF_ROLES, ROLE_LABELS } from "@/shared/accounts";
@@ -87,7 +86,7 @@ function StaffEditor({
           <p>
             {account
               ? `${account.email} · Updating access signs out existing sessions.`
-              : "Provide staff sign-in details. Students continue to register themselves."}
+              : "Students self-register."}
           </p>
         </div>
       </div>
@@ -183,8 +182,7 @@ function StaffEditor({
         </fieldset>
         {!account && (
           <p className="small muted" id="staff-password-help">
-            Use 12–128 characters. Share the email and initial password
-            privately with the staff member.
+            12–128 characters. Share credentials privately.
           </p>
         )}
         <div className="form-actions">
@@ -238,9 +236,8 @@ function PasswordEditor({
         }}
       >
         <p>
-          Set a new password for <strong>{account.email}</strong>. Existing
-          sessions will be signed out. The account’s active or disabled status
-          stays the same.
+          <strong>{account.email}</strong>. This signs out existing sessions;
+          account status is unchanged.
         </p>
         {(error || serverError) && (
           <p className="message error" role="alert">
@@ -271,9 +268,7 @@ function PasswordEditor({
             />
           </label>
         </fieldset>
-        <p className="small muted">
-          Use 12–128 characters. Existing passwords cannot be viewed.
-        </p>
+        <p className="small muted">12–128 characters.</p>
         <div className="form-actions">
           <button
             className="button secondary"
@@ -367,7 +362,6 @@ export function AccountsTab() {
     <div className="page-stack accounts-workspace">
       <PageHeading
         title="Staff accounts"
-        description="Create staff access, assign responsibilities, and keep accounts up to date."
         action={
           <button
             className="button primary"
@@ -383,11 +377,6 @@ export function AccountsTab() {
           </button>
         }
       />
-      <p className="account-scope">
-        <ShieldCheck size={16} />
-        System Admin manages accounts. Student records and academic analytics
-        remain in their permitted workspaces.
-      </p>
       {(message || (error && !editor && !reset && !toggle)) && (
         <div
           className={`message ${error ? "error" : "success"}`}
@@ -430,10 +419,7 @@ export function AccountsTab() {
         <div className="panel-header">
           <div>
             <h2>Staff directory</h2>
-            <p>
-              Students self-register. System Admin accounts are protected from
-              changes here.
-            </p>
+            <p>Admin accounts are protected.</p>
           </div>
           <button
             className="button secondary"
@@ -571,10 +557,6 @@ export function AccountsTab() {
         <div className="panel-header">
           <div>
             <h2>Account activity</h2>
-            <p>
-              Account changes and administrator access events. Passwords are
-              never recorded.
-            </p>
           </div>
         </div>
         {activity.length ? (
@@ -632,8 +614,8 @@ export function AccountsTab() {
             </p>
             <p className="small muted">
               {toggle.active
-                ? "This signs out existing sessions and prevents sign-in. You can activate the account again later."
-                : "The staff member can sign in again with their existing password and assigned role."}
+                ? "Signs out all sessions and blocks sign-in. You can reactivate later."
+                : "Restores sign-in with the existing password and role."}
             </p>
             <div className="form-actions">
               <button

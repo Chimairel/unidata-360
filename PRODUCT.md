@@ -28,3 +28,5 @@ Eight synthetic SIS students and matching learning/library seed data. Two suppli
 
 ## Product Principles
 Make every lifecycle stage demonstrable. Enforce permissions before sending data to the browser. Distinguish synthetic demonstration data from institutional claims. Preserve audit history across demo resets.
+
+Keep interface copy brief: task titles, labels, useful status and essential guidance. Put detailed criteria behind disclosure and course explanations in presentation views. Avoid promotional introductions and repeated descriptions.

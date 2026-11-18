@@ -132,3 +132,9 @@ Verification passed: **31 automated tests, zero skips; 66 workflow HTTP checks; 
 The independent Impeccable finish review identified two misleading status messages. Successful reload/recheck now clears obsolete staging feedback, and resolved issue descriptions are explicitly labeled as the original finding. Desktop/mobile recaptures and the rebuilt applications confirmed both fixes; the reviewer scored both resolved with disposition **ship**. The existing design tokens, black rail, gray panels, typography, native fields and table behavior were compared with the incumbent system; DESIGN.md was preserved. The detector reported zero primary findings, with existing color/type documentation advisories retained for a separate design-system review.
 
 See [workflow guide](WORKFLOWS.md) for the current role policy and presentation steps. Advising cases require signed-in staff accounts; they do not send emails. The earlier four-role walkthrough above records an older baseline rather than the current six-role policy.
+
+## Concise interface copy — 19 November 2026
+
+Removed account-page introductions and benefit lists, repeated dashboard descriptions and promotional headings. Shortened staff, student, pipeline, quality, case and governance guidance. Warning criteria remain available in an expandable section; field labels, upload/password limits, ETL publishing instructions and consequential-action notices remain visible where needed.
+
+Browser checks used disposable PostgreSQL data: sign-in at 1920px and 390px, mobile registration, recovery, Registrar workspaces, student self-access and the Admin staff form. Sign-in/sign-out, account links and warning-criteria disclosure worked; no console errors were recorded. Lint and production builds passed. Backend behavior and access policy were unchanged.

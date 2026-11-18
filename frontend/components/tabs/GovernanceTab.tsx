@@ -94,11 +94,6 @@ export function GovernanceTab() {
     <div className="page-stack">
       <PageHeading
         title={personalActivity ? "My activity & access" : "Governance & audit"}
-        description={
-          personalActivity
-            ? "Review your own activity history and the field restrictions that apply to your account."
-            : "Review access policies, field masking, and the system-wide audit history."
-        }
         action={
           currentRole !== "STUDENT" ? (
             <ReportLink kind="audit" label="Export audit CSV" />
@@ -108,12 +103,11 @@ export function GovernanceTab() {
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h2>Role-based access policy</h2>
-            <p>Application policy for this educational demonstration</p>
+            <h2>Access policy</h2>
           </div>
           <Badge tone="info">
             <ShieldCheck size={13} />
-            Enforced in server routes
+            Role-based access
           </Badge>
         </div>
         <div className="table-wrap">
@@ -159,16 +153,15 @@ export function GovernanceTab() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Field masking in practice</h2>
-              <p>Only permitted values arrive in your browser.</p>
+              <h2>Field masking</h2>
             </div>
             <LockKeyhole size={20} className="text-accent" />
           </div>
           <div className="panel-body">
             <p className="small">
               {accessMode === "account"
-                ? "Your account role determines this projection. Raw fields are withheld when your role does not permit access."
-                : "Change the demo persona in the top bar to compare the same student’s projected record. Raw fields are withheld from restricted personas."}
+                ? "Fields shown for your role."
+                : "Switch demo persona to compare access."}
             </p>
             {sample ? (
               <div className="mask-sample">
@@ -206,7 +199,6 @@ export function GovernanceTab() {
           <div className="panel-header">
             <div>
               <h2>Governance controls</h2>
-              <p>Privacy-inspired controls with inspectable behavior</p>
             </div>
             <Database size={20} className="text-accent" />
           </div>
@@ -216,30 +208,23 @@ export function GovernanceTab() {
                 <CheckCircle2 size={15} />
                 <span>
                   {accessMode === "account"
-                    ? "A revocable HttpOnly session identifies your signed-in account. Its assigned role gates data, writes, and exports."
-                    : "HttpOnly session cookies identify the current demonstration persona. Server permissions gate source writes and exports."}
+                    ? "Account roles restrict records, changes and exports."
+                    : "Demo persona permissions restrict changes and exports."}
                 </span>
               </li>
               <li>
                 <CheckCircle2 size={15} />
                 <span>
-                  Audit entries use UTC timestamps and SHA-256 chaining. A
-                  PostgreSQL trigger rejects edits and deletions.
+                  Hash-chained audit logs cannot be edited or deleted.
                 </span>
               </li>
               <li>
                 <CheckCircle2 size={15} />
-                <span>
-                  CSV/JSON records are validated before import. Invalid batches
-                  are rejected without partial writes.
-                </span>
+                <span>Invalid imports are rejected in full.</span>
               </li>
               <li>
                 <CheckCircle2 size={15} />
-                <span>
-                  Resetting the demo preserves the audit trail and historical
-                  ETL reports.
-                </span>
+                <span>Demo resets preserve audit and ETL history.</span>
               </li>
             </ul>
             <div style={{ marginTop: 18 }}>
@@ -354,12 +339,8 @@ export function GovernanceTab() {
       <div className="inline-note">
         <ShieldCheck size={16} />
         <span>
-          FERPA and GDPR inform the course’s governance discussion. This app
-          demonstrates selected technical controls; it does not establish
-          regulatory compliance.{" "}
-          {accessMode === "account"
-            ? "Account access uses administrator-provisioned roles. Institutional identity and operational privacy controls remain necessary before handling real student data."
-            : "Persona switching is intentionally open in demo mode. Enable account mode to require sign-in and administrator-assigned roles."}
+          Demonstration controls, not certified FERPA/GDPR compliance.
+          {accessMode !== "account" && " Demo personas do not require sign-in."}
         </span>
       </div>
     </div>

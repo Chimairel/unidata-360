@@ -91,7 +91,6 @@ export function StudentDirectory({
             Student directory{" "}
             <span className="directory-count">{students.length}</span>
           </h2>
-          <p>Find a student and open their connected record.</p>
         </div>
         <div className="view-switch" role="group" aria-label="Directory view">
           <button

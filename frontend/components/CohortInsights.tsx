@@ -157,10 +157,9 @@ export function CohortInsights({
       </section>
       <section className="source-health">
         <div className="insight-heading">
-          <h2>Connected & current</h2>
+          <h2>Source coverage</h2>
           <ShieldCheck size={21} />
         </div>
-        <p>Three sources. One trusted student view.</p>
         <div className="health-score">
           <strong>{complete}%</strong>
           <span>
@@ -191,10 +190,9 @@ export function CohortInsights({
       {attention.length > 0 && (
         <section className="attention-queue">
           <div className="insight-heading">
-            <h2>A little attention</h2>
+            <h2>Needs attention</h2>
             <span>{flagged.length} flagged</span>
           </div>
-          <p>A good moment to check in.</p>
           {attention.map((s) => (
             <button
               key={s.studentId}
@@ -210,10 +208,7 @@ export function CohortInsights({
           ))}
         </section>
       )}
-      <p className="insights-note">
-        Synthetic course dataset · Current snapshot, not a longitudinal
-        prediction.
-      </p>
+      <p className="insights-note">Synthetic data · Current snapshot</p>
     </aside>
   );
 }

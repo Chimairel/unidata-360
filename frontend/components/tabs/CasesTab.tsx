@@ -38,10 +38,6 @@ function CaseEditor({
       <div className="panel-header">
         <div>
           <h2>Create a support case</h2>
-          <p>
-            Choose a student and an active staff member responsible for the next
-            action.
-          </p>
         </div>
       </div>
       <form
@@ -123,9 +119,7 @@ function CaseEditor({
           </label>
         </fieldset>
         <p className="small muted">
-          One support case per student preserves a continuous history. Reopen an
-          existing resolved case when further support is needed. Staff notes
-          remain internal.
+          Staff-only notes. One case per student; reopen for further support.
         </p>
         <div className="form-actions">
           <button
@@ -238,8 +232,8 @@ function CaseDetail({
         {!canEdit && (
           <p className="message info">
             {entry.assigneeId
-              ? "This case is assigned to another staff member. You can review the case you opened; the assigned person or school leadership manages its follow-up."
-              : "Assign an active responsible staff member before recording follow-up."}
+              ? "Read-only. Assigned staff or school leadership manages follow-up."
+              : "Assign staff before recording follow-up."}
           </p>
         )}
         <div className="workflow-detail-grid">
@@ -400,11 +394,7 @@ export function CasesTab({ initialStudentId }: { initialStudentId?: string }) {
     <div className="page-stack workflow-page">
       <PageHeading
         title="Advising cases"
-        description={
-          currentRole === "DEAN"
-            ? `Coordinate student support within ${departmentScope}. Track responsibility, follow-up and outcomes.`
-            : "Turn a concern into owned work. Record follow-up, track due dates and close the case with an outcome."
-        }
+        description={currentRole === "DEAN" ? departmentScope : undefined}
         action={
           accessMode === "account" && (
             <button
@@ -424,11 +414,8 @@ export function CasesTab({ initialStudentId }: { initialStudentId?: string }) {
       />
       {accessMode !== "account" ? (
         <section className="panel panel-body">
-          <h2>Use a staff account for case management</h2>
-          <p>
-            Cases link to real staff identities. Sign in as Registrar, Dean or
-            Academic Advisor to manage assignments and private notes.
-          </p>
+          <h2>Staff sign-in required</h2>
+          <p>Sign in as Registrar, Dean or Academic Advisor.</p>
           <Link className="button primary" href="/login">
             Sign in
           </Link>
@@ -468,7 +455,7 @@ export function CasesTab({ initialStudentId }: { initialStudentId?: string }) {
                         }),
                   ).length
                 }{" "}
-                overdue. Student accounts cannot access these notes.
+                overdue · Staff only
               </p>
               {entry ? (
                 <CaseDetail
@@ -502,10 +489,6 @@ export function CasesTab({ initialStudentId }: { initialStudentId?: string }) {
                             ? "Your cases and unassigned referrals"
                             : "Case queue"}
                         </h2>
-                        <p>
-                          Open the case to review its history or record the next
-                          action.
-                        </p>
                       </div>
                       <button
                         className="button secondary"

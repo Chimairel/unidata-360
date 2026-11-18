@@ -2,13 +2,7 @@
 import { useState } from "react";
 import { CohortInsights } from "@/frontend/components/CohortInsights";
 import { StudentDirectory } from "@/frontend/components/StudentDirectory";
-import {
-  ShieldCheck,
-  LockKeyhole,
-  Users,
-  GraduationCap,
-  ArrowUpRight,
-} from "lucide-react";
+import { ShieldCheck, Users, GraduationCap, ArrowUpRight } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import {
   Badge,
@@ -24,7 +18,6 @@ export function Student360Tab() {
     currentRole,
     viewStudent,
     isSyncing,
-    accessMode,
     actorName,
     departmentScope,
   } = useEDM();
@@ -65,15 +58,6 @@ export function Student360Tab() {
                   </>
                 )}
               </h1>
-              <p>
-                {currentRole === "ACADEMIC_ADVISOR"
-                  ? "Review academic progress and follow up with students who need support."
-                  : currentRole === "COMPLIANCE_AUDITOR"
-                    ? "Inspect permitted student summaries with identifying fields masked."
-                    : currentRole === "DEAN"
-                      ? `Review academic progress and student support in ${departmentScope}.`
-                      : "Manage connected student records across the school."}
-              </p>
               <span>
                 {currentRole === "ACADEMIC_ADVISOR"
                   ? "Academic advising"
@@ -96,15 +80,13 @@ export function Student360Tab() {
               <ShieldCheck size={23} />
             </span>
             <div>
-              <strong>One student. The whole story.</strong>
-              <span>
-                {completeness}% source completeness · SIS + LMS + Library
-              </span>
+              <strong>{completeness}% source completeness</strong>
+              <span>SIS · LMS · Library</span>
             </div>
             <Badge tone="info">
               {currentRole === "REGISTRAR"
                 ? "Registrar access"
-                : "Server-masked access"}
+                : "Masked fields"}
             </Badge>
             <ArrowUpRight size={20} />
           </div>
@@ -131,19 +113,6 @@ export function Student360Tab() {
             }}
           />
         )}
-      </div>
-      <div className="inline-note">
-        <LockKeyhole size={15} />
-        <span>
-          Field permissions are applied by the server.{" "}
-          {currentRole === "STUDENT"
-            ? accessMode === "account"
-              ? "You can only access the student record linked to your account."
-              : "You can only access the Marcus Vance demonstration record."
-            : currentRole === "COMPLIANCE_AUDITOR"
-              ? "Auditor profiles use pseudonyms; direct course details and sensitive fields are withheld."
-              : "Open a dossier to inspect the source history and download a role-scoped report."}
-        </span>
       </div>
       {selected && (
         <Modal
@@ -268,9 +237,8 @@ export function Student360Tab() {
             <div className="inline-note" style={{ marginTop: 24 }}>
               <ShieldCheck size={16} />
               <span>
-                Sources: SIS + LMS + Library · Last synchronized{" "}
-                {formatTime(selected.lastSyncedAt)} SGT. Downloaded reports
-                preserve this persona’s field permissions.
+                SIS · LMS · Library · Updated{" "}
+                {formatTime(selected.lastSyncedAt)} SGT
               </span>
             </div>
           </div>

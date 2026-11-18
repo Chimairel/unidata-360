@@ -8,8 +8,7 @@ export function StudentWorkspace() {
   if (!student)
     return (
       <EmptyState title="Your record is not available">
-        Ask the registrar to check the student ID linked to your account and
-        refresh your record.
+        Contact the registrar to check your linked student ID.
       </EmptyState>
     );
   const courses = student.lmsSummary.courses;
@@ -17,7 +16,6 @@ export function StudentWorkspace() {
     <div className="page-stack">
       <PageHeading
         title={`Hello, ${student.fullName.split(" ")[0]}.`}
-        description="Your academic record, learning activity, and library clearance in one place."
         action={
           <ReportLink
             kind="student"
@@ -61,7 +59,6 @@ export function StudentWorkspace() {
           <div className="panel-header">
             <div>
               <h2>My learning activity</h2>
-              <p>Course results and attendance from the learning system</p>
             </div>
           </div>
           {courses.length ? (
@@ -90,7 +87,7 @@ export function StudentWorkspace() {
             </div>
           ) : (
             <div className="panel-body">
-              <p>No learning activity has been imported for your record yet.</p>
+              <p>No learning records yet.</p>
             </div>
           )}
         </section>
@@ -98,7 +95,6 @@ export function StudentWorkspace() {
           <div className="panel-header">
             <div>
               <h2>My library clearance</h2>
-              <p>Loans, overdue items, and outstanding fines</p>
             </div>
           </div>
           <div className="panel-body">
@@ -116,17 +112,12 @@ export function StudentWorkspace() {
                 </div>
               ))}
             </dl>
-            <p className="small muted">
-              For questions about loans or clearance, contact the university
-              library.
-            </p>
           </div>
         </section>
       </div>
       <div className="inline-note">
-        This account can view and download only its linked student record. To
-        correct university data, contact the registrar. Last refreshed:{" "}
-        {formatTime(student.lastSyncedAt)}.
+        Updated {formatTime(student.lastSyncedAt)}. For corrections, contact the
+        registrar.
       </div>
     </div>
   );

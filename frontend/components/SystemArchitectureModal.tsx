@@ -2,7 +2,10 @@
 import { ArrowRight } from "lucide-react";
 import { industryMatrix } from "@/frontend/lib/presentation";
 import { Modal } from "./ui";
-import { educationSourceMap, educationLifecycle } from "@/frontend/lib/courseAlignment";
+import {
+  educationSourceMap,
+  educationLifecycle,
+} from "@/frontend/lib/courseAlignment";
 export function SystemArchitectureModal({
   isOpen,
   onClose,
@@ -55,18 +58,14 @@ export function SystemArchitectureModal({
           </table>
         </div>
         <p className="small" style={{ marginTop: 20 }}>
-          Matrix transcribed from the supplied course slides. HR, Alumni CRM,
-          Data Fabric and live vendor APIs describe the wider industry model;
-          this app implements three synthetic feeds, CSV/JSON ingestion, a
-          Next.js API, and ETL backed by PostgreSQL.
+          Matrix from the course slides. HR, Alumni CRM, Data Fabric and live
+          vendor APIs remain proposed extensions.
         </p>
         <h3 style={{ marginTop: 28 }}>
           University source and responsibility map
         </h3>
         <p className="small" style={{ margin: "8px 0 16px" }}>
-          The course&apos;s five university sources are mapped below.
-          Implementation status distinguishes the working feeds from proposed
-          connections.
+          Working and proposed sources.
         </p>
         <div className="table-wrap">
           <table>
@@ -130,21 +129,13 @@ export function SystemArchitectureModal({
           Integration choice and governance boundary
         </h3>
         <p className="small" style={{ marginTop: 8 }}>
-          Manual batch ETL suits the local classroom dataset: source uploads are
-          validated and staged, then one explicit run publishes a consistent
-          master. ELT, CDC, virtualization and Data Fabric are alternative
-          methods from the lecture, not deployed components. Immediate browser
-          API responses do not imply real-time synchronization with Canvas or
-          another vendor.
+          Batch ETL validates uploads before publishing the master. ELT, CDC,
+          virtualization and Data Fabric are lecture alternatives. Live vendor
+          synchronization is not implemented.
         </p>
         <p className="small" style={{ marginTop: 12 }}>
-          FERPA and GDPR identify the education context. Role checks, masking,
-          scoped exports and a tamper-evident audit trail demonstrate selected
-          controls. Institutional legal review, lawful processing, retention,
-          rights handling and infrastructure encryption remain production
-          responsibilities. Department owners above identify business
-          responsibility; the application does not provision separate HR or
-          alumni roles.
+          Role checks, masking, scoped exports and audit history demonstrate
+          FERPA/GDPR governance concepts, not certified compliance.
         </p>
       </div>
     </Modal>

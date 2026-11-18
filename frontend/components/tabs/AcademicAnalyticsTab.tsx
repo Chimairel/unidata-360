@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { DEPARTMENTS } from "@/shared/school";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
-import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
   Badge,
   EmptyState,
@@ -72,9 +72,8 @@ export function AcademicAnalyticsTab({
         title={
           currentRole === "DEAN"
             ? `${departmentScope} academic overview`
-            : "See progress. Spot who needs support."
+            : "Academic analytics"
         }
-        description="A current view of academic performance and engagement, with explainable early-warning indicators and saved advisor follow-ups."
         action={
           <ReportLink
             kind="analytics"
@@ -135,7 +134,6 @@ export function AcademicAnalyticsTab({
           <div className="panel-header">
             <div>
               <h2>GPA distribution</h2>
-              <p>Student count by cumulative grade band</p>
             </div>
             <Badge>SIS master data</Badge>
           </div>
@@ -161,16 +159,13 @@ export function AcademicAnalyticsTab({
                 </div>
               ))}
             </div>
-            <p className="distribution-caption">
-              Grade bands use the institution’s 4.00 GPA scale.
-            </p>
+            <p className="distribution-caption">4.00 GPA scale</p>
           </div>
         </section>
         <section className="panel">
           <div className="panel-header">
             <div>
               <h2>Program overview</h2>
-              <p>Cohort size and average cumulative GPA</p>
             </div>
           </div>
           <div className="panel-body">
@@ -202,10 +197,7 @@ export function AcademicAnalyticsTab({
               <AlertTriangle size={18} className="text-warning" />
               Early-warning radar
             </h2>
-            <p>
-              Prioritize human review using academic, engagement, and clearance
-              signals.
-            </p>
+            <p>Flags for staff review.</p>
           </div>
           <Badge tone="warning">{atRisk.length} need attention</Badge>
         </div>
@@ -316,21 +308,20 @@ export function AcademicAnalyticsTab({
           </div>
         ) : (
           <EmptyState title="No students currently flagged">
-            All students in your scope are below the configured warning
-            thresholds.
+            No warning signals in this cohort.
           </EmptyState>
         )}
       </section>
-      <div className="inline-note">
-        <Info size={16} />
-        <span>
+      <details className="panel workflow-disclosure">
+        <summary>Warning criteria</summary>
+        <p className="panel-body small">
           Critical: GPA below 2.00, attendance below 65% when LMS data exists,
           4+ missed deadlines, or probation. Moderate: GPA below 2.50,
           attendance below 80%, 2+ missed deadlines, or a library hold. These
           rules support human review. Current enrollment is a snapshot; a
           retention rate requires longitudinal data.
-        </span>
-      </div>
+        </p>
+      </details>
     </div>
   );
 }
