@@ -75,6 +75,12 @@ const labels: Record<string, string> = {
   ACCOUNT_UPDATED: "Staff access updated",
   ACCOUNT_STATUS_CHANGED: "Staff status changed",
   STAFF_PASSWORD_RESET: "Staff password reset",
+  CASE_CREATED: "Support case created",
+  CASE_UPDATED: "Support case updated",
+  CASE_ASSIGNED: "Case assignment updated",
+  QUALITY_ISSUE_UPDATED: "Quality issue updated",
+  QUALITY_ISSUE_RESOLVED: "Quality issue resolved",
+  QUALITY_SOURCE_CORRECTED: "Source identity corrected",
 };
 export function GovernanceTab() {
   const { currentRole, masterRecords, auditLogs, auditIntegrity, accessMode } =

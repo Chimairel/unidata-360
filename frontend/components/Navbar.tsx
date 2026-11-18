@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronRight,
   UserCog,
+  ClipboardCheck,
+  ListChecks,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { UserRole } from "@/shared/types";
@@ -20,6 +22,13 @@ import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
 export type { TabId } from "@/frontend/lib/workspaceAccess";
 const tabs = [
   { id: "accounts", label: "Staff accounts", short: "Accounts", icon: UserCog },
+  { id: "quality", label: "Data quality", short: "Quality", icon: ListChecks },
+  {
+    id: "cases",
+    label: "Advising cases",
+    short: "Cases",
+    icon: ClipboardCheck,
+  },
   { id: "student360", label: "Student 360", short: "Students", icon: Users },
   {
     id: "pipeline",
@@ -261,7 +270,7 @@ export function Navbar({
           className="compact-nav"
           aria-label="Mobile workspace navigation"
           style={{
-            gridTemplateColumns: `repeat(${visibleTabs.length || 1}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${visibleTabs.length > 4 ? 3 : visibleTabs.length || 1}, minmax(0, 1fr))`,
           }}
         >
           {visibleTabs.map(({ id, label, short, icon: Icon }) => (

@@ -10,13 +10,16 @@ import {
   ReportLink,
   RiskBadge,
 } from "@/frontend/components/ui";
-export function AcademicAnalyticsTab() {
+export function AcademicAnalyticsTab({
+  onOpenCase,
+}: {
+  onOpenCase: (studentId: string) => void;
+}) {
   const {
     masterRecords,
     interventions,
-    assignAdvisor,
     currentRole,
-    isSyncing,
+    accessMode,
     departmentScope,
   } = useEDM();
   const [department, setDepartment] = useState("ALL");
@@ -222,7 +225,8 @@ export function AcademicAnalyticsTab() {
               <tbody>
                 {atRisk.map((s) => {
                   const assigned = interventions.find(
-                    (i) => i.studentId === s.studentId && i.status === "Open",
+                    (i) =>
+                      i.studentId === s.studentId && i.status !== "Resolved",
                   );
                   return (
                     <tr key={s.studentId}>
@@ -277,24 +281,30 @@ export function AcademicAnalyticsTab() {
                               }}
                             >
                               <CheckCircle2 size={14} />
-                              Follow-up saved
+                              Case {assigned.status.toLowerCase()}
                             </span>
                             <span className="muted">
                               {assigned.advisorName}
                             </span>
+                            <button
+                              className="button secondary"
+                              onClick={() => onOpenCase(s.studentId)}
+                            >
+                              Review case
+                            </button>
                           </>
                         ) : (
                           <button
                             className="button secondary"
-                            disabled={!canAssign || isSyncing}
-                            onClick={() => void assignAdvisor(s.studentId)}
+                            disabled={!canAssign || accessMode !== "account"}
+                            onClick={() => onOpenCase(s.studentId)}
                             title={
                               !canAssign
                                 ? "Advisor or registrar access is required"
                                 : undefined
                             }
                           >
-                            Assign advisor
+                            Open support case
                           </button>
                         )}
                       </td>

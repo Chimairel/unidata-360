@@ -106,6 +106,10 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS student_registrations (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, student_id TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS registration_limits (key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_end BIGINT NOT NULL, last_attempt BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS interventions (student_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS source_metadata (feed TEXT NOT NULL, record_key TEXT NOT NULL, received_at TEXT, received_by TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(feed,record_key));
+    INSERT INTO source_metadata(feed,record_key,received_at,received_by,revision) SELECT feed,record_key,NULL,'Legacy import — receipt time unknown',0 FROM sources ON CONFLICT DO NOTHING;
+    CREATE TABLE IF NOT EXISTS quality_issues (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS quality_state (id TEXT PRIMARY KEY, checked_at TEXT NOT NULL);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
     CREATE UNIQUE INDEX IF NOT EXISTS student_account_id_unique ON users(lower(student_id)) WHERE role='STUDENT' AND student_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, email TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);

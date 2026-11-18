@@ -20,7 +20,8 @@
     "admin:setup": "tsx scripts/setup-admin.ts",
     "test:auth": "tsx scripts/smoke-auth.ts",
     "test:registration": "tsx scripts/smoke-registration.ts",
-    "test:admin": "tsx scripts/smoke-admin.ts"
+    "test:admin": "tsx scripts/smoke-admin.ts",
+    "test:workflows": "tsx scripts/smoke-workflows.ts"
   },
   "dependencies": {
     "@next/env": "16.4.5",

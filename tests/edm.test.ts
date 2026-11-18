@@ -67,7 +67,7 @@ test("ETL resolves foreign keys, deduplicates, and reports orphan records", () =
 test("missing LMS is incomplete data, not evidence of zero attendance risk", () => {
   const { masterRecords } = runETLPipeline([initialSISRecords[0]], [], []);
   assert.equal(masterRecords[0].overallRiskCategory, "Safe");
-  assert.equal(masterRecords[0].dataHealthScore, 70);
+  assert.equal(masterRecords[0].dataHealthScore, 33);
   assert.notEqual(masterRecords[0].librarySummary.clearanceStatus, "Cleared");
 });
 test("CSV handles commas and multiline quoted fields and converts numeric strings", () => {

@@ -259,7 +259,11 @@ export function IntegrationPipelineTab() {
             </div>
             {report && (
               <Badge tone={report.status === "SUCCESS" ? "success" : "warning"}>
-                {report.status.replaceAll("_", " ")}
+                {report.status === "FAILED"
+                  ? "Failed"
+                  : report.warnings.length
+                    ? "Completed with notices"
+                    : "Completed"}
               </Badge>
             )}
           </div>
@@ -281,7 +285,7 @@ export function IntegrationPipelineTab() {
                     <dd>{report.recordsLoaded}</dd>
                   </div>
                   <div>
-                    <dt>Rejected / duplicate rows</dt>
+                    <dt>Duplicate / unlinked rows</dt>
                     <dd>{report.anomaliesDetected}</dd>
                   </div>
                   <div>

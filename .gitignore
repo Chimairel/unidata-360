@@ -50,7 +50,7 @@ next-env.d.ts
 
 # Local databases, course documents with personal details, and review artifacts
 /data/
-/.impeccable/
+**/.impeccable/
 /docs/UniData_360_Software_Requirements_Specification.docx
 /docs/SRS_VERIFICATION.md
 /tmp/

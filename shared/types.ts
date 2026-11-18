@@ -103,7 +103,7 @@ export interface UnifiedStudentRecord {
   };
 
   // EDM Data Quality & Health Score
-  dataHealthScore: number; // 0 - 100%
+  dataHealthScore: number; // Percentage of the three SIS/LMS/Library feeds present.
   overallRiskCategory: "Safe" | "Moderate Risk" | "Critical Alert";
   lastSyncedAt: string;
 }
@@ -130,7 +130,13 @@ export interface AuditLogEntry {
     | "ACCOUNT_CREATED"
     | "ACCOUNT_UPDATED"
     | "ACCOUNT_STATUS_CHANGED"
-    | "STAFF_PASSWORD_RESET";
+    | "STAFF_PASSWORD_RESET"
+    | "CASE_CREATED"
+    | "CASE_UPDATED"
+    | "CASE_ASSIGNED"
+    | "QUALITY_ISSUE_UPDATED"
+    | "QUALITY_ISSUE_RESOLVED"
+    | "QUALITY_SOURCE_CORRECTED";
   targetResource: string;
   status: "ALLOWED" | "RESTRICTED_MASKED" | "LOGGED";
   details: string;
@@ -152,13 +158,86 @@ export interface Intervention {
   studentId: string;
   advisorName: string;
   createdAt: string;
-  status: "Open" | "Resolved";
+  status: "Open" | "In progress" | "Resolved";
+  assigneeId?: string;
+  createdById?: string;
+  reason?: string;
+  priority?: "Normal" | "High";
+  dueDate?: string;
+  updatedAt?: string;
+  outcome?: string;
+}
+export interface WorkflowEvent {
+  id: string;
+  at: string;
+  actor: string;
+  text: string;
+}
+export interface AdvisingCase extends Intervention {
+  reason: string;
+  priority: "Normal" | "High";
+  updatedAt: string;
+  notes: WorkflowEvent[];
+  history: WorkflowEvent[];
+}
+export interface CaseAssignee {
+  id: string;
+  displayName: string;
+  role: "REGISTRAR" | "DEAN" | "ACADEMIC_ADVISOR";
+  department?: string;
+}
+export interface CaseWorkspace {
+  cases: AdvisingCase[];
+  students: { studentId: string; fullName: string; department: string }[];
+  assignees: CaseAssignee[];
+  currentUserId: string;
+}
+export interface QualityIssue {
+  id: string;
+  rule: "MISSING_LMS" | "MISSING_LIBRARY" | "ORPHAN_LMS" | "ORPHAN_LIBRARY";
+  feed: Feed;
+  sourceKey: string;
+  studentId: string;
+  description: string;
+  severity: "Warning" | "Error";
+  status: "Open" | "In progress" | "Resolved";
+  ownerId?: string;
+  ownerName?: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedAt?: string;
+  history: WorkflowEvent[];
+}
+export interface SourceMetadata {
+  feed: Feed;
+  key: string;
+  receivedAt: string | null;
+  receivedBy: string;
+  revision: number;
+}
+export interface QualityWorkspace {
+  issues: QualityIssue[];
+  checkedAt: string | null;
+  sources: {
+    feed: Feed;
+    name: string;
+    owner: string;
+    key: string;
+    rows: number;
+    lastReceivedAt: string | null;
+    unknownProvenance: number;
+  }[];
+  metadata: SourceMetadata[];
+  runs: ETLRunReport[];
+  stewards: { id: string; displayName: string }[];
+  students: { studentId: string; fullName: string }[];
 }
 export interface EDMSnapshot {
   accessMode?: "demo" | "account";
   currentRole: UserRole;
   actorName: string;
   departmentScope?: Department;
+  actorId?: string;
   sisRecords: SISRecord[];
   lmsRecords: LMSRecord[];
   libraryRecords: LibraryRecord[];

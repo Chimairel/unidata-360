@@ -70,6 +70,7 @@ async function seed() {
 export async function upsert(
   feed: Feed,
   input: Array<SISRecord | LMSRecord | LibraryRecord>,
+  identity?: AccessIdentity,
 ) {
   const existing = new Set(
     (
@@ -100,6 +101,20 @@ export async function upsert(
         " ON CONFLICT(feed,record_key) DO UPDATE SET payload=excluded.payload",
       ...Array.from(batch).flatMap(([key, payload]) => [feed, key, payload]),
     );
+  if (batch.size) {
+    const receivedAt = new Date().toISOString();
+    await execute(
+      "INSERT INTO source_metadata(feed,record_key,received_at,received_by,revision) VALUES " +
+        Array.from(batch, () => "(?,?,?,?,1)").join(",") +
+        " ON CONFLICT(feed,record_key) DO UPDATE SET received_at=excluded.received_at,received_by=excluded.received_by,revision=source_metadata.revision+1",
+      ...Array.from(batch.keys()).flatMap((key) => [
+        feed,
+        key,
+        receivedAt,
+        identity?.displayName || "Synthetic seed / local import",
+      ]),
+    );
+  }
   return { inserted, updated, duplicates };
 }
 export async function source<T>(feed: Feed): Promise<T[]> {
@@ -118,7 +133,7 @@ export async function masters(
     : await rows<Payload>("SELECT payload FROM master ORDER BY id");
   return records.map((r) => JSON.parse(r.payload));
 }
-export async function sync() {
+export async function sync(identity?: AccessIdentity) {
   const result = runETLPipeline(
     await source<SISRecord>("SIS"),
     await source<LMSRecord>("LMS"),
@@ -137,6 +152,8 @@ export async function sync() {
     "INSERT INTO etl_runs(payload) VALUES(?)",
     JSON.stringify(result.report),
   );
+  const { reconcileQuality } = await import("./quality");
+  await reconcileQuality(result.report.endTime, identity);
   return result.report;
 }
 export async function audit(
@@ -208,6 +225,7 @@ export function snapshot(
           accessMode: identity?.mode || "demo",
           currentRole: role,
           actorName: identity?.displayName || actors[role],
+          actorId: identity?.userId,
           sisRecords: [],
           lmsRecords: [],
           libraryRecords: [],
@@ -274,13 +292,49 @@ export function snapshot(
           ? []
           : (await rows<Payload>("SELECT payload FROM interventions"))
               .map((r) => JSON.parse(r.payload) as Intervention)
-              .filter((entry) =>
-                permitted.some((s) => s.studentId === entry.studentId),
+              .filter(
+                (entry) =>
+                  permitted.some((s) => s.studentId === entry.studentId) &&
+                  (role !== "ACADEMIC_ADVISOR" ||
+                    identity?.mode !== "account" ||
+                    !entry.assigneeId ||
+                    entry.assigneeId === identity.userId ||
+                    entry.createdById === identity.userId),
+              )
+              .map(
+                ({
+                  id,
+                  studentId,
+                  advisorName,
+                  createdAt,
+                  status,
+                  assigneeId,
+                  createdById,
+                  reason,
+                  priority,
+                  dueDate,
+                  updatedAt,
+                  outcome,
+                }) => ({
+                  id,
+                  studentId,
+                  advisorName,
+                  createdAt,
+                  status,
+                  assigneeId,
+                  createdById,
+                  reason,
+                  priority,
+                  dueDate,
+                  updatedAt,
+                  outcome,
+                }),
               );
       return {
         accessMode: identity?.mode || "demo",
         currentRole: role,
         actorName: identity?.displayName || actors[role],
+        actorId: identity?.userId,
         departmentScope: departmentScope(role, identity),
         masterRecords: permitted,
         sisRecords,
@@ -313,9 +367,10 @@ export function snapshot(
 }
 export async function resetDemo(role: UserRole, identity?: AccessIdentity) {
   await execute("DELETE FROM sources");
+  await execute("DELETE FROM source_metadata");
   await execute("DELETE FROM interventions");
   await seed();
-  await sync();
+  await sync(identity);
   await audit(
     role,
     "RESET_DEMO",
@@ -341,15 +396,13 @@ export async function assignIntervention(
     "SELECT payload FROM interventions WHERE student_id=?",
     studentId,
   );
-  if (
-    existing &&
-    (JSON.parse(existing.payload) as Intervention).status === "Open"
-  )
-    return;
+  if (existing) return;
   const entry: Intervention = {
     id: randomUUID(),
     studentId,
-    advisorName: student.advisorName,
+    advisorName: "Unassigned referral",
+    createdById: identity?.userId,
+    reason: "Academic support referral — assign a staff member in Cases",
     createdAt: new Date().toISOString(),
     status: "Open",
   };

@@ -116,3 +116,19 @@ Result: passed in the browser. CSV validation passed. Server tests independently
 - Fixed during the journey: successful sign-in and sign-out now clear their pending state. Previously, returning to the cached sign-in page could leave the form stuck on “Signing in…”. Repeated desktop and mobile sign-out/sign-in checks passed after the fix.
 
 These results apply to the current local build. The older hosted deployment requires a separate deployment before it receives current interface changes.
+
+## Quality and advising extension — 18 November 2026
+
+These checks used a disposable PostgreSQL schema, synthetic accounts and the production frontend/backend on ports 3005/3006. They did not modify the shared classroom records.
+
+- **Registrar:** opened the four-item quality queue, assigned a Registrar steward, saved an In progress note, and relinked unmatched LMS and Library source identities. ETL published the staged changes and automatically resolved all four associated issues. Resolved history retained the note, staging event and ETL timestamp. Source lineage showed the corrected keys, responsible user and incremented revision. The inline case-creation form exposed real active staff accounts.
+- **Academic Advisor:** opened an assigned support case, recorded an internal note, changed Open to In progress, and resolved it with an outcome. Native validation blocked an empty resolution outcome. Reload retained the resolved case. Desktop and 390px mobile forms/history were inspected.
+- **Student:** school-ID sign-in still opened only the linked personal record. Quality and Cases navigation were absent.
+- **Compliance Auditor:** inspected resolved quality history without stewardship, correction, ETL or case-management controls.
+- **Other role boundaries:** HTTP checks covered System Admin denial, department-scoped Dean access, wrong-department rejection, peer-advisor restrictions, inactive assignees, private notes, origin checks and forbidden commands. The browser checks above supplement these server checks; they do not claim a new browser journey for every role.
+
+Verification passed: **31 automated tests, zero skips; 66 workflow HTTP checks; 117 existing role/department HTTP checks; lint; both production builds**. Browser console errors were empty. The responsive extension retains the existing monochrome design, stacks fields on mobile and confines wide tables to their own scroll area.
+
+The independent Impeccable finish review identified two misleading status messages. Successful reload/recheck now clears obsolete staging feedback, and resolved issue descriptions are explicitly labeled as the original finding. Desktop/mobile recaptures and the rebuilt applications confirmed both fixes; the reviewer scored both resolved with disposition **ship**. The existing design tokens, black rail, gray panels, typography, native fields and table behavior were compared with the incumbent system; DESIGN.md was preserved. The detector reported zero primary findings, with existing color/type documentation advisories retained for a separate design-system review.
+
+See [workflow guide](WORKFLOWS.md) for the current role policy and presentation steps. Advising cases require signed-in staff accounts; they do not send emails. The earlier four-role walkthrough above records an older baseline rather than the current six-role policy.

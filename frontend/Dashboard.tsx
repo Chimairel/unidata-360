@@ -17,6 +17,8 @@ import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectur
 import { PresentationMode } from "@/frontend/components/PresentationMode";
 import { SignIn } from "@/frontend/components/SignIn";
 import { AccountsTab } from "@/frontend/components/tabs/AccountsTab";
+import { CasesTab } from "@/frontend/components/tabs/CasesTab";
+import { QualityTab } from "@/frontend/components/tabs/QualityTab";
 import type { UserRole } from "@/shared/types";
 
 function Workspace() {
@@ -26,6 +28,10 @@ function Workspace() {
   } | null>(null);
   const [architecture, setArchitecture] = useState(false);
   const [presentation, setPresentation] = useState(false);
+  const [caseIntent, setCaseIntent] = useState<{
+    role: UserRole;
+    studentId: string;
+  } | null>(null);
   const {
     isLoading,
     error,
@@ -48,7 +54,10 @@ function Workspace() {
       </a>
       <Navbar
         activeTab={activeTab}
-        setActiveTab={(tab) => setSelection({ role: currentRole, tab })}
+        setActiveTab={(tab) => {
+          setSelection({ role: currentRole, tab });
+          if (tab === "cases") setCaseIntent(null);
+        }}
         openArchitecture={() => setArchitecture(true)}
         openPresentation={() => setPresentation(true)}
       />
@@ -90,6 +99,17 @@ function Workspace() {
             {activeTab === "accounts" && currentRole === "SYSTEM_ADMIN" && (
               <AccountsTab />
             )}
+            {activeTab === "quality" && <QualityTab />}
+            {activeTab === "cases" && (
+              <CasesTab
+                key={`${currentRole}:${caseIntent?.role === currentRole ? caseIntent.studentId : "queue"}`}
+                initialStudentId={
+                  caseIntent?.role === currentRole
+                    ? caseIntent.studentId
+                    : undefined
+                }
+              />
+            )}
             {activeTab === "student360" &&
               (currentRole === "STUDENT" ? (
                 <StudentWorkspace />
@@ -98,7 +118,13 @@ function Workspace() {
               ))}
             {activeTab === "pipeline" && <IntegrationPipelineTab />}
             {activeTab === "analytics" && (
-              <AcademicAnalyticsTab key={currentRole} />
+              <AcademicAnalyticsTab
+                key={currentRole}
+                onOpenCase={(studentId) => {
+                  setCaseIntent({ role: currentRole, studentId });
+                  setSelection({ role: currentRole, tab: "cases" });
+                }}
+              />
             )}
             {activeTab === "governance" && <GovernanceTab />}
           </>

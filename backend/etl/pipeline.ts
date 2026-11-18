@@ -83,7 +83,7 @@ export function runETLPipeline(
 
   // Transform and Merge using SIS as primary golden demographic master
   for (const sis of uniqueSIS) {
-    let healthScore = 100;
+    let presentSources = 1;
 
     // Check LMS reconciliation
     const studentLmsList = lmsByStudent.get(sis.studentId) || [];
@@ -91,7 +91,8 @@ export function runETLPipeline(
       warnings.push(
         `[Reconciliation Notice]: Student ${sis.studentId} has no active LMS course enrollment.`,
       );
-      healthScore -= 20;
+    } else {
+      presentSources++;
     }
 
     // Check Library reconciliation
@@ -100,7 +101,8 @@ export function runETLPipeline(
       warnings.push(
         `[Reconciliation Notice]: Student ${sis.studentId} has no Library card record.`,
       );
-      healthScore -= 10;
+    } else {
+      presentSources++;
     }
 
     // Compute LMS summary statistics
@@ -186,7 +188,7 @@ export function runETLPipeline(
         highestRiskCourse,
       },
       librarySummary: libSummary,
-      dataHealthScore: Math.max(0, healthScore),
+      dataHealthScore: Math.round((presentSources / 3) * 100),
       overallRiskCategory,
       lastSyncedAt: startTime,
     };
@@ -200,7 +202,7 @@ export function runETLPipeline(
     id: options?.id || `ETL-${crypto.randomUUID()}`,
     startTime,
     endTime,
-    status: anomaliesDetected > 0 ? "PARTIAL_SUCCESS" : "SUCCESS",
+    status: warnings.length > 0 ? "PARTIAL_SUCCESS" : "SUCCESS",
     recordsExtracted: {
       sis: sisData.length,
       lms: lmsData.length,

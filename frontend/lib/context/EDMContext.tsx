@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import type { EDMSnapshot, Feed, UserRole } from "@/shared/types";
+import type { EDMSnapshot, Feed, UserRole, Intervention } from "@/shared/types";
 import { useRouter } from "next/navigation";
 
 interface EDMContextType extends EDMSnapshot {
@@ -18,6 +18,7 @@ interface EDMContextType extends EDMSnapshot {
   importRecords: (feed: Feed, content: string) => Promise<boolean>;
   viewStudent: (studentId: string) => Promise<boolean>;
   assignAdvisor: (studentId: string) => Promise<boolean>;
+  updateCaseSummaries: (cases: Intervention[], ownerId: string) => void;
   refresh: () => Promise<void>;
   dismissMessage: () => void;
 }
@@ -192,6 +193,12 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
         viewStudent: (studentId) => command({ type: "view", studentId }),
         assignAdvisor: (studentId) =>
           command({ type: "intervention", studentId }),
+        updateCaseSummaries: (interventions, ownerId) =>
+          setData((current) =>
+            current.actorId === ownerId
+              ? { ...current, interventions }
+              : current,
+          ),
       }}
     >
       {children}

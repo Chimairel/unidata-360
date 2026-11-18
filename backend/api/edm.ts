@@ -147,7 +147,7 @@ export async function POST(request: Request) {
       message = "Persona updated. Server permissions applied.";
     } else if (cmd.type === "sync") {
       await transaction(async () => {
-        const report = await sync();
+        const report = await sync(s);
         await audit(
           role,
           "ETL_SYNC_RUN",
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     } else if (cmd.type === "import") {
       const rows = parseImport(cmd.feed, cmd.content, cmd.format);
       await transaction(async () => {
-        const result = await upsert(cmd.feed, rows);
+        const result = await upsert(cmd.feed, rows, s);
         message = `${result.inserted} inserted, ${result.updated} updated; ${result.duplicates} duplicate keys merged. Run ETL to update the master store.`;
         await audit(role, "IMPORT_DATA", cmd.feed, message, "ALLOWED", s);
       });

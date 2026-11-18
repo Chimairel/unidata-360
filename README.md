@@ -54,6 +54,8 @@ See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and 
 - **Student 360:** searchable/filterable directory with compact list, sortable table and card views, explicit risk filters and an advisor-attention shortcut, detailed academic and campus dossiers, role-scoped JSON and downloadable printable PDF reports. The statistics column compares permitted students by GPA or LMS attendance and shows source completeness and an attention queue.
 - **Analytics:** GPA bands, program averages, probation counts, current enrollment snapshot, explainable warning rules and persisted internal advisor follow-ups.
 - **Governance:** server-applied field masking, student self-access, role-gated writes/exports, hash-chained append-only audit trail, action filters and CSV export.
+- **Data quality:** persistent issue stewardship, staged identity corrections, automatic ETL rechecks/resolution, source receipt metadata, source/field mapping and recent run history. Source completeness counts the three feeds actually present.
+- **Advising cases:** real staff assignment, private follow-up notes, due dates, priority, resolution outcomes and reopening history, scoped to each permitted role. See [workflow guide](docs/WORKFLOWS.md).
 - **Account access:** school ID/password sign-in for students and assigned email/password sign-in for staff, fixed server-assigned roles, linked student identities, salted password hashes, hashed session tokens, sign-out revocation and login throttling. Demo mode remains available for class.
 - **Student registration:** matching SIS/master student ID and email, single-use email verification, student-only activation and administrator-created staff accounts. See [registration setup](docs/STUDENT_REGISTRATION.md) for Resend delivery and local classroom previews.
 - **Presentation:** ten classroom slides, the supplied comparative industry matrix, a five-source university responsibility map, enrollment-to-alumni scope, integration trade-offs, speaker notes, previous/next controls, direct slide selection, arrow/PageUp/PageDown/Home/End keys and optional fullscreen.
@@ -71,12 +73,12 @@ Run `npm run admin:setup` once against the shared classroom database to create `
 
 | Role | Workspace and limits |
 | --- | --- |
-| Registrar | Student directory, pipeline/imports, analytics and system audit. Can run ETL and save follow-ups. |
+| Registrar | Student directory, pipeline/imports, data quality, advising cases, analytics and system audit. Can stage corrections, run ETL and coordinate cases. |
 | System Admin | Staff account creation, access updates, activation/disablement, password resets and account activity. No student-data workspace. |
-| Dean | Assigned department’s masked student records, analytics, follow-ups and own activity. No imports, ETL or access to other departments. |
-| Academic Advisor | Masked student directory, analytics, follow-ups and their own activity history. No source imports or ETL. |
+| Dean | Assigned department’s masked student records, analytics, advising cases and own activity. No imports, ETL, source-quality workspace or access to other departments. |
+| Academic Advisor | Masked student directory, analytics, permitted cases and own activity. Manages assigned cases; cannot assign a peer or access source quality/imports/ETL. |
 | Student | Personal record, courses, attendance, library clearance and own PDF report. No pipeline, cohort analytics, audit trail or internal staff follow-ups. |
-| Compliance Auditor | Starts on governance/audit; may inspect masked student summaries and export permitted reports. No pipeline, academic analytics or data changes. |
+| Compliance Auditor | Starts on governance/audit; read-only data quality, masked student summaries and permitted exports. No pipeline, academic analytics, case notes or data changes. |
 
 Both desktop and mobile navigation follow this policy. Account roles remain fixed; the separate classroom demo mode permits persona switching. Server endpoints independently reject actions and exports outside each role's permissions.
 
@@ -84,7 +86,7 @@ Both desktop and mobile navigation follow this policy. Account roles remain fixe
 2. Download a CSV or JSON template and import it, or use **Add demo student**. Imports update staged source feeds; they do not immediately change Student 360.
 3. **Run pipeline**, inspect its reconciliation report, then open the student dossier in **Student 360**. A student without LMS data is marked incomplete rather than automatically treated as absent.
 4. Switch **Demo persona** to Academic Advisor and open the same dossier to see restricted fields. Download a PDF with those restrictions applied. Student mode can access only Marcus Vance's demonstration record.
-5. Open **Academic analytics**, inspect the early-warning radar, and save an advisor follow-up under the advisor/registrar persona. Reload to show persistence. This creates an internal task; it does not send an email or contact a real person.
+5. Sign in with an actual Advisor, Dean or Registrar account for **Advising cases**. Open a support case from the early-warning radar, record a note and resolve it with an outcome. Demo personas cannot manage staff workflows. Saving cases does not send email. A Registrar can also inspect and correct source relationships in **Data quality**; ETL confirms resolution.
 6. Inspect **Governance & audit**, filter actions, verify the chain status, and export CSV.
 7. Select **Present** for the ten-slide class walkthrough, or **Course matrix** for the industry comparison and five-source university lifecycle map. Restore the seed dataset from the integration tab when needed; the confirmation explains what is replaced. Audit and ETL history are retained.
 
@@ -105,11 +107,14 @@ Backend Next.js server :3006
   ├─ GET/POST/DELETE /api/auth → access mode / sign-in / sign-out
   ├─ GET /api/edm       → current permitted snapshot
   ├─ POST /api/edm      → role / import / sync / view / intervention / reset
+  ├─ GET/POST /api/cases → permitted cases / staff assignment / follow-up / resolution
+  ├─ GET/POST /api/quality → quality issues / stewardship / staged identity correction
   └─ GET /api/reports   → student PDF / analytics PDF / dossier JSON / audit CSV
            ↓
   HttpOnly session → server access policy → validation / ETL / reports
            ↓
-  PostgreSQL: sources, master, etl_runs, audit, interventions, sessions, users, login_attempts
+  PostgreSQL: sources, source_metadata, master, etl_runs, quality_issues, quality_state,
+              audit, interventions (case payloads), sessions, users, login_attempts
 ```
 
 `backend/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
@@ -145,6 +150,7 @@ The supplied course matrix also includes HR, Alumni CRM, Data Fabric, and vendor
 npm test         # set EDM_TEST_DATABASE_URL to include database checks
 npm run test:api # run against a local demo backed by a disposable database
 npm run test:auth -- --hosted
+npm run test:workflows # disposable EDM_TEST_DATABASE_URL; starts both production services
 npm run lint
 npm run build
 ```

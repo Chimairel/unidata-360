@@ -1,5 +1,7 @@
 # UniData 360 course and product gap review
 
+Implementation update, 18 November: the Data Quality and advising-case phase is now implemented; see [workflow guide](WORKFLOWS.md) and [verification](MVP_JOURNEYS.md). The findings below retain the 17 November baseline. Historical terms, graduation/alumni, live vendor connectivity, school conventions and the Word SRS refresh remain open scope.
+
 Reviewed 17 November 2026 against the original 19-slide course deck, the current code at `c6f2ae4`, the existing SRS and public documentation for established university applications.
 
 The implemented paths passed the latest MVP verification. This review asks a different question: which capabilities are absent or incomplete? UniData demonstrates the assignment's integration pattern, and its role boundaries work. The largest remaining gaps are managing data quality as ongoing work, completing advising cases, and representing the university lifecycle beyond a current student snapshot.
