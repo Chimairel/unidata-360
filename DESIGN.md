@@ -1,6 +1,6 @@
 ---
 name: UniData 360
-description: A monochrome university workspace with light and dark themes, a black rail and a MercuryLogin account entrance.
+description: A monochrome university workspace with Mercury typography, liquid accents and light and dark themes.
 colors:
   canvas: "#f1f1f3"
   rail: "#111113"
@@ -44,15 +44,9 @@ colors:
   mercury-dark: "#bcbcc6"
   dark-mercury-light: "#9b9b9f"
   dark-mercury-dark: "#45454a"
-  sign-in-underline: "#90909a"
-  dark-sign-in-underline: "#70707b"
+  field-underline: "#75757f"
+  dark-field-underline: "#858590"
 typography:
-  greeting:
-    fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "31px"
-    fontWeight: 780
-    lineHeight: 1.22
-    letterSpacing: "-0.035em"
   insight-value:
     fontFamily: "Geist, Arial, sans-serif"
     fontSize: "39px"
@@ -94,22 +88,22 @@ typography:
     lineHeight: 1.55
   workspace-headline:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "28px"
-    fontWeight: 740
-    lineHeight: 1.22
-    letterSpacing: "-0.035em"
+    fontSize: "clamp(1.875rem, 4vw, 3.25rem)"
+    fontWeight: 800
+    lineHeight: 1.04
+    letterSpacing: "-0.04em"
   workspace-panel-title:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "16px"
-    fontWeight: 620
-    lineHeight: 1.4
-    letterSpacing: "-0.02em"
+    fontSize: "18px"
+    fontWeight: 740
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
   directory-title:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "19px"
-    fontWeight: 720
-    lineHeight: 1.4
-    letterSpacing: "-0.02em"
+    fontSize: "18px"
+    fontWeight: 740
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
   summary-value:
     fontFamily: "Geist, Arial, sans-serif"
     fontSize: "30px"
@@ -278,7 +272,7 @@ The supplied learning-dashboard reference establishes a light, monochrome univer
 
 Geist typography, compact labeled controls and generous separation between dashboard columns support UniData 360. Restrained green, amber and rose identify status; they accompany readable labels. Light remains the default; the persistent dark theme maps the same workspace, presentation, account and modal roles to dark neutrals and contrasting actions.
 
-The user's supplied 21st.dev MercuryLogin template replaces the campus-illustration sign-in surface. Its stacked heading, underlined fields, gray liquid backdrop and liquid submit action are scoped to sign-in; the operational workspace keeps its existing monochrome hierarchy.
+The 21st.dev MercuryLogin design sets the visual direction across UniData. Bold Geist titles mark the current task, compact section headings organize records and tables, and underlined fields and rounded primary actions connect account access to the workspace. The liquid accent moves behind account forms and rests behind workspace headings.
 
 The user's supplied reference replaces the former navy identity. The frontmatter owns normative primitives. The final reference-led stylesheet section and scoped responsive overrides take precedence over inherited rules. This merge records the requested sign-in replacement and themes only; unrelated pre-existing documentation/layout drift has been preserved rather than rescanned.
 
@@ -334,8 +328,7 @@ The hierarchy pairs a bold greeting and large counts with compact operational te
 ### Hierarchy
 
 - **Display:** presentation headings use `display` (36px), reducing to 26px on narrow screens. Generic headings retain `headline` (28px) and `title` (18px).
-- **Greeting:** `greeting` uses 31px, weight 780 and line height 1.22, reducing to 27px at 760px.
-- **Workspace:** page titles use `workspace-headline` (28px, weight 740). Panel titles use `workspace-panel-title` (16px); directory titles use `directory-title` (19px, weight 720), reducing to 18px at 760px. Statistics headings use 18px, weight 720; source-health and attention headings use 17px.
+- **Workspace:** page titles and greetings use uppercase `workspace-headline` (30–52px, weight 800). Panel, directory, insight and dialog titles use 18px Geist at weight 740 for a clear second level.
 - **Body:** the inherited baseline uses `body` (14px, line height 1.55). Page descriptions use 13px; greeting copy and ordinary operational data use 12px. Directory descriptions use 11px.
 - **Records:** list names use 12px and weight 680, reducing to 11px at 760px. Metadata uses 10px, reducing to 9px. Black record actions use 9px, reducing to 8px. These are scoped compact details rather than the default label scale.
 - **Labels:** `label` uses 12px, weight 550. Badges and metadata use 9–10px; rail labels use 9px. `mono` uses 11px, with student IDs scoped to 10px.
@@ -358,7 +351,7 @@ At 760px, the frame fills the viewport, with no outer padding, radius or shadow.
 
 Panels retain 24px body padding and 20px by 22px heading padding. Split panels and forms stack at 760px; pipeline connectors turn downward. Standard dialogs are limited to 640px wide, wide dialogs to 1050px, with 16px viewport gutters and internal scrolling. Presentation reaches 1440px wide and 94dvh high, switching to 8px gutters and 96dvh on narrow screens. Mobile slides start at the top; comparative tables keep local scrolling.
 
-Sign-in places a centered form in a 440px maximum-width shell, with 56px/40px/64px top/horizontal/bottom padding and vertical centering below the shared account header. The transparent panel has no internal padding or border. Its stacked heading has 52px bottom spacing; form rows have a 28px gap. At 760px, the shell uses 40px/28px/48px padding, starts at the top and reduces heading spacing to 40px. The decorative liquid layer sits behind the form and cannot intercept input. Registration and recovery retain their existing compact forms with shared theme colors. Keep labeled fields, state feedback and account-help links.
+Account pages share a centered form beneath the same header and liquid backdrop. Sign-in uses a 440px shell with a stacked title and 28px row gaps. Registration and recovery use a 560px shell with 32–48px titles and 16px row gaps. At 760px and below the horizontal inset is 28px and longer account headings use 32–44px type. The workspace uses a static liquid accent that fades into the canvas behind the heading area.
 
 ## Elevation & Depth
 
@@ -425,7 +418,7 @@ Native dialogs retain Escape behavior, sticky headings, named close controls and
 ### Do:
 
 - **Do** reuse the monochrome materials and their theme mappings across workspace, presentation and account surfaces.
-- **Do** keep MercuryLogin's liquid decoration scoped to sign-in and preserve readable fields, keyboard focus and reduced motion in both themes.
+- **Do** use the shared Mercury account layout for sign-in, registration and recovery. Use the still liquid accent in workspaces and preserve field labels, keyboard focus and reduced motion in both themes.
 - **Do** pair status colors with explicit readable labels.
 - **Do** plot GPA or attendance from records available to the current role and label the metric and scale.
 - **Do** retain tabular figures for comparable metrics and Geist Mono for identifiers.

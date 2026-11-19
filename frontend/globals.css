@@ -15,6 +15,14 @@
   --primary-hover: #35353b;
   --radius: 12px;
   --font-sans: var(--font-geist-sans);
+  --display-weight: 800;
+  --display-tracking: -0.04em;
+  --workspace-title-size: clamp(1.875rem, 4vw, 3.25rem);
+  --section-title-size: 1.125rem;
+  --field-rule: #75757f;
+  --mercury-light: #dedee4;
+  --mercury-dark: #bcbcc6;
+  --mercury-opacity: 0.48;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -31,6 +39,10 @@
   --success: #8fdbb2;
   --warning: #f2c778;
   --danger: #ff9aad;
+  --field-rule: #858590;
+  --mercury-light: #9b9b9f;
+  --mercury-dark: #45454a;
+  --mercury-opacity: 0.38;
   color-scheme: dark;
 }
 @theme inline {
@@ -1561,32 +1573,9 @@ td .badge {
   background: var(--surface);
   color: var(--foreground);
 }
-.sign-in-shell {
-  width: 100%;
-  flex: 1;
-  max-width: 560px;
-  margin: auto;
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
 .sign-in-content {
   width: 100%;
-}
-.sign-in-panel .panel-body {
-  padding: clamp(28px, 2.5vw, 40px);
-}
-.sign-in-panel h1 {
-  margin: 16px 0 8px;
-  font-size: 26px;
-}
-.sign-in-panel .small,
-.sign-in-panel .text-link {
-  font-size: 14px;
-}
-.sign-in-panel .message {
-  margin: 18px 0 0;
+  min-width: 0;
 }
 .sign-in-form {
   display: grid;
@@ -1669,13 +1658,6 @@ td .badge {
   .account-header-nav a {
     padding: 0 8px;
     font-size: 12px;
-  }
-  .sign-in-shell {
-    padding: 24px;
-    justify-content: flex-start;
-  }
-  .sign-in-panel .panel-body {
-    padding: 24px;
   }
 }
 
@@ -4185,7 +4167,7 @@ body {
   }
 }
 
-/* 21st.dev MercuryLogin adaptation: real UniData authentication and themes. */
+/* Mercury typography, controls and surfaces across UniData. */
 .theme-toggle {
   width: 44px;
   height: 44px;
@@ -4199,8 +4181,6 @@ body {
 .neural-access-page {
   position: relative;
   isolation: isolate;
-  --mercury-light: #dedee4;
-  --mercury-dark: #bcbcc6;
 }
 .neural-access-page .account-header {
   position: relative;
@@ -4227,7 +4207,7 @@ body {
   min-height: 460px;
   left: calc(50% - 180px);
   top: 29%;
-  opacity: 0.48;
+  opacity: var(--mercury-opacity);
   transform: translate(var(--mercury-x, 0px), var(--mercury-y, 0px));
 }
 .neural-blob {
@@ -4269,39 +4249,67 @@ body {
   display: flex;
   align-items: center;
 }
-.neural-auth-shell .sign-in-panel {
-  border: 0;
-  background: transparent;
-  overflow: visible;
-}
-.neural-auth-shell .panel-body {
-  padding: 0;
-}
 .neural-auth-shell h1 {
   max-width: 4ch;
   font-size: 64px;
   line-height: 0.92;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--display-tracking);
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: var(--display-weight);
   margin: 0 0 52px;
+}
+.neural-auth-shell--extended {
+  max-width: 560px;
+  padding-block: 36px 48px;
+}
+.neural-auth-shell--extended h1 {
+  max-width: none;
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1;
+  margin-bottom: 14px;
+  text-wrap: wrap;
+}
+.account-description {
+  margin-bottom: 26px;
+  max-width: 46ch;
+}
+.neural-auth-shell .sign-in-help,
+.neural-auth-shell .text-link {
+  font-size: 14px;
 }
 .neural-auth-shell .sign-in-form {
   margin-top: 0;
   gap: 28px;
 }
+.neural-auth-shell--extended .sign-in-form {
+  gap: 16px;
+}
 .neural-auth-shell .sign-in-form label {
   font-size: 12px;
   color: var(--muted);
 }
-.neural-auth-shell .sign-in-form input {
+.neural-auth-shell .sign-in-form :is(input, select),
+.workspace
+  :is(
+    .workflow-page,
+    .directory-controls,
+    .department-filter,
+    .account-filters,
+    .account-fields
+  )
+  :is(input:not([type="file"], [type="checkbox"], [type="radio"]), select) {
   background: transparent;
   border: 0;
-  border-bottom: 1px solid #90909a;
+  border-bottom: 1px solid var(--field-rule);
   border-radius: 0;
   padding: 12px 0;
   min-height: 56px;
   font-size: 17px;
+}
+.neural-auth-shell--extended .sign-in-form :is(input, select) {
+  min-height: 44px;
+  padding-block: 8px;
+  font-size: 16px;
 }
 .neural-auth-shell .sign-in-form .primary {
   margin-top: 0;
@@ -4352,17 +4360,19 @@ body {
 .neural-auth-shell .message {
   margin: 0 0 24px;
 }
-:root[data-theme="dark"] .neural-access-page {
-  --mercury-light: #9b9b9f;
-  --mercury-dark: #45454a;
+.neural-auth-shell .sign-in-form input::placeholder {
+  color: var(--muted);
 }
-:root[data-theme="dark"] .neural-liquid {
-  opacity: 0.38;
-}
-:root[data-theme="dark"] .neural-auth-shell .sign-in-form input {
-  border-bottom-color: #70707b;
-}
-.neural-auth-shell .sign-in-form input:focus {
+.neural-auth-shell .sign-in-form :is(input, select):focus,
+.workspace
+  :is(
+    .workflow-page,
+    .directory-controls,
+    .department-filter,
+    .account-filters,
+    .account-fields
+  )
+  :is(input, select):focus {
   border-bottom-color: var(--foreground);
 }
 
@@ -4380,7 +4390,6 @@ body {
   :is(
     .panel,
     .summary-strip,
-    .welcome-banner,
     .connected-record-strip,
     .student-list-record,
     .student-card,
@@ -4390,9 +4399,6 @@ body {
     .insight-counters > button,
     .source-health,
     .view-switch,
-    .directory-controls input,
-    .directory-controls select,
-    .sort-control,
     .inline-note,
     .bar-track,
     th
@@ -4525,8 +4531,96 @@ body {
 :root[data-theme="dark"] .button.danger-button {
   border-color: #743447;
 }
-:root[data-theme="dark"] .neural-auth-shell .sign-in-panel {
+.workspace {
+  position: relative;
+  isolation: isolate;
+}
+.neural-stage--still {
+  height: 260px;
+  mask-image: linear-gradient(transparent, #000 22%, #000 40%, transparent);
+}
+.neural-stage--still .neural-liquid {
+  inset: -200px -90px auto auto;
+  width: min(65vw, 780px);
+  height: 490px;
+  min-height: 0;
+  opacity: 0.26;
+  transform: none;
+}
+.neural-stage--still .neural-blob {
+  animation: none;
+}
+.workspace :is(.page-heading h1, .welcome-banner h1) {
+  font-size: var(--workspace-title-size);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  line-height: 1.04;
+  text-transform: uppercase;
+  text-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+.workspace .page-heading h1 {
+  max-width: 23ch;
+}
+.workspace .page-heading p {
+  margin-top: 12px;
+}
+.workspace .welcome-banner {
   background: transparent;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding-inline: 0;
+}
+.workspace .welcome-banner h1 {
+  max-width: 19ch;
+}
+.workspace .welcome-banner div > span:not(.emblem-tag) {
+  font-size: 12px;
+  margin-top: 12px;
+}
+.workspace
+  :is(.panel-header h2, .directory-section-heading h2, .insight-heading h2),
+.modal-heading h2 {
+  font-size: var(--section-title-size);
+  line-height: 1.2;
+  font-weight: 740;
+  letter-spacing: -0.025em;
+}
+.workspace :is(.panel-header, .connected-record-strip) {
+  border-color: var(--line);
+}
+.workspace .student-list-record .list-record-identity strong {
+  font-size: 13px;
+}
+.workspace .list-record-identity > span {
+  font-size: 11px;
+}
+.workspace
+  :is(
+    .workflow-page,
+    .directory-controls,
+    .department-filter,
+    .account-filters,
+    .account-fields
+  )
+  :is(input:not([type="file"], [type="checkbox"], [type="radio"]), select) {
+  min-height: 40px;
+  font-size: 14px;
+  padding-block: 8px;
+}
+.workspace :is(.directory-controls, .account-filters) .search-field input {
+  padding-inline-start: 36px;
+}
+.workspace .directory-controls .sort-control select {
+  padding-inline-start: 0;
+}
+.workspace .sort-control {
+  background: transparent;
+}
+.button.primary,
+.list-record-action {
+  border-radius: 16px;
+  font-weight: 700;
 }
 @media (max-width: 760px) {
   .neural-auth-shell {
@@ -4537,10 +4631,21 @@ body {
     font-size: 56px;
     margin-bottom: 40px;
   }
+  .neural-auth-shell--extended h1 {
+    font-size: clamp(2rem, 8vw, 2.75rem);
+    margin-bottom: 14px;
+  }
   .neural-liquid {
     width: 180vw;
     left: 14%;
     top: 30%;
+  }
+  .neural-stage--still .neural-liquid {
+    width: 530px;
+    inset: -220px -210px auto auto;
+  }
+  .workspace .welcome-emblem {
+    display: none;
   }
   .workspace-actions .theme-toggle {
     width: 40px;

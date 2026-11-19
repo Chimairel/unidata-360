@@ -16,6 +16,7 @@ import { GovernanceTab } from "@/frontend/components/tabs/GovernanceTab";
 import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectureModal";
 import { PresentationMode } from "@/frontend/components/PresentationMode";
 import { SignIn } from "@/frontend/components/SignIn";
+import { MercuryBackdrop } from "@/frontend/components/ui/neural-access-login";
 import { AccountsTab } from "@/frontend/components/tabs/AccountsTab";
 import { CasesTab } from "@/frontend/components/tabs/CasesTab";
 import { QualityTab } from "@/frontend/components/tabs/QualityTab";
@@ -62,6 +63,7 @@ function Workspace() {
         openPresentation={() => setPresentation(true)}
       />
       <main id="workspace" className="workspace">
+        <MercuryBackdrop still />
         {(error || notice) && (
           <div
             className={`message ${error ? "error" : "success"}`}

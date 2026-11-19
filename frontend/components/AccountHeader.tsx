@@ -2,7 +2,11 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
-export function AccountHeader({ current }: { current: "login" | "register" }) {
+export function AccountHeader({
+  current,
+}: {
+  current: "login" | "register" | "recovery";
+}) {
   return (
     <header className="account-header">
       <div className="account-header-inner">

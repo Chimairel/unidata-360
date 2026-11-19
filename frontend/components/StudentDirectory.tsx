@@ -140,7 +140,7 @@ export function StudentDirectory({
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
         >
-          <option value="ALL">All permitted departments</option>
+          <option value="ALL">All departments</option>
           {DEPARTMENTS.filter((d) =>
             students.some((s) => s.department === d),
           ).map((d) => (

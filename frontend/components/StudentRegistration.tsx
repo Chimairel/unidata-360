@@ -2,14 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  AlertCircle,
-  CheckCircle2,
-  Mail,
-} from "lucide-react";
-import { AccountHeader } from "./AccountHeader";
+import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
+import { AccountAccess } from "./AccountAccess";
+import { NeuralSubmit } from "./ui/neural-access-login";
 import { DEPARTMENTS, type Department } from "@/shared/school";
 
 type Stage = "request" | "sent" | "password" | "complete" | "approval";
@@ -83,268 +78,251 @@ export function StudentRegistration({
       "Your email is verified. You can sign in after the Registrar approves your request.",
   };
   return (
-    <div className="account-page">
-      <AccountHeader current={recovery ? "login" : "register"} />
-      <main className="sign-in-shell">
-        <section className="sign-in-content">
-          <div className="panel sign-in-panel">
-            <div className="panel-body">
-              {stage === "complete" ? (
-                <CheckCircle2 size={24} />
-              ) : (
-                <Mail size={24} />
+    <AccountAccess current={recovery ? "recovery" : "register"}>
+      <h1 ref={heading} tabIndex={-1}>
+        {titles[stage]}
+      </h1>
+      <p className="account-description">{descriptions[stage]}</p>
+      {error && (
+        <div className="message error" role="alert">
+          <AlertCircle size={17} />
+          <span>{error}</span>
+        </div>
+      )}
+      {(stage === "request" || stage === "password") && (
+        <form
+          className="sign-in-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setError("");
+            if (stage === "password" && password !== confirmPassword) {
+              setError(
+                "Passwords do not match. Enter the same password in both fields.",
+              );
+              return;
+            }
+            setPending(true);
+            try {
+              const response = await fetch(
+                `${recovery ? "/api/password-reset" : "/api/register"}${stage === "request" ? "" : "/verify"}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(
+                    stage === "request"
+                      ? recovery
+                        ? { studentId, email }
+                        : { studentId, email, fullName, department }
+                      : { token, password },
+                  ),
+                },
+              );
+              const result = await response.json();
+              if (!response.ok)
+                throw new Error(result.error || "Please try again.");
+              if (stage === "request") {
+                setPreview(result.delivery === "preview");
+                setStage("sent");
+              } else {
+                setPassword("");
+                setConfirmPassword("");
+                setToken("");
+                setStage(result.pendingApproval ? "approval" : "complete");
+              }
+            } catch (failure) {
+              setError(
+                failure instanceof Error
+                  ? failure.message
+                  : "Unable to connect. Please try again.",
+              );
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          {stage === "request" ? (
+            <>
+              {!recovery && (
+                <label htmlFor="register-name">
+                  Full name
+                  <input
+                    id="register-name"
+                    name="fullName"
+                    autoComplete="name"
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    disabled={pending}
+                  />
+                </label>
               )}
-              <h1 ref={heading} tabIndex={-1}>
-                {titles[stage]}
-              </h1>
-              <p className="small">{descriptions[stage]}</p>
-              {error && (
-                <div className="message error" role="alert">
-                  <AlertCircle size={17} />
-                  <span>{error}</span>
-                </div>
-              )}
-              {(stage === "request" || stage === "password") && (
-                <form
-                  className="sign-in-form"
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    setError("");
-                    if (stage === "password" && password !== confirmPassword) {
-                      setError(
-                        "Passwords do not match. Enter the same password in both fields.",
-                      );
-                      return;
+              <label htmlFor="register-student">
+                School ID
+                <input
+                  id="register-student"
+                  name="studentId"
+                  autoComplete="off"
+                  required
+                  maxLength={60}
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  disabled={pending}
+                />
+              </label>
+              {!recovery && (
+                <label htmlFor="register-department">
+                  Department
+                  <select
+                    id="register-department"
+                    name="department"
+                    value={department}
+                    onChange={(e) =>
+                      setDepartment(e.target.value as Department)
                     }
-                    setPending(true);
-                    try {
-                      const response = await fetch(
-                        `${recovery ? "/api/password-reset" : "/api/register"}${stage === "request" ? "" : "/verify"}`,
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(
-                            stage === "request"
-                              ? recovery
-                                ? { studentId, email }
-                                : { studentId, email, fullName, department }
-                              : { token, password },
-                          ),
-                        },
-                      );
-                      const result = await response.json();
-                      if (!response.ok)
-                        throw new Error(result.error || "Please try again.");
-                      if (stage === "request") {
-                        setPreview(result.delivery === "preview");
-                        setStage("sent");
-                      } else {
-                        setPassword("");
-                        setConfirmPassword("");
-                        setToken("");
-                        setStage(
-                          result.pendingApproval ? "approval" : "complete",
-                        );
-                      }
-                    } catch (failure) {
-                      setError(
-                        failure instanceof Error
-                          ? failure.message
-                          : "Unable to connect. Please try again.",
-                      );
-                    } finally {
-                      setPending(false);
-                    }
-                  }}
-                >
-                  {stage === "request" ? (
-                    <>
-                      {!recovery && (
-                        <label htmlFor="register-name">
-                          Full name
-                          <input
-                            id="register-name"
-                            name="fullName"
-                            autoComplete="name"
-                            required
-                            minLength={2}
-                            maxLength={100}
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            disabled={pending}
-                          />
-                        </label>
-                      )}
-                      <label htmlFor="register-student">
-                        School ID
-                        <input
-                          id="register-student"
-                          name="studentId"
-                          autoComplete="off"
-                          required
-                          maxLength={60}
-                          value={studentId}
-                          onChange={(e) => setStudentId(e.target.value)}
-                          disabled={pending}
-                        />
-                      </label>
-                      {!recovery && (
-                        <label htmlFor="register-department">
-                          Department
-                          <select
-                            id="register-department"
-                            name="department"
-                            value={department}
-                            onChange={(e) =>
-                              setDepartment(e.target.value as Department)
-                            }
-                            required
-                            disabled={pending}
-                          >
-                            <option value="">Choose department</option>
-                            {DEPARTMENTS.map((d) => (
-                              <option key={d} value={d}>
-                                {d}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-                      <label htmlFor="register-email">
-                        {recovery ? "Registered email" : "Email address"}
-                        <input
-                          id="register-email"
-                          name="email"
-                          type="email"
-                          autoComplete="email"
-                          placeholder="you@gmail.com"
-                          required
-                          maxLength={200}
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          disabled={pending}
-                        />
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <label htmlFor="register-password">
-                        Password
-                        <input
-                          id="register-password"
-                          name="password"
-                          type="password"
-                          autoComplete="new-password"
-                          minLength={12}
-                          maxLength={128}
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={pending}
-                          aria-describedby="password-guidance"
-                        />
-                      </label>
-                      <span
-                        id="password-guidance"
-                        className="small muted registration-guidance"
-                      >
-                        Use 12–128 characters. A few unrelated words make a
-                        memorable password.
-                      </span>
-                      <label htmlFor="register-confirm">
-                        Confirm password
-                        <input
-                          id="register-confirm"
-                          name="confirmPassword"
-                          type="password"
-                          autoComplete="new-password"
-                          minLength={12}
-                          maxLength={128}
-                          required
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          disabled={pending}
-                        />
-                      </label>
-                    </>
-                  )}
-                  <button className="button primary" disabled={pending}>
-                    {pending
-                      ? "Please wait…"
-                      : stage === "request"
-                        ? recovery
-                          ? "Send password reset link"
-                          : "Send verification link"
-                        : recovery
-                          ? "Reset password"
-                          : "Verify and continue"}
-                    <ArrowRight size={16} />
-                  </button>
-                </form>
-              )}
-              {stage === "sent" && (
-                <div className="registration-next" role="status">
-                  {preview && (
-                    <p className="small">
-                      Ask your administrator for the local verification link.
-                    </p>
-                  )}
-                  <p className="small">
-                    {preview
-                      ? "No preview? Confirm your school details with the registrar."
-                      : recovery
-                        ? "No email? Check spam or confirm your registered email with the registrar."
-                        : "No email? Check spam or confirm your school details with the registrar."}
-                  </p>
-                  <button
-                    className="button secondary"
-                    onClick={() => {
-                      setStage("request");
-                      setError("");
-                    }}
+                    required
+                    disabled={pending}
                   >
-                    Request another link
-                  </button>
-                </div>
+                    <option value="">Choose department</option>
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               )}
-              {stage === "complete" && (
-                <Link
-                  className="button primary registration-finish"
-                  href="/login"
-                >
-                  Sign in <ArrowRight size={16} />
-                </Link>
-              )}
-              {stage === "password" && (
-                <button
-                  className="text-link registration-restart"
-                  onClick={() => {
-                    setStage("request");
-                    setToken("");
-                    setPassword("");
-                    setConfirmPassword("");
-                    setError("");
-                  }}
-                >
-                  Link expired? Request a new one
-                </button>
-              )}
-              {stage !== "complete" && (
-                <p className="small sign-in-help">
-                  <Link className="text-link registration-back" href="/login">
-                    <ArrowLeft size={14} /> Back to sign in
-                  </Link>
-                </p>
-              )}
-              {stage === "request" && (
-                <p className="small sign-in-help muted">
-                  Staff access: contact your administrator.
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
+              <label htmlFor="register-email">
+                {recovery ? "Registered email" : "Email address"}
+                <input
+                  id="register-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@gmail.com"
+                  required
+                  maxLength={200}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={pending}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label htmlFor="register-password">
+                Password
+                <input
+                  id="register-password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={pending}
+                  aria-describedby="password-guidance"
+                />
+              </label>
+              <span
+                id="password-guidance"
+                className="small muted registration-guidance"
+              >
+                Use 12–128 characters. A few unrelated words make a memorable
+                password.
+              </span>
+              <label htmlFor="register-confirm">
+                Confirm password
+                <input
+                  id="register-confirm"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={pending}
+                />
+              </label>
+            </>
+          )}
+          <NeuralSubmit>
+            <button className="button primary" disabled={pending}>
+              {pending
+                ? "Please wait…"
+                : stage === "request"
+                  ? recovery
+                    ? "Send password reset link"
+                    : "Send verification link"
+                  : recovery
+                    ? "Reset password"
+                    : "Verify and continue"}
+              <ArrowRight size={16} />
+            </button>
+          </NeuralSubmit>
+        </form>
+      )}
+      {stage === "sent" && (
+        <div className="registration-next" role="status">
+          {preview && (
+            <p className="small">
+              Ask your administrator for the local verification link.
+            </p>
+          )}
+          <p className="small">
+            {preview
+              ? "No preview? Confirm your school details with the registrar."
+              : recovery
+                ? "No email? Check spam or confirm your registered email with the registrar."
+                : "No email? Check spam or confirm your school details with the registrar."}
+          </p>
+          <button
+            className="button secondary"
+            onClick={() => {
+              setStage("request");
+              setError("");
+            }}
+          >
+            Request another link
+          </button>
+        </div>
+      )}
+      {stage === "complete" && (
+        <Link className="button primary registration-finish" href="/login">
+          Sign in <ArrowRight size={16} />
+        </Link>
+      )}
+      {stage === "password" && (
+        <button
+          className="text-link registration-restart"
+          onClick={() => {
+            setStage("request");
+            setToken("");
+            setPassword("");
+            setConfirmPassword("");
+            setError("");
+          }}
+        >
+          Link expired? Request a new one
+        </button>
+      )}
+      {stage !== "complete" && (
+        <p className="small sign-in-help">
+          <Link className="text-link registration-back" href="/login">
+            <ArrowLeft size={14} /> Back to sign in
+          </Link>
+        </p>
+      )}
+      {stage === "request" && (
+        <p className="small sign-in-help muted">
+          Staff access: contact your administrator.
+        </p>
+      )}
+    </AccountAccess>
   );
 }

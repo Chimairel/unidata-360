@@ -15,7 +15,6 @@ const blobs = [
 
 export function NeuralAccessLogin({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
-  const filterId = `mercury-${useId().replaceAll(":", "")}`;
   useEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -44,15 +43,25 @@ export function NeuralAccessLogin({ children }: { children: ReactNode }) {
 
   return (
     <div ref={root} className="account-page neural-access-page">
-      <LiquidFilter id={filterId} />
-      <div className="neural-stage" aria-hidden="true">
-        <div className="neural-liquid" style={{ filter: `url(#${filterId})` }}>
-          {blobs.map((style, index) => (
-            <div key={index} className="neural-blob" style={style} />
-          ))}
-        </div>
-      </div>
+      <MercuryBackdrop />
       {children}
+    </div>
+  );
+}
+
+export function MercuryBackdrop({ still = false }: { still?: boolean }) {
+  const filterId = `mercury-${useId().replaceAll(":", "")}`;
+  return (
+    <div
+      className={`neural-stage${still ? " neural-stage--still" : ""}`}
+      aria-hidden="true"
+    >
+      <LiquidFilter id={filterId} />
+      <div className="neural-liquid" style={{ filter: `url(#${filterId})` }}>
+        {blobs.map((style, index) => (
+          <div key={index} className="neural-blob" style={style} />
+        ))}
+      </div>
     </div>
   );
 }
