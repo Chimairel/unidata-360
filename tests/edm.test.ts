@@ -7,7 +7,12 @@ import {
   requestStudentRegistration,
   verifyStudentRegistration,
 } from "../backend/registration";
-import { emailConfiguration, sendVerificationEmail } from "../backend/email";
+import {
+  emailConfiguration,
+  sendPasswordResetEmail,
+  sendRegistrationDecisionEmail,
+  sendVerificationEmail,
+} from "../backend/email";
 import {
   POST as register,
   verify as confirmRegistration,
@@ -415,6 +420,71 @@ test("Resend delivery uses the configured sender; preview mode cannot run on a p
     process.env = previous;
   }
 });
+
+test("Brevo sends each account message through HTTPS using the configured sender", async () => {
+  const previous = { ...process.env };
+  const originalFetch = globalThis.fetch;
+  try {
+    const origin = "https://school.example.edu";
+    const from = "accounts@example.edu";
+    const recipient = "student@example.edu";
+    const apiKey = "test-brevo-key";
+    Object.assign(process.env, {
+      EDM_EMAIL_MODE: "brevo",
+      EDM_PUBLIC_ORIGIN: origin,
+      EDM_BREVO_FROM_EMAIL: "invalid sender",
+      BREVO_API_KEY: apiKey,
+    });
+    assert.throws(emailConfiguration, /Account email is unavailable/);
+    process.env.EDM_BREVO_FROM_EMAIL = from;
+    delete process.env.BREVO_API_KEY;
+    assert.throws(emailConfiguration, /Account email is unavailable/);
+    process.env.BREVO_API_KEY = apiKey;
+
+    const messages: Array<{ subject: string; textContent: string }> = [];
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, "https://api.brevo.com/v3/smtp/email");
+      assert.equal(options?.method, "POST");
+      const headers = new Headers(options.headers);
+      assert.equal(headers.get("api-key"), apiKey);
+      assert.equal(headers.get("Authorization"), null);
+      const body = JSON.parse(String(options.body));
+      assert.deepEqual(body.sender, { name: "UniData 360", email: from });
+      assert.deepEqual(body.to, [{ email: recipient }]);
+      messages.push(body);
+      return Response.json({ messageId: "test-message" }, { status: 201 });
+    };
+
+    const token = "a".repeat(64);
+    await sendVerificationEmail(recipient, token);
+    await sendPasswordResetEmail(recipient, token);
+    await sendRegistrationDecisionEmail(recipient, true);
+    await sendRegistrationDecisionEmail(recipient, false);
+
+    assert.equal(messages.length, 4);
+    assert.ok(
+      messages[0].textContent.includes(`${origin}/register#token=${token}`),
+    );
+    assert.ok(
+      messages[1].textContent.includes(
+        `${origin}/reset-password#token=${token}`,
+      ),
+    );
+    assert.ok(messages[2].textContent.includes(`${origin}/login`));
+    assert.match(messages[3].textContent, /Contact the registrar/);
+
+    globalThis.fetch = async () =>
+      Response.json({ message: "sender rejected" }, { status: 403 });
+    await assert.rejects(() => sendVerificationEmail(recipient, token), {
+      message:
+        "Account email is unavailable. Contact your project administrator or try again later.",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env = previous;
+  }
+});
+
 databaseTest(
   "server projections withhold raw feeds and restrict student scope",
   async () => {

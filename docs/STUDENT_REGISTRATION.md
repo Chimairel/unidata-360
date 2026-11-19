@@ -25,6 +25,21 @@ Recovery tokens are hashed and bound to the registered account email. An expired
 
 The database stores a hash of the verification token. The browser clears the token fragment from its address bar. Activation rechecks the record, prevents duplicate accounts for a student ID, consumes pending links, and appends an audit event in one transaction. Requests have a 60-second cooldown and a limit of five per email/student ID every 15 minutes.
 
+## Real email with Brevo
+
+In Brevo, [verify a sender](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email) and [create an API key](https://help.brevo.com/hc/en-us/articles/209467485-Create-and-manage-your-API-keys) with permission to send transactional email. Use the sender's email address and keep the key in the backend environment.
+
+```dotenv
+EDM_EMAIL_MODE=brevo
+BREVO_API_KEY=YOUR_BREVO_API_KEY
+EDM_BREVO_FROM_EMAIL=accounts@YOUR_VERIFIED_DOMAIN
+EDM_PUBLIC_ORIGIN=https://YOUR_FRONTEND_DOMAIN
+```
+
+Save these in `backend/.env.local` and restart the backend. For testing on this computer, set `EDM_PUBLIC_ORIGIN=http://localhost:3005` and open the email link here. For the hosted app, put the variables in Railway and use the public Vercel origin. Brevo's [HTTPS endpoint](https://developers.brevo.com/reference/send-transac-email) works with [Railway's SMTP restrictions](https://docs.railway.com/networking/outbound-networking).
+
+Submit a registration using an unused school ID and an inbox you can access. Check the [Brevo transactional logs](https://help.brevo.com/hc/en-us/articles/360021533839-Manage-your-transactional-logs-and-email-previews) if the message is delayed, then open the link and confirm the expected account status. Use a fresh registration after switching from preview mode.
+
 ## Real email with Resend
 
 Configure these **backend-only** values in `backend/.env.local` (or the backend host's environment), then restart the backend:
@@ -38,7 +53,7 @@ EDM_PUBLIC_ORIGIN=https://YOUR_FRONTEND_DOMAIN
 
 Use an API key and sender domain configured in your own Resend account. UniData cannot generate provider credentials. Delivery errors appear as a sanitized backend log message; the registration response stays generic to avoid exposing the roster. Students should check spam and ask the registrar to confirm details if no message arrives.
 
-Never use a `NEXT_PUBLIC_` prefix for the database URL or Resend key. The frontend calls its own `/api` routes, which proxy to the backend.
+Keep the database URL and email provider keys in the backend environment. The frontend calls its own `/api` routes, which proxy to the backend.
 
 ## Local classroom email preview
 
@@ -55,4 +70,4 @@ Preview delivery is restricted to loopback frontend origins and disabled on Verc
 
 ## Verification
 
-`npm test` includes registration, role-injection, duplicate activation, expiry, changed-roster, throttling, delivery-failure and Resend-request tests. Database tests require an isolated `EDM_TEST_DATABASE_URL`. `npm run test:registration` checks signup, school ID login, password recovery and session revocation through the running production frontend/backend proxy with a fresh isolated database and private temporary email previews. No real emails are sent by these tests.
+`npm test` includes registration, role-injection, duplicate activation, expiry, changed-roster, throttling, delivery failures and mocked Brevo and Resend requests. Database tests require an isolated `EDM_TEST_DATABASE_URL`. `npm run test:registration` checks signup, school ID login, password recovery and session revocation through the running production frontend/backend proxy with a fresh isolated database and private temporary email previews. No real emails are sent by these tests.

@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 export class EmailUnavailable extends Error {
   constructor() {
@@ -28,13 +29,18 @@ export function emailConfiguration() {
   if (!local && url.protocol !== "https:") throw new EmailUnavailable();
   const mode = process.env.EDM_EMAIL_MODE || "resend";
   if (mode === "preview" && local) return { mode: "preview" as const, origin };
-  if (
-    mode !== "resend" ||
-    !process.env.RESEND_API_KEY ||
-    !process.env.EDM_EMAIL_FROM
-  )
-    throw new EmailUnavailable();
-  return { mode: "resend" as const, origin };
+  if (mode === "brevo") {
+    const apiKey = process.env.BREVO_API_KEY?.trim();
+    const from = z.email().safeParse(process.env.EDM_BREVO_FROM_EMAIL?.trim());
+    if (apiKey && from.success)
+      return { mode, origin, apiKey, from: from.data } as const;
+  }
+  if (mode === "resend") {
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.EDM_EMAIL_FROM;
+    if (apiKey && from) return { mode, origin, apiKey, from } as const;
+  }
+  throw new EmailUnavailable();
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
@@ -59,7 +65,7 @@ async function sendAccountEmail(
     purpose === "recovery"
       ? `${subject}\n\nOpen this link to choose a new password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request this reset, ignore this email; your password stays unchanged. After resetting, sign in with your school ID and new password.`
       : `${subject}\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. New school IDs require Registrar approval after verification. Once active, sign in with your school ID and password.`;
-  return deliverMessage(email, subject, text);
+  return deliverMessage(config, email, subject, text);
 }
 
 export async function sendRegistrationDecisionEmail(
@@ -73,11 +79,15 @@ export async function sendRegistrationDecisionEmail(
   const text = approved
     ? `Your student access is approved. Sign in with your school ID and the password you chose:\n${config.origin}/login`
     : "Your registration request was not approved. Contact the registrar to confirm your school details.";
-  return deliverMessage(email, subject, text);
+  return deliverMessage(config, email, subject, text);
 }
 
-async function deliverMessage(email: string, subject: string, text: string) {
-  const config = emailConfiguration();
+async function deliverMessage(
+  config: ReturnType<typeof emailConfiguration>,
+  email: string,
+  subject: string,
+  text: string,
+) {
   if (config.mode === "preview") {
     const directory =
       process.env.EDM_EMAIL_PREVIEW_DIR ||
@@ -90,23 +100,45 @@ async function deliverMessage(email: string, subject: string, text: string) {
     );
     return;
   }
+  const request: {
+    url: string;
+    headers: Record<string, string>;
+    body: object;
+  } =
+    config.mode === "brevo"
+      ? {
+          url: "https://api.brevo.com/v3/smtp/email",
+          headers: { "api-key": config.apiKey, Accept: "application/json" },
+          body: {
+            sender: { name: "UniData 360", email: config.from },
+            to: [{ email }],
+            subject,
+            textContent: text,
+          },
+        }
+      : {
+          url: "https://api.resend.com/emails",
+          headers: { Authorization: `Bearer ${config.apiKey}` },
+          body: { from: config.from, to: [email], subject, text },
+        };
+
+  let response: Response;
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    response = await fetch(request.url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.EDM_EMAIL_FROM,
-        to: [email],
-        subject,
-        text,
-      }),
+      headers: { "Content-Type": "application/json", ...request.headers },
+      body: JSON.stringify(request.body),
       signal: AbortSignal.timeout(10000),
     });
-    if (!response.ok) throw new EmailUnavailable();
   } catch {
+    console.error("Account email provider could not be reached.", config.mode);
+    throw new EmailUnavailable();
+  }
+  if (!response.ok) {
+    console.error("Account email provider rejected request.", {
+      provider: config.mode,
+      status: response.status,
+    });
     throw new EmailUnavailable();
   }
 }
