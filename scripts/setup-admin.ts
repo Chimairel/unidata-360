@@ -51,7 +51,7 @@ async function main() {
   const block = `\nSystem Admin (staff account management)\nEmail: ${email}\nPassword: ${password}\nSign in at http://localhost:3005/login\n`;
   await writeFile(
     resolve(directory, "admin.private.txt"),
-    "UniData 360 | Private synthetic System Admin account\n" + block,
+    "Estante | Private synthetic System Admin account\n" + block,
     { mode: 0o600 },
   );
   for (const name of [
@@ -59,7 +59,7 @@ async function main() {
     "development.private.txt",
     "online.private.txt",
   ]) {
-    let content = "UniData 360 | Private classroom account guide\n";
+    let content = "Estante | Private classroom account guide\n";
     try {
       content = await readFile(resolve(directory, name), "utf8");
     } catch (error) {

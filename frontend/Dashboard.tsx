@@ -134,7 +134,7 @@ function Workspace() {
       </main>
       <footer className="app-footer">
         <span>
-          UniData 360 <span className="footer-dot">·</span> EDM course
+          Estante <span className="footer-dot">·</span> EDM course
           demonstration
         </span>
         <span>

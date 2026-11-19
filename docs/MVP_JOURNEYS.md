@@ -1,4 +1,4 @@
-# UniData 360 MVP journeys
+# Estante MVP journeys
 
 ## Full six-role MVP regression — 17 November 2026
 
@@ -151,6 +151,6 @@ The independent Impeccable finish review returned **ship** for this extension af
 
 ## Mercury sign-in and themes — 19 November 2026
 
-Adapted the supplied 21st.dev MercuryLogin design to real UniData authentication. The centered form keeps school-ID/staff-email sign-in, registration and recovery links. The gray liquid backdrop and submit effect support reduced motion; keyboard focus remains visible outside the SVG filter. Light is the default. The header theme toggle persists light/dark selection across refreshes and account/workspace navigation.
+Adapted the supplied 21st.dev MercuryLogin design to real Estante authentication. The centered form keeps school-ID/staff-email sign-in, registration and recovery links. The gray liquid backdrop and submit effect support reduced motion; keyboard focus remains visible outside the SVG filter. Light is the default. The header theme toggle persists light/dark selection across refreshes and account/workspace navigation.
 
 Browser checks covered both themes on desktop and 390px mobile, refresh persistence, registration/recovery links, failed login, synthetic Registrar sign-in and sign-out, and themed Student 360 charts, analytics, quality tables and dossier dialogs. Account and shared classroom data were not changed; authenticated checks used a disposable PostgreSQL schema, which was removed afterward. The mobile white-background override was corrected. Final frontend build, lint, formatting and diff checks passed. Reduced-motion rules were inspected in source; an OS preference change was not exercised. The independent reviewer scored the restored liquid action and documentation fixes resolved with disposition **ship**.

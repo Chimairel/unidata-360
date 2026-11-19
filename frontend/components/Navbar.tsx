@@ -99,14 +99,12 @@ export function Navbar({
   const staff =
     !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) && !isLoading;
   const brand = (
-    <Link className="brand" href="/" aria-label="UniData home">
+    <Link className="brand" href="/" aria-label="Estante home">
       <span className="brand-mark">
         <GraduationCap size={24} />
       </span>
       <span>
-        <strong>
-          UniData<span className="brand-360">360</span>
-        </strong>
+        <strong>Estante</strong>
         <small>University workspace</small>
       </span>
     </Link>
@@ -114,8 +112,8 @@ export function Navbar({
   return (
     <>
       <aside className="workspace-sidebar" aria-label="University workspace">
-        <Link className="rail-brand" href="/" aria-label="UniData home">
-          U<span>.</span>
+        <Link className="rail-brand" href="/" aria-label="Estante home">
+          E<span>.</span>
         </Link>
         <nav className="sidebar-nav" aria-label="Workspace navigation">
           {visibleTabs.map(({ id, label, short, icon: Icon }) => (

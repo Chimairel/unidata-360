@@ -5,7 +5,7 @@ Students register themselves at `/register`. Registrar, department-assigned Dean
 ## Student flow
 
 1. Enter full name, school ID, email and one of BSIT/BEED/BSED/BSHM at `/register`.
-2. UniData prepares a single-use verification link, valid for 30 minutes. A school ID already in the master must match its SIS email; self-entered details do not replace that school record. Existing accounts and ineligible details receive a generic public response.
+2. Estante prepares a single-use verification link, valid for 30 minutes. A school ID already in the master must match its SIS email; self-entered details do not replace that school record. Existing accounts and ineligible details receive a generic public response.
 3. Open the link and choose a 12–128-character password. Matching published SIS students activate directly. Unlisted IDs become **Pending** verified requests; they cannot sign in yet.
 4. Registrar opens **Student 360 → Student registration requests**, confirms enrollment and approves or rejects the request. Other roles, including System Admin, cannot review it. Rejection requires an internal reason; decisions are audited and an email notification is prepared.
 5. Approved students sign in with **school ID + password**. Approval creates only the account. Until SIS data is imported and ETL runs, the student sees their approved account identity and an academic-records-pending message; no grades, attendance or clearance are fabricated.
@@ -47,11 +47,11 @@ Configure these **backend-only** values in `backend/.env.local` (or the backend 
 ```dotenv
 EDM_EMAIL_MODE=resend
 RESEND_API_KEY=re_YOUR_REAL_KEY
-EDM_EMAIL_FROM=UniData 360 <accounts@YOUR_VERIFIED_DOMAIN>
+EDM_EMAIL_FROM=Estante <accounts@YOUR_VERIFIED_DOMAIN>
 EDM_PUBLIC_ORIGIN=https://YOUR_FRONTEND_DOMAIN
 ```
 
-Use an API key and sender domain configured in your own Resend account. UniData cannot generate provider credentials. Delivery errors appear as a sanitized backend log message; the registration response stays generic to avoid exposing the roster. Students should check spam and ask the registrar to confirm details if no message arrives.
+Use an API key and sender domain configured in your own Resend account. Estante cannot generate provider credentials. Delivery errors appear as a sanitized backend log message; the registration response stays generic to avoid exposing the roster. Students should check spam and ask the registrar to confirm details if no message arrives.
 
 Keep the database URL and email provider keys in the backend environment. The frontend calls its own `/api` routes, which proxy to the backend.
 

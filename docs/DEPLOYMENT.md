@@ -1,4 +1,4 @@
-# Host UniData 360
+# Host Estante
 
 The production deployment uses [unidata-360.vercel.app](https://unidata-360.vercel.app) for the Next.js application and Neon PostgreSQL for persistent storage. Next.js route handlers connect to Neon over verified TLS. Browser requests use a first-party, secure session cookie. Local development continues on port **3005**.
 

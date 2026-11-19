@@ -346,7 +346,7 @@ databaseTest(
       const originalFetch = globalThis.fetch;
       process.env.EDM_EMAIL_MODE = "resend";
       process.env.RESEND_API_KEY = "test-key-not-real";
-      process.env.EDM_EMAIL_FROM = "UniData <accounts@example.edu>";
+      process.env.EDM_EMAIL_FROM = "Estante <accounts@example.edu>";
       await execute("DELETE FROM registration_limits");
       globalThis.fetch = async () => Response.json({}, { status: 403 });
       try {
@@ -396,7 +396,7 @@ test("Resend delivery uses the configured sender; preview mode cannot run on a p
     delete process.env.RESEND_API_KEY;
     assert.throws(emailConfiguration, /unavailable/);
     process.env.RESEND_API_KEY = "test-key-not-real";
-    process.env.EDM_EMAIL_FROM = "UniData <accounts@example.edu>";
+    process.env.EDM_EMAIL_FROM = "Estante <accounts@example.edu>";
     globalThis.fetch = async (url, options) => {
       assert.equal(url, "https://api.resend.com/emails");
       const body = JSON.parse(String(options?.body));
@@ -449,7 +449,7 @@ test("Brevo sends each account message through HTTPS using the configured sender
       assert.equal(headers.get("api-key"), apiKey);
       assert.equal(headers.get("Authorization"), null);
       const body = JSON.parse(String(options.body));
-      assert.deepEqual(body.sender, { name: "UniData 360", email: from });
+      assert.deepEqual(body.sender, { name: "Estante", email: from });
       assert.deepEqual(body.to, [{ email: recipient }]);
       messages.push(body);
       return Response.json({ messageId: "test-message" }, { status: 201 });

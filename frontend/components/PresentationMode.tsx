@@ -68,7 +68,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
     >
       <div className="modal-heading">
         <div className="presentation-heading">
-          <h2>UniData 360</h2>
+          <h2>Estante</h2>
           <Badge>EDM · Education / Universities</Badge>
         </div>
         <div className="presentation-tools">

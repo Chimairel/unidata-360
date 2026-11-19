@@ -1,4 +1,4 @@
-# UniData 360 course alignment
+# Estante course alignment
 
 For the current requirement-by-requirement review, product references, documentation mismatches and prioritized gaps, see [Course and product gap review — 17 November 2026](COURSE_AND_PRODUCT_GAP_REVIEW.md). The review below records the earlier 6 November baseline and its historical verification results.
 
@@ -6,7 +6,7 @@ Reviewed 6 November 2026 against all 19 slides of the supplied `integration.pptx
 
 The assignment on slide 19 is an industry map and presentation: choose one industry, map sources → integration → governance → outputs, present a flowchart, and place the industry in the comparative matrix. Examples of ETL, ELT, APIs, CDC, virtualization and Data Fabric are alternative approaches, not a requirement to implement all of them. Hotel-specific requirements in the reference SRS are formatting examples, not university requirements.
 
-| Evidence | UniData coverage |
+| Evidence | Estante coverage |
 | --- | --- |
 | Slides 3–7: integration, DQM and ETL | Schema validation, text/email normalization, duplicate-key policy, studentId reconciliation, atomic golden master and ETL reports. |
 | Slide 8: method choices | Controlled batch ETL and same-origin API; alternative methods and latency/scale trade-offs explained in presentation. |

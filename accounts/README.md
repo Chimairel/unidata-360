@@ -1,8 +1,8 @@
-# UniData 360 demo accounts
+# Estante demo accounts
 
 Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by System Admin in the Accounts dashboard; the CLI remains available for initial setup. Registrar and Dean are application roles, separate from the person who provisions accounts.
 
-Local and online UniData use the same PostgreSQL database and these nine synthetic accounts across six roles.
+Local and online Estante use the same PostgreSQL database and these nine synthetic accounts across six roles.
 
 | Role | Sign-in | Access |
 | --- | --- | --- |

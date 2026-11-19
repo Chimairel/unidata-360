@@ -1,6 +1,6 @@
 # School departments and staff roles
 
-UniData uses the four departments supplied by the group:
+Estante uses the four departments supplied by the group:
 
 | Department | Program |
 | --- | --- |

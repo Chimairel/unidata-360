@@ -50,13 +50,13 @@ test("password reset delivery uses Resend and a fragment token without disclosin
   Object.assign(process.env, {
     EDM_EMAIL_MODE: "resend",
     RESEND_API_KEY: "test-only-not-real",
-    EDM_EMAIL_FROM: "UniData <accounts@example.edu>",
+    EDM_EMAIL_FROM: "Estante <accounts@example.edu>",
     EDM_PUBLIC_ORIGIN: "https://school.example.test",
   });
   globalThis.fetch = async (url, options) => {
     assert.equal(url, "https://api.resend.com/emails");
     const body = JSON.parse(String(options?.body));
-    assert.equal(body.subject, "Reset your UniData 360 student password");
+    assert.equal(body.subject, "Reset your Estante student password");
     assert.deepEqual(body.to, ["student@example.test"]);
     assert.ok(body.text.includes(`/reset-password#token=${"a".repeat(64)}`));
     assert.ok(!body.text.includes("GPA"));

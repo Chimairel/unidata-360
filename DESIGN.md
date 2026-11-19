@@ -1,5 +1,5 @@
 ---
-name: UniData 360
+name: Estante
 description: A monochrome university workspace with Mercury typography, liquid accents and light and dark themes.
 colors:
   canvas: "#f1f1f3"
@@ -262,7 +262,7 @@ components:
     height: "44px"
 ---
 
-# Design System: UniData 360
+# Design System: Estante
 
 ## Overview
 
@@ -270,9 +270,9 @@ components:
 
 The supplied learning-dashboard reference establishes a light, monochrome university workspace: a white application workspace fills the browser viewport, with an inset black navigation rail. Soft gray records and confident black actions give operational data a friendly, composed rhythm.
 
-Geist typography, compact labeled controls and generous separation between dashboard columns support UniData 360. Restrained green, amber and rose identify status; they accompany readable labels. Light remains the default; the persistent dark theme maps the same workspace, presentation, account and modal roles to dark neutrals and contrasting actions.
+Geist typography, compact labeled controls and generous separation between dashboard columns support Estante. Restrained green, amber and rose identify status; they accompany readable labels. Light remains the default; the persistent dark theme maps the same workspace, presentation, account and modal roles to dark neutrals and contrasting actions.
 
-The 21st.dev MercuryLogin design sets the visual direction across UniData. Bold Geist titles mark the current task, compact section headings organize records and tables, and underlined fields and rounded primary actions connect account access to the workspace. The liquid accent moves behind account forms and rests behind workspace headings.
+The 21st.dev MercuryLogin design sets the visual direction across Estante. Bold Geist titles mark the current task, compact section headings organize records and tables, and underlined fields and rounded primary actions connect account access to the workspace. The liquid accent moves behind account forms and rests behind workspace headings.
 
 The user's supplied reference replaces the former navy identity. The frontmatter owns normative primitives. The final reference-led stylesheet section and scoped responsive overrides take precedence over inherited rules. This merge records the requested sign-in replacement and themes only; unrelated pre-existing documentation/layout drift has been preserved rather than rescanned.
 
@@ -395,7 +395,7 @@ Inputs, selects and textareas use white fill, foreground text, a fine gray borde
 
 The black rail starts with a compact **U.** home mark, followed by labeled SVG buttons for Students, Pipeline, Analytics and Governance. Active fill is charcoal with white text; hover adds charcoal feedback. Course matrix and account controls occupy the lower area. Rail buttons are 66px wide and at least 65px high, narrowing to 60px at 1200px.
 
-The header retains UniData 360, current location, Present, Run ETL and actor controls, plus a theme toggle. The same toggle appears in account navigation. It is a bordered 44px square, reducing to 40px in the mobile workspace header, and names its next action (**Use dark theme** or **Use light theme**). Location hides at 1200px. At 960px compact navigation and course/account controls replace the rail. Selected compact navigation follows primary/on-primary colors. At 760px Present and Run ETL hide visible labels but retain accessible names. Account mode keeps the assigned **Account role** readable in a disabled selector; demo mode permits **Demo persona** switching.
+The header retains Estante, current location, Present, Run ETL and actor controls, plus a theme toggle. The same toggle appears in account navigation. It is a bordered 44px square, reducing to 40px in the mobile workspace header, and names its next action (**Use dark theme** or **Use light theme**). Location hides at 1200px. At 960px compact navigation and course/account controls replace the rail. Selected compact navigation follows primary/on-primary colors. At 760px Present and Run ETL hide visible labels but retain accessible names. Account mode keeps the assigned **Account role** readable in a disabled selector; demo mode permits **Demo persona** switching.
 
 ### Cohort Statistics
 

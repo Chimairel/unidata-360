@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UniData 360 | Enterprise Data Management",
+  title: "Estante | Enterprise Data Management",
   description:
     "Higher Education Enterprise Data Management System: Sources, ETL Integration, FERPA Governance & Student 360",
 };

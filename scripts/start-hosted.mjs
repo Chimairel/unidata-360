@@ -9,7 +9,7 @@ function fail(message) {
 }
 
 if (env.EDM_AUTH_MODE !== "accounts" || env.EDM_SECURE_COOKIES !== "true") {
-  fail("Hosted UniData requires accounts mode and secure cookies.");
+  fail("Hosted Estante requires accounts mode and secure cookies.");
 }
 let origin;
 try {

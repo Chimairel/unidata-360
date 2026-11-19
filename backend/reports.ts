@@ -11,9 +11,9 @@ export async function makeReport(
   pdf.setTitle(
     student
       ? `${student.studentId} - Student 360`
-      : "UniData Academic Analytics",
+      : "Estante Academic Analytics",
   );
-  pdf.setAuthor("UniData 360");
+  pdf.setAuthor("Estante");
   let page = pdf.addPage([595.28, 841.89]);
   let y = 750;
   const clean = (v: unknown) =>
@@ -29,7 +29,7 @@ export async function makeReport(
       height: 62,
       color: rgb(0.05, 0.09, 0.16),
     });
-    page.drawText("UniData 360 | University data workspace", {
+    page.drawText("Estante | University data workspace", {
       x: 42,
       y: 805,
       size: 14,
@@ -140,7 +140,7 @@ export async function makeReport(
   }
   pdf.getPages().forEach((p, i) => {
     p.drawText(
-      `UniData 360 | Educational demonstration | ${i + 1} / ${pdf.getPageCount()}`,
+      `Estante | Educational demonstration | ${i + 1} / ${pdf.getPageCount()}`,
       { x: 42, y: 32, size: 8, font: regular, color: rgb(0.4, 0.45, 0.52) },
     );
   });

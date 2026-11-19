@@ -13,13 +13,13 @@ export function AccountHeader({
         <Link
           href="/login"
           className="account-header-brand"
-          aria-label="UniData 360 sign in"
+          aria-label="Estante sign in"
         >
           <span className="brand-mark">
             <GraduationCap size={23} />
           </span>
           <span>
-            <strong>UniData 360</strong>
+            <strong>Estante</strong>
             <span className="account-header-subtitle">
               University data workspace
             </span>

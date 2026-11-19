@@ -59,8 +59,8 @@ async function sendAccountEmail(
   const link = `${config.origin}/${purpose === "recovery" ? "reset-password" : "register"}#token=${token}`;
   const subject =
     purpose === "recovery"
-      ? "Reset your UniData 360 student password"
-      : "Verify your UniData 360 student account";
+      ? "Reset your Estante student password"
+      : "Verify your Estante student account";
   const text =
     purpose === "recovery"
       ? `${subject}\n\nOpen this link to choose a new password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request this reset, ignore this email; your password stays unchanged. After resetting, sign in with your school ID and new password.`
@@ -74,8 +74,8 @@ export async function sendRegistrationDecisionEmail(
 ) {
   const config = emailConfiguration();
   const subject = approved
-    ? "Your UniData 360 student access is approved"
-    : "Your UniData 360 registration request was reviewed";
+    ? "Your Estante student access is approved"
+    : "Your Estante registration request was reviewed";
   const text = approved
     ? `Your student access is approved. Sign in with your school ID and the password you chose:\n${config.origin}/login`
     : "Your registration request was not approved. Contact the registrar to confirm your school details.";
@@ -110,7 +110,7 @@ async function deliverMessage(
           url: "https://api.brevo.com/v3/smtp/email",
           headers: { "api-key": config.apiKey, Accept: "application/json" },
           body: {
-            sender: { name: "UniData 360", email: config.from },
+            sender: { name: "Estante", email: config.from },
             to: [{ email }],
             subject,
             textContent: text,

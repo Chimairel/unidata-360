@@ -1,4 +1,4 @@
-# UniData 360
+# Estante
 <!-- impeccable:product-schema 1 -->
 
 ## Platform
@@ -23,7 +23,7 @@ The operational extension adds Registrar/Auditor Data Quality work and real-acco
 Unlisted school IDs can request Student access with a name, email and department. Email verification and password setup precede Registrar approval. Pending/rejected requests cannot sign in. Approval creates only the Student account; SIS imports remain authoritative for academic records. Registrar reviews these requests within Student 360. Local preview mode saves messages on the backend computer and does not send inbox email.
 
 ## Brand Commitments
-Preserve UniData’s name and university data purpose. The supplied 21st.dev MercuryLogin design guides typography, hierarchy and controls across the app. Bold Geist headings, underlined fields and rounded primary actions connect the account pages and workspaces. Account forms use the animated liquid backdrop, and workspace headings use a still version. Light remains the default, with a persistent dark-theme toggle in both headers.
+Preserve Estante’s name and university data purpose. The supplied 21st.dev MercuryLogin design guides typography, hierarchy and controls across the app. Bold Geist headings, underlined fields and rounded primary actions connect the account pages and workspaces. Account forms use the animated liquid backdrop, and workspace headings use a still version. Light remains the default, with a persistent dark-theme toggle in both headers.
 
 ## Evidence on Hand
 Eight synthetic SIS students and matching learning/library seed data. Two supplied classroom reference slides. No real institution, live Canvas integration, regulatory certification or longitudinal retention dataset is supplied.

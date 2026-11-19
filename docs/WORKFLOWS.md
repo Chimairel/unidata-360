@@ -1,6 +1,6 @@
 # Data quality and advising workflows
 
-UniData now supports two operational workspaces alongside the existing pipeline, student records and analytics. They use the same shared PostgreSQL database and fixed account roles. Frontend remains on 3005 and backend on 3006.
+Estante now supports two operational workspaces alongside the existing pipeline, student records and analytics. They use the same shared PostgreSQL database and fixed account roles. Frontend remains on 3005 and backend on 3006.
 
 ## Access
 

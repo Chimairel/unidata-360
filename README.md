@@ -1,4 +1,4 @@
-# UniData 360 · Enterprise Data Management
+# Estante · Enterprise Data Management
 
 A full-stack classroom demonstration of the Education / Universities EDM lifecycle:
 
@@ -31,7 +31,7 @@ npm run dev
 
 Use either the root command or the two separate terminals. Stop the running servers with Ctrl+C before starting them again.
 
-UniData creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Local and hosted applications share accounts and records when configured with the shared database; changes in either appear in both.
+Estante creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Local and hosted applications share accounts and records when configured with the shared database; changes in either appear in both.
 
 For the production build:
 

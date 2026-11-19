@@ -72,7 +72,7 @@ export async function GET(request: Request) {
         {
           headers: {
             "Content-Type": "text/csv; charset=utf-8",
-            "Content-Disposition": 'attachment; filename="unidata-audit.csv"',
+            "Content-Disposition": 'attachment; filename="estante-audit.csv"',
             "Cache-Control": "no-store",
           },
         },
@@ -126,7 +126,7 @@ export async function GET(request: Request) {
     return new Response(Buffer.from(bytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${student?.studentId || "unidata-analytics"}.pdf"`,
+        "Content-Disposition": `attachment; filename="${student?.studentId || "estante-analytics"}.pdf"`,
         "Cache-Control": "no-store",
       },
     });

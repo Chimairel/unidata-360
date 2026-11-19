@@ -178,13 +178,6 @@ strong {
   font-size: 23px;
   letter-spacing: -0.04em;
 }
-.brand-360 {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--accent);
-  margin-left: 5px;
-}
 .brand small {
   display: block;
   color: var(--muted);
@@ -2865,11 +2858,6 @@ body {
   font-weight: 720;
   letter-spacing: -0.035em;
 }
-.brand-360 {
-  color: var(--muted);
-  font-size: 11px;
-  margin-left: 4px;
-}
 .brand small {
   font-size: 10px;
 }
@@ -4167,7 +4155,7 @@ body {
   }
 }
 
-/* Mercury typography, controls and surfaces across UniData. */
+/* Mercury typography, controls and surfaces across Estante. */
 .theme-toggle {
   width: 44px;
   height: 44px;

@@ -39,7 +39,7 @@ export const slides = [
   {
     title: "One student lifecycle. Three disconnected systems.",
     intro:
-      "UniData 360 connects student information, learning activity, and library records into a governed view for university staff and students.",
+      "Estante connects student information, learning activity, and library records into a governed view for university staff and students.",
     items: [
       [
         "The industry",
