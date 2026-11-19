@@ -331,7 +331,7 @@ At 760px, the frame fills the viewport, with no outer padding, radius or shadow.
 
 Panels retain 24px body padding and 20px by 22px heading padding. Split panels and forms stack at 760px; pipeline connectors turn downward. Standard dialogs are limited to 640px wide, wide dialogs to 1050px, with 16px viewport gutters and internal scrolling. Presentation reaches 1440px wide and 94dvh high, switching to 8px gutters and 96dvh on narrow screens. Mobile slides start at the top; comparative tables keep local scrolling.
 
-Sign-in, registration and recovery use one compact form below the shared account header. The shell has a 560px maximum width and 32px by 24px padding, centered vertically when space allows. At 760px it uses 24px padding and starts at the top. Keep the task heading, labeled fields, state feedback and account-help links; omit promotional introductions and benefit lists.
+Sign-in places a generated black campus outline on the left and the existing form on the right, in a 1440px maximum-width shell with a form column up to 480px. At 960px and below it stacks the form first and illustration below. Registration and recovery retain a compact 560px shell. At 760px account forms use 24px padding and start at the top. Keep the task heading, labeled fields, state feedback and account-help links; omit promotional introductions and benefit lists.
 
 ## Elevation & Depth
 
@@ -345,7 +345,7 @@ State feedback uses 160ms background, text and border-color transitions. Existin
 
 The outer workspace has square edges; the inset rail retains its rounded silhouette. Welcome and source-health blocks are softly rounded; panels retain the shared 12px radius. List rows use 11px corners, controls 8px and record actions 6px. Badges use 5px; dialogs 16px. List avatars are rounded rectangles; dossier avatars and small indicators may remain circular. Fine borders define fields and tables; upload targets use dashed edges.
 
-The greeting emblem is a Lucide graduation-cap SVG inside an outlined circle with small rotated SIS, LMS and Library tags. No illustration raster ships. The tags correspond to implemented feeds.
+The greeting emblem is a Lucide graduation-cap SVG inside an outlined circle with small rotated SIS, LMS and Library tags. The tags correspond to implemented feeds. Sign-in uses a decorative generated campus raster with thick solid black contours on white; it depicts an imagined school rather than an actual campus.
 
 ## Components
 

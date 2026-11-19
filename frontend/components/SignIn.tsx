@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LockKeyhole, AlertCircle } from "lucide-react";
 import { AccountHeader } from "./AccountHeader";
@@ -44,7 +45,17 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   return (
     <div className="account-page">
       <AccountHeader current="login" />
-      <main className="sign-in-shell">
+      <main className="sign-in-shell login-shell">
+        <div className="login-campus" aria-hidden="true">
+          <Image
+            src="/illustrations/campus-outline-bold.png"
+            alt=""
+            width={1536}
+            height={1024}
+            sizes="(max-width: 960px) min(100vw, 560px), (max-width: 1440px) 52vw, 720px"
+            className="login-campus-image"
+          />
+        </div>
         <section className="sign-in-content">
           <div className="panel sign-in-panel">
             <div className="panel-body">

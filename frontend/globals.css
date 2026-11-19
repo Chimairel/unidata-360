@@ -1556,6 +1556,22 @@ td .badge {
 .sign-in-content {
   width: 100%;
 }
+.login-shell {
+  max-width: 1440px;
+  padding: 48px clamp(24px, 4vw, 64px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
+}
+.login-campus {
+  min-width: 0;
+}
+.login-campus-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .sign-in-panel .panel-body {
   padding: clamp(28px, 2.5vw, 40px);
 }
@@ -1635,6 +1651,17 @@ td .badge {
   align-items: center;
   gap: 6px;
   min-height: 44px;
+}
+@media (max-width: 960px) {
+  .login-shell {
+    display: flex;
+    max-width: 560px;
+    gap: 32px;
+  }
+  .login-campus {
+    order: 2;
+    width: 100%;
+  }
 }
 @media (max-width: 760px) {
   .account-header-inner {
