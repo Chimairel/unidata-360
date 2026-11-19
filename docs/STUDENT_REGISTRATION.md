@@ -4,13 +4,15 @@ Students register themselves at `/register`. Registrar, department-assigned Dean
 
 ## Student flow
 
-1. Import the student's SIS record and run ETL. The master store must contain the student's school ID and email.
-2. The student chooses **Create your student account** on the sign-in page and enters those exact details.
-3. UniData sends a single-use verification link to the email from the school record. The link expires after 30 minutes. Unknown details and existing accounts receive the same public response.
-4. The student opens the link and chooses a password of 12–128 characters. The account is activated as **Student**, linked to that student ID.
-5. The student signs in with **school ID + password** and sees only their own permitted record. Staff continue using their assigned email + password. An expired link can be replaced from the registration page. Existing student accounts keep their current password.
+1. Enter full name, school ID, email and one of BSIT/BEED/BSED/BSHM at `/register`.
+2. UniData prepares a single-use verification link, valid for 30 minutes. A school ID already in the master must match its SIS email; self-entered details do not replace that school record. Existing accounts and ineligible details receive a generic public response.
+3. Open the link and choose a 12–128-character password. Matching published SIS students activate directly. Unlisted IDs become **Pending** verified requests; they cannot sign in yet.
+4. Registrar opens **Student 360 → Student registration requests**, confirms enrollment and approves or rejects the request. Other roles, including System Admin, cannot review it. Rejection requires an internal reason; decisions are audited and an email notification is prepared.
+5. Approved students sign in with **school ID + password**. Approval creates only the account. Until SIS data is imported and ETL runs, the student sees their approved account identity and an academic-records-pending message; no grades, attendance or clearance are fabricated.
 
-A personal Gmail address is accepted for registration when it matches the email in the school record; this does not implement Google sign-in. Student emails are used for verification and recovery, not as login names. The login field accepts school IDs regardless of letter case and trims surrounding spaces. Passwords remain case-sensitive.
+The Registrar checks any SIS record published while a request was pending. Conflicting email/department details block approval. Request password hashes are cleared after approval/rejection. Rejected students may submit a fresh verified request; previous decisions remain recorded. If a decision notification fails, the approved account remains usable and the Registrar is told to contact the student.
+
+A personal Gmail address is accepted; existing SIS students must use the email on that record. This does not implement Google sign-in. Email is used for verification and recovery, not as the student login name. School-ID sign-in ignores letter case and surrounding spaces; passwords remain case-sensitive.
 
 ## Student password recovery
 
@@ -47,7 +49,7 @@ EDM_EMAIL_MODE=preview
 EDM_PUBLIC_ORIGIN=http://localhost:3005
 ```
 
-Run `npm run dev` from the project root. Each eligible registration or recovery request saves a text message in `backend/.local-email/`. Open the newest message and copy its complete verification URL into the browser. Set a password, then sign in with the school ID. The UI explicitly identifies preview delivery. These messages contain temporary links; they are ignored by Git and excluded from deployment packages. Delete old previews after presenting.
+Run `npm run dev` from the project root. Each eligible registration or recovery request saves a text message in `backend/.local-email/`. **Preview mode sends no inbox email.** Open the newest message and copy its complete verification URL into the browser. Set a password, then follow the account status shown; unlisted IDs still require Registrar approval. The UI explicitly says **Local email preview**. Decision notifications are saved locally too. These private messages are ignored by Git and excluded from deployments.
 
 Preview delivery is restricted to loopback frontend origins and disabled on Vercel and Railway. Production requires real email configuration. For real registration, SIS email addresses must be mailboxes students can access; do not send to the synthetic seed addresses.
 

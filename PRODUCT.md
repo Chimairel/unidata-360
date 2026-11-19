@@ -20,6 +20,8 @@ Account mode uses school ID/password sign-in for students and assigned email/pas
 
 The operational extension adds Registrar/Auditor Data Quality work and real-account advising cases for Registrar, department Deans and Academic Advisors. Source issues persist with stewardship and history, resolve only after passing ETL, and retain receipt metadata. Cases link to active staff accounts and support notes, due dates, outcomes and reopening. Students and auditors do not receive case notes; System Admin remains limited to staff accounts. Term history, HR/Alumni integration and graduation review remain future lifecycle work.
 
+Unlisted school IDs can request Student access with a name, email and department. Email verification and password setup precede Registrar approval. Pending/rejected requests cannot sign in. Approval creates only the Student account; SIS imports remain authoritative for academic records. Registrar reviews these requests within Student 360. Local preview mode saves messages on the backend computer and does not send inbox email.
+
 ## Brand Commitments
 Preserve UniData's name and university data purpose. The user's latest supplied reference replaces the former navy direction with a light, monochrome learning dashboard: a black navigation rail, white canvas, soft gray rows, bold black actions, and a complementary statistics column.
 

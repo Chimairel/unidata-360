@@ -58,7 +58,26 @@ async function sendAccountEmail(
   const text =
     purpose === "recovery"
       ? `${subject}\n\nOpen this link to choose a new password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request this reset, ignore this email; your password stays unchanged. After resetting, sign in with your school ID and new password.`
-      : `${subject}\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. After verification, sign in with your school ID and password.`;
+      : `${subject}\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. New school IDs require Registrar approval after verification. Once active, sign in with your school ID and password.`;
+  return deliverMessage(email, subject, text);
+}
+
+export async function sendRegistrationDecisionEmail(
+  email: string,
+  approved: boolean,
+) {
+  const config = emailConfiguration();
+  const subject = approved
+    ? "Your UniData 360 student access is approved"
+    : "Your UniData 360 registration request was reviewed";
+  const text = approved
+    ? `Your student access is approved. Sign in with your school ID and the password you chose:\n${config.origin}/login`
+    : "Your registration request was not approved. Contact the registrar to confirm your school details.";
+  return deliverMessage(email, subject, text);
+}
+
+async function deliverMessage(email: string, subject: string, text: string) {
+  const config = emailConfiguration();
   if (config.mode === "preview") {
     const directory =
       process.env.EDM_EMAIL_PREVIEW_DIR ||

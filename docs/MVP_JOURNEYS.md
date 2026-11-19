@@ -138,3 +138,13 @@ See [workflow guide](WORKFLOWS.md) for the current role policy and presentation 
 Removed account-page introductions and benefit lists, repeated dashboard descriptions and promotional headings. Shortened staff, student, pipeline, quality, case and governance guidance. Warning criteria remain available in an expandable section; field labels, upload/password limits, ETL publishing instructions and consequential-action notices remain visible where needed.
 
 Browser checks used disposable PostgreSQL data: sign-in at 1920px and 390px, mobile registration, recovery, Registrar workspaces, student self-access and the Admin staff form. Sign-in/sign-out, account links and warning-criteria disclosure worked; no console errors were recorded. Lint and production builds passed. Backend behavior and access policy were unchanged.
+
+## Student registration approval — 19 November 2026
+
+Students now enter their name, school ID, department and email. Matching published SIS records retain direct activation after verification. Unlisted IDs require email verification and Registrar approval. Approval creates a Student account without inventing SIS, grades, attendance or library data.
+
+Verification used a disposable PostgreSQL schema and production services on ports 3005/3006: **33 automated tests, zero skips; 41 registration/recovery HTTP checks; lint; both production builds passed**. The checks covered pending-login denial, privileged-field rejection, Registrar-only decisions, duplicate/repeated approvals, rejection and reapplication, late SIS conflicts, consumed tokens, cleared request password hashes, audit events and approved self-access with no academic record.
+
+Browser checks covered desktop/mobile registration fields and the local preview notice, the Registrar queue, review fields, required rejection reason and empty status filter, and approved Student sign-in with only personal account details. Password creation and approval mutations were verified through the API. Browser console errors were empty. No real emails were sent and shared classroom records were not changed. Local preview mode saves eligible links in `backend/.local-email/`; real delivery requires the Resend configuration in [student registration](STUDENT_REGISTRATION.md).
+
+The independent Impeccable finish review returned **ship** for this extension after inspecting eight desktop/mobile captures and the affected components. Existing typography, neutral panels, native fields and inline review behavior were preserved. DESIGN.md and its existing sidecar were left unchanged.

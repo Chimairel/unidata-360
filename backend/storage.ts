@@ -104,6 +104,18 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL, student_id TEXT, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS login_attempts (email TEXT PRIMARY KEY, failures INTEGER NOT NULL, retry_at BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS student_registrations (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, student_id TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);
+    ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS display_name TEXT;
+    ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS department TEXT;
+    ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS review_required INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE IF NOT EXISTS student_access_requests (
+      id TEXT PRIMARY KEY, student_id TEXT NOT NULL, email TEXT NOT NULL,
+      display_name TEXT NOT NULL, department TEXT NOT NULL, password_hash TEXT,
+      created_at TEXT NOT NULL, email_verified_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending', reviewed_at TEXT, reviewed_by TEXT,
+      review_note TEXT, user_id TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS student_request_pending_id ON student_access_requests(lower(student_id)) WHERE status='Pending';
+    CREATE UNIQUE INDEX IF NOT EXISTS student_request_pending_email ON student_access_requests(email) WHERE status='Pending';
     CREATE TABLE IF NOT EXISTS registration_limits (key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, window_end BIGINT NOT NULL, last_attempt BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS interventions (student_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS source_metadata (feed TEXT NOT NULL, record_key TEXT NOT NULL, received_at TEXT, received_by TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(feed,record_key));

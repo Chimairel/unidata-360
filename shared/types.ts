@@ -126,6 +126,9 @@ export interface AuditLogEntry {
     | "SIGN_IN"
     | "SIGN_OUT"
     | "STUDENT_REGISTERED"
+    | "STUDENT_ACCESS_REQUESTED"
+    | "STUDENT_ACCESS_APPROVED"
+    | "STUDENT_ACCESS_REJECTED"
     | "PASSWORD_RESET"
     | "ACCOUNT_CREATED"
     | "ACCOUNT_UPDATED"
@@ -239,6 +242,11 @@ export interface EDMSnapshot {
   departmentScope?: Department;
   actorId?: string;
   sisRecords: SISRecord[];
+  studentProfile?: {
+    studentId: string;
+    fullName: string;
+    department?: Department;
+  };
   lmsRecords: LMSRecord[];
   libraryRecords: LibraryRecord[];
   masterRecords: UnifiedStudentRecord[];

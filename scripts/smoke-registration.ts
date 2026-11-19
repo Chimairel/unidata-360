@@ -7,6 +7,7 @@ import { createServer } from "node:net";
 import { startServices } from "./services.mjs";
 import { closeDatabase, first } from "../backend/store";
 import { initialSISRecords } from "../backend/data/mockData";
+import { createAccount } from "../backend/auth";
 
 async function main() {
   const database = process.env.EDM_TEST_DATABASE_URL;
@@ -54,10 +55,19 @@ async function main() {
     child.stderr!.resume();
   }
   let checks = 0;
-  async function post(route: string, body: unknown, expected: number) {
+  async function post(
+    route: string,
+    body: unknown,
+    expected: number,
+    cookie?: string,
+  ) {
     const response = await fetch(origin + route, {
       method: "POST",
-      headers: { origin, "Content-Type": "application/json" },
+      headers: {
+        origin,
+        "Content-Type": "application/json",
+        ...(cookie ? { cookie } : {}),
+      },
       body: JSON.stringify(body),
     });
     assert.equal(response.status, expected, route);
@@ -85,7 +95,7 @@ async function main() {
           ? /Create your student account/
           : route === "/reset-password"
             ? /Reset your student password/
-            : /Sign in to UniData/,
+            : /<h1[^>]*>Sign in<\/h1>/,
       );
       checks++;
     }
@@ -190,6 +200,102 @@ async function main() {
     });
     assert.equal(logout.status, 200);
     checks++;
+    const applicant = {
+      studentId: "20990001",
+      email: "applicant@example.edu",
+      fullName: "Synthetic Applicant",
+      department: "BSIT",
+    };
+    await post("/api/register", applicant, 200);
+    const applicantMessages = await Promise.all(
+      (await readdir(directory)).map((name) =>
+        readFile(path.join(directory, name), "utf8"),
+      ),
+    );
+    const applicantToken = applicantMessages
+      .find((body) => body.startsWith(`To: ${applicant.email}\n`))!
+      .match(/#token=([a-f0-9]{64})/)![1];
+    const verified = await post(
+      "/api/register/verify",
+      { token: applicantToken, password },
+      200,
+    );
+    assert.equal((await verified.json()).pendingApproval, true);
+    await post("/api/auth", { identifier: applicant.studentId, password }, 401);
+    await createAccount({
+      email: "registration-reviewer@example.edu",
+      displayName: "Review Registrar",
+      role: "REGISTRAR",
+      password,
+    });
+    const staffLogin = await post(
+      "/api/auth",
+      { identifier: "registration-reviewer@example.edu", password },
+      200,
+    );
+    const staffCookie = staffLogin.headers.get("set-cookie")!.split(";")[0];
+    const queueResponse = await fetch(origin + "/api/student-requests", {
+      headers: { cookie: staffCookie },
+    });
+    assert.equal(queueResponse.status, 200);
+    checks++;
+    const queue = await queueResponse.json();
+    assert.equal(JSON.stringify(queue).includes("password_hash"), false);
+    const request = queue.requests.find(
+      (r: { studentId: string }) => r.studentId === applicant.studentId,
+    );
+    await post(
+      "/api/student-requests",
+      { id: request.id, decision: "approve", role: "REGISTRAR" },
+      400,
+      staffCookie,
+    );
+    await post(
+      "/api/student-requests",
+      { id: request.id, decision: "approve" },
+      200,
+      staffCookie,
+    );
+    await post(
+      "/api/student-requests",
+      { id: request.id, decision: "approve" },
+      409,
+      staffCookie,
+    );
+    const approvedLogin = await post(
+      "/api/auth",
+      { identifier: applicant.studentId, password },
+      200,
+    );
+    const approvedCookie = approvedLogin.headers
+      .get("set-cookie")!
+      .split(";")[0];
+    const approvedView = await (
+      await fetch(origin + "/api/edm", { headers: { cookie: approvedCookie } })
+    ).json();
+    assert.equal(approvedView.masterRecords.length, 0);
+    assert.equal(approvedView.studentProfile.studentId, applicant.studentId);
+    checks++;
+    assert.equal(
+      (
+        await fetch(origin + "/api/student-requests", {
+          headers: { cookie: approvedCookie },
+        })
+      ).status,
+      403,
+    );
+    checks++;
+    await post(
+      "/api/student-requests",
+      { id: request.id, decision: "reject", note: "Forged decision" },
+      403,
+      approvedCookie,
+    );
+    await post(
+      "/api/register/verify",
+      { token: applicantToken, password },
+      400,
+    );
     console.log(
       `Student registration, school ID login and password recovery HTTP smoke passed: ${checks} checks; frontend 3005, backend 3006, no real email sent.`,
     );

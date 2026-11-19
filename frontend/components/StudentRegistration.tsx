@@ -10,8 +10,9 @@ import {
   Mail,
 } from "lucide-react";
 import { AccountHeader } from "./AccountHeader";
+import { DEPARTMENTS, type Department } from "@/shared/school";
 
-type Stage = "request" | "sent" | "password" | "complete";
+type Stage = "request" | "sent" | "password" | "complete" | "approval";
 export function StudentRegistration({
   purpose = "registration",
 }: { purpose?: "registration" | "recovery" } = {}) {
@@ -19,6 +20,8 @@ export function StudentRegistration({
   const [stage, setStage] = useState<Stage>("request");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [department, setDepartment] = useState<Department | "">("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [token, setToken] = useState("");
@@ -56,23 +59,28 @@ export function StudentRegistration({
     request: recovery
       ? "Reset your student password"
       : "Create your student account",
-    sent: "Check your email",
+    sent: preview ? "Local email preview" : "Check your email",
     password: recovery ? "Choose a new password" : "Choose your password",
     complete: recovery ? "Your password is updated" : "Your account is ready",
+    approval: "Awaiting Registrar approval",
   };
   const descriptions = {
     request: recovery
       ? "Enter your school ID and the email registered to your student account."
-      : "Enter the school ID and email on your school record.",
-    sent: recovery
-      ? "If your details match, you’ll receive a reset link valid for 30 minutes."
-      : "If your record is eligible, you’ll receive a verification link valid for 30 minutes.",
+      : "Use your school details. New IDs need Registrar approval.",
+    sent: preview
+      ? "Eligible links are saved locally, not emailed. Links expire in 30 minutes."
+      : recovery
+        ? "If your details match, you’ll receive a reset link valid for 30 minutes."
+        : "If your record is eligible, you’ll receive a verification link valid for 30 minutes.",
     password: recovery
       ? "Choose a new password. This will sign out your existing account sessions."
-      : "Set a password to activate your student account.",
+      : "Choose a password to finish email verification.",
     complete: recovery
       ? "Sign in with your school ID and new password. Previous sessions have been signed out."
       : "Sign in with your school ID and password.",
+    approval:
+      "Your email is verified. You can sign in after the Registrar approves your request.",
   };
   return (
     <div className="account-page">
@@ -117,7 +125,9 @@ export function StudentRegistration({
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify(
                             stage === "request"
-                              ? { studentId, email }
+                              ? recovery
+                                ? { studentId, email }
+                                : { studentId, email, fullName, department }
                               : { token, password },
                           ),
                         },
@@ -132,7 +142,9 @@ export function StudentRegistration({
                         setPassword("");
                         setConfirmPassword("");
                         setToken("");
-                        setStage("complete");
+                        setStage(
+                          result.pendingApproval ? "approval" : "complete",
+                        );
                       }
                     } catch (failure) {
                       setError(
@@ -147,13 +159,28 @@ export function StudentRegistration({
                 >
                   {stage === "request" ? (
                     <>
+                      {!recovery && (
+                        <label htmlFor="register-name">
+                          Full name
+                          <input
+                            id="register-name"
+                            name="fullName"
+                            autoComplete="name"
+                            required
+                            minLength={2}
+                            maxLength={100}
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            disabled={pending}
+                          />
+                        </label>
+                      )}
                       <label htmlFor="register-student">
                         School ID
                         <input
                           id="register-student"
                           name="studentId"
                           autoComplete="off"
-                          placeholder="STU-2024-004"
                           required
                           maxLength={60}
                           value={studentId}
@@ -161,8 +188,30 @@ export function StudentRegistration({
                           disabled={pending}
                         />
                       </label>
+                      {!recovery && (
+                        <label htmlFor="register-department">
+                          Department
+                          <select
+                            id="register-department"
+                            name="department"
+                            value={department}
+                            onChange={(e) =>
+                              setDepartment(e.target.value as Department)
+                            }
+                            required
+                            disabled={pending}
+                          >
+                            <option value="">Choose department</option>
+                            {DEPARTMENTS.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       <label htmlFor="register-email">
-                        Email on your school record
+                        {recovery ? "Registered email" : "Email address"}
                         <input
                           id="register-email"
                           name="email"
@@ -228,7 +277,7 @@ export function StudentRegistration({
                           : "Send verification link"
                         : recovery
                           ? "Reset password"
-                          : "Verify and create account"}
+                          : "Verify and continue"}
                     <ArrowRight size={16} />
                   </button>
                 </form>
@@ -237,13 +286,15 @@ export function StudentRegistration({
                 <div className="registration-next" role="status">
                   {preview && (
                     <p className="small">
-                      Demo email: ask the presenter to open the local preview.
+                      Ask your administrator for the local verification link.
                     </p>
                   )}
                   <p className="small">
-                    {recovery
-                      ? "No email? Check spam or confirm your registered email with the registrar."
-                      : "No email? Check spam or confirm your school details with the registrar."}
+                    {preview
+                      ? "No preview? Confirm your school details with the registrar."
+                      : recovery
+                        ? "No email? Check spam or confirm your registered email with the registrar."
+                        : "No email? Check spam or confirm your school details with the registrar."}
                   </p>
                   <button
                     className="button secondary"

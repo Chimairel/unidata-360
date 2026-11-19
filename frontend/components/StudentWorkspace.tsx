@@ -3,10 +3,27 @@ import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { EmptyState, PageHeading, ReportLink, formatTime, Badge } from "./ui";
 
 export function StudentWorkspace() {
-  const { masterRecords } = useEDM();
+  const { masterRecords, studentProfile } = useEDM();
   const student = masterRecords[0];
   if (!student)
-    return (
+    return studentProfile ? (
+      <div className="page-stack">
+        <PageHeading
+          title={`Hello, ${studentProfile.fullName.split(" ")[0]}.`}
+        />
+        <section className="panel panel-body">
+          <h2>Student account</h2>
+          <p>
+            {studentProfile.fullName} · {studentProfile.studentId} ·{" "}
+            {studentProfile.department}
+          </p>
+          <p>Access approved. Academic records have not been imported yet.</p>
+          <p className="small muted">
+            Contact the registrar for your school record.
+          </p>
+        </section>
+      </div>
+    ) : (
       <EmptyState title="Your record is not available">
         Contact the registrar to check your linked student ID.
       </EmptyState>

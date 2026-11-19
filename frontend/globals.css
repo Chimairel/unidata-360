@@ -1580,7 +1580,8 @@ td .badge {
   gap: 7px;
   font-size: 14px;
 }
-.sign-in-form input {
+.sign-in-form input,
+.sign-in-form select {
   width: 100%;
   min-height: 52px;
   font-size: 16px;

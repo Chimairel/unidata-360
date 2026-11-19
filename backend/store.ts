@@ -336,6 +336,15 @@ export function snapshot(
         actorName: identity?.displayName || actors[role],
         actorId: identity?.userId,
         departmentScope: departmentScope(role, identity),
+        ...(student && identity?.mode === "account" && identity.studentId
+          ? {
+              studentProfile: {
+                studentId: identity.studentId,
+                fullName: identity.displayName || "Student",
+                department: identity.department,
+              },
+            }
+          : {}),
         masterRecords: permitted,
         sisRecords,
         lmsRecords,
