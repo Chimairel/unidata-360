@@ -92,7 +92,7 @@ async function main() {
       assert.match(
         await response.text(),
         route === "/register"
-          ? /Create your student account/
+          ? /Activate your student account/
           : route === "/reset-password"
             ? /Reset your student password/
             : /<h1[^>]*>Sign in<\/h1>/,
@@ -102,6 +102,58 @@ async function main() {
     const student = initialSISRecords[3];
     const password = randomBytes(24).toString("base64url");
     const details = { studentId: student.studentId, email: student.email };
+    const registrarEmail = "enrollment-registrar@example.edu";
+    await createAccount({
+      email: registrarEmail,
+      displayName: "Enrollment Registrar",
+      role: "REGISTRAR",
+      password,
+    });
+    const signedInRegistrar = await post(
+      "/api/auth",
+      { identifier: registrarEmail, password },
+      200,
+    );
+    const staffCookie = signedInRegistrar.headers
+      .get("set-cookie")!
+      .split(";")[0];
+    const rosterUpload = {
+      type: "import",
+      feed: "SIS",
+      format: "json",
+      content: JSON.stringify([student]),
+    };
+    const imported = await post("/api/edm", rosterUpload, 200, staffCookie);
+    assert.match(
+      (await imported.json()).message,
+      /1 student accounts? created/,
+    );
+    const accounts = await fetch(origin + "/api/student-accounts", {
+      headers: { cookie: staffCookie },
+    });
+    assert.deepEqual(await accounts.json(), { pending: 1, active: 0 });
+    checks++;
+    const denied = await post(
+      "/api/auth",
+      { identifier: student.studentId, password: "123456" },
+      401,
+    );
+    assert.equal(denied.headers.has("set-cookie"), false);
+    assert.equal((await fetch(origin + "/api/edm")).status, 401);
+    assert.equal(
+      (await fetch(origin + "/api/reports?type=analytics")).status,
+      401,
+    );
+    assert.equal((await fetch(origin + "/api/student-accounts")).status, 401);
+    checks += 3;
+    await post("/api/password-reset", details, 200);
+    assert.equal((await readdir(directory)).length, 0);
+    await post(
+      "/api/register",
+      { ...details, fullName: "Claimed Name", department: "BSIT" },
+      400,
+    );
+
     await post("/api/register", { ...details, role: "REGISTRAR" }, 400);
     const missing = await post(
       "/api/register",
@@ -141,6 +193,13 @@ async function main() {
       await fetch(origin + "/api/auth", { headers: { cookie } })
     ).json();
     assert.equal(identity.identity.role, "STUDENT");
+    await post("/api/student-accounts", { type: "provision" }, 403, cookie);
+    const reimported = await post("/api/edm", rosterUpload, 200, staffCookie);
+    assert.match(
+      (await reimported.json()).message,
+      /0 student accounts created/,
+    );
+    await post("/api/auth", { identifier: student.studentId, password }, 200);
     const snapshotResponse = await fetch(origin + "/api/edm", {
       headers: { cookie },
     });
@@ -200,104 +259,20 @@ async function main() {
     });
     assert.equal(logout.status, 200);
     checks++;
-    const applicant = {
-      studentId: "20990001",
-      email: "applicant@example.edu",
-      fullName: "Synthetic Applicant",
-      department: "BSIT",
-    };
-    await post("/api/register", applicant, 200);
-    const applicantMessages = await Promise.all(
-      (await readdir(directory)).map((name) =>
-        readFile(path.join(directory, name), "utf8"),
-      ),
-    );
-    const applicantToken = applicantMessages
-      .find((body) => body.startsWith(`To: ${applicant.email}\n`))!
-      .match(/#token=([a-f0-9]{64})/)![1];
-    const verified = await post(
-      "/api/register/verify",
-      { token: applicantToken, password },
-      200,
-    );
-    assert.equal((await verified.json()).pendingApproval, true);
-    await post("/api/auth", { identifier: applicant.studentId, password }, 401);
-    await createAccount({
-      email: "registration-reviewer@example.edu",
-      displayName: "Review Registrar",
-      role: "REGISTRAR",
-      password,
-    });
-    const staffLogin = await post(
-      "/api/auth",
-      { identifier: "registration-reviewer@example.edu", password },
-      200,
-    );
-    const staffCookie = staffLogin.headers.get("set-cookie")!.split(";")[0];
-    const queueResponse = await fetch(origin + "/api/student-requests", {
-      headers: { cookie: staffCookie },
-    });
-    assert.equal(queueResponse.status, 200);
-    checks++;
-    const queue = await queueResponse.json();
-    assert.equal(JSON.stringify(queue).includes("password_hash"), false);
-    const request = queue.requests.find(
-      (r: { studentId: string }) => r.studentId === applicant.studentId,
-    );
     await post(
       "/api/student-requests",
-      { id: request.id, decision: "approve", role: "REGISTRAR" },
-      400,
+      { id: "historical", decision: "approve" },
+      410,
       staffCookie,
     );
     await post(
-      "/api/student-requests",
-      { id: request.id, decision: "approve" },
+      "/api/student-accounts",
+      { type: "provision" },
       200,
       staffCookie,
-    );
-    await post(
-      "/api/student-requests",
-      { id: request.id, decision: "approve" },
-      409,
-      staffCookie,
-    );
-    const approvedLogin = await post(
-      "/api/auth",
-      { identifier: applicant.studentId, password },
-      200,
-    );
-    const approvedCookie = approvedLogin.headers
-      .get("set-cookie")!
-      .split(";")[0];
-    const approvedView = await (
-      await fetch(origin + "/api/edm", { headers: { cookie: approvedCookie } })
-    ).json();
-    assert.equal(approvedView.masterRecords.length, 0);
-    assert.equal(approvedView.studentProfile.studentId, applicant.studentId);
-    checks++;
-    assert.equal(
-      (
-        await fetch(origin + "/api/student-requests", {
-          headers: { cookie: approvedCookie },
-        })
-      ).status,
-      403,
-    );
-    checks++;
-    await post(
-      "/api/student-requests",
-      { id: request.id, decision: "reject", note: "Forged decision" },
-      403,
-      approvedCookie,
-    );
-    await post(
-      "/api/register/verify",
-      { token: applicantToken, password },
-      400,
     );
     console.log(
-      `Student registration, school ID login and password recovery HTTP smoke passed: ${checks} checks; frontend 3005, backend 3006, no real email sent.`,
+      `Student activation, school ID login and password recovery HTTP smoke passed: ${checks} checks; frontend 3005, backend 3006, no real email sent.`,
     );
   } finally {
     await services.stop();
@@ -314,7 +289,7 @@ async function main() {
 main().catch(async () => {
   await closeDatabase();
   console.error(
-    "Registration HTTP smoke failed. Check isolated database setup, service ports, and registration behavior.",
+    "Activation HTTP smoke failed. Check isolated database setup, service ports, and activation behavior.",
   );
   process.exitCode = 1;
 });

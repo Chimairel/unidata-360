@@ -17,3 +17,9 @@ export interface RegistrationWorkspace {
   requests: StudentAccessRequest[];
   message?: string;
 }
+
+export interface StudentAccountsWorkspace {
+  pending: number;
+  active: number;
+  message?: string;
+}

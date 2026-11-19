@@ -1,30 +1,20 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { hashPassword, tokenHash } from "./auth";
-import { audit, execute, first, masters, transaction } from "./store";
+import { audit, execute, first, transaction } from "./store";
 import { emailConfiguration, sendVerificationEmail } from "./email";
-import { DEPARTMENTS } from "@/shared/school";
 
-export const registrationRequest = z
-  .object({
-    studentId: z
-      .string()
-      .trim()
-      .regex(/^[A-Za-z0-9_-]{1,60}$/),
-    email: z.string().trim().toLowerCase().pipe(z.email().max(200)),
-    fullName: z.string().trim().min(2).max(100).optional(),
-    department: z.enum(DEPARTMENTS).optional(),
-  })
-  .strict()
-  .refine((v) => Boolean(v.fullName) === Boolean(v.department), {
-    message: "Provide both your name and department.",
-  });
-export const registrationVerification = z
-  .object({
-    token: z.string().regex(/^[a-f0-9]{64}$/),
-    password: z.string().min(12).max(128),
-  })
-  .strict();
+export const studentContact = z.strictObject({
+  studentId: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{1,60}$/),
+  email: z.string().trim().toLowerCase().pipe(z.email().max(200)),
+});
+export const registrationVerification = z.strictObject({
+  token: z.string().regex(/^[a-f0-9]{64}$/),
+  password: z.string().min(12).max(128),
+});
 
 export class RegistrationError extends Error {
   constructor(
@@ -34,98 +24,51 @@ export class RegistrationError extends Error {
     super(message);
   }
 }
+
 const invalidLink = () =>
   new RegistrationError(
-    "This verification link is invalid or expired. Request a new link, or sign in if you already have an account.",
+    "This activation link is invalid or expired. Request a new link, or sign in if your account is already active.",
   );
-type Pending = {
+
+type PendingAccount = {
+  id: string;
   email: string;
   student_id: string;
-  expires_at: string | number;
-  delivered: number;
-  display_name: string | null;
-  department: string | null;
-  review_required: number;
+  display_name: string;
 };
 
-async function eligibility(
-  studentId: string,
-  email: string,
-  allowReview: boolean,
-) {
-  if (
-    await first(
-      "SELECT 1 FROM users WHERE email=? OR lower(student_id)=lower(?)",
-      email,
-      studentId,
-    )
-  )
-    return null;
-  if (
-    await first(
-      "SELECT 1 FROM student_access_requests WHERE status='Pending' AND (email=? OR lower(student_id)=lower(?))",
-      email,
-      studentId,
-    )
-  )
-    return null;
-  const canonical = await first<{ id: string }>(
-    "SELECT id FROM master WHERE lower(id)=lower(?)",
-    studentId,
+async function activationAccount(studentId: string, email: string) {
+  return first<PendingAccount>(
+    `SELECT u.id,u.email,u.student_id,u.display_name FROM users u
+     JOIN sources sis ON sis.feed='SIS' AND sis.record_key=u.student_id
+     WHERE u.role='STUDENT' AND u.active=1 AND u.activation_required
+       AND lower(u.student_id)=? AND u.email=?
+       AND sis.payload::jsonb->>'enrollmentStatus'='Active'
+       AND lower(btrim(sis.payload::jsonb->>'email'))=u.email
+       AND NOT EXISTS (
+         SELECT 1 FROM sources other
+         WHERE other.feed='SIS' AND other.record_key<>sis.record_key
+           AND (lower(other.record_key)=lower(sis.record_key)
+             OR lower(btrim(other.payload::jsonb->>'email'))=u.email)
+       )`,
+    studentId.toLowerCase(),
+    email,
   );
-  const [student] = canonical ? await masters(canonical.id) : [];
-  if (student)
-    return student.email.trim().toLowerCase() === email
-      ? { review: false, studentId: student.studentId }
-      : null;
-  const staged = await first<{ payload: string; record_key: string }>(
-    "SELECT payload,record_key FROM sources WHERE feed='SIS' AND lower(record_key)=lower(?)",
-    studentId,
-  );
-  if (staged && JSON.parse(staged.payload).email.trim().toLowerCase() !== email)
-    return null;
-  return allowReview
-    ? { review: true, studentId: staged?.record_key || studentId }
-    : null;
 }
 
-async function available(studentId: string, email: string) {
-  const [student] = await masters(studentId);
-  if (!student || student.email.trim().toLowerCase() !== email) return null;
-  if (
-    await first(
-      "SELECT 1 FROM users WHERE email=? OR lower(student_id)=lower(?)",
-      email,
-      studentId,
-    )
-  )
-    return null;
-  if (
-    await first(
-      "SELECT 1 FROM student_access_requests WHERE status='Pending' AND (email=? OR lower(student_id)=lower(?))",
-      email,
-      studentId,
-    )
-  )
-    return null;
-  return student;
-}
-
-export async function requestStudentRegistration(input: unknown) {
-  const { studentId, email, fullName, department } =
-    registrationRequest.parse(input);
+export async function requestStudentActivation(input: unknown) {
+  const { studentId, email } = studentContact.parse(input);
   const config = emailConfiguration();
-  const token = randomBytes(32).toString("hex"),
-    hash = tokenHash(token);
+  const token = randomBytes(32).toString("hex");
+  const hash = tokenHash(token);
   const now = Date.now();
-  const eligible = await transaction(async () => {
+  const account = await transaction(async () => {
     await execute("DELETE FROM registration_limits WHERE window_end<=?", now);
     await execute("DELETE FROM student_registrations WHERE expires_at<=?", now);
-    const keys = [
+    for (const key of [
       tokenHash(`email:${email}`),
       tokenHash(`student:${studentId.toLowerCase()}`),
-    ];
-    for (const key of keys) {
+    ]) {
       const limit = await first<{
         attempts: number;
         last_attempt: string | number;
@@ -141,148 +84,104 @@ export async function requestStudentRegistration(input: unknown) {
           "Please wait before requesting another link. You can request up to five links every 15 minutes.",
           429,
         );
-    }
-    for (const key of keys)
       await execute(
         "INSERT INTO registration_limits(key,attempts,window_end,last_attempt) VALUES(?,1,?,?) ON CONFLICT(key) DO UPDATE SET attempts=registration_limits.attempts+1,last_attempt=excluded.last_attempt",
         key,
         now + 15 * 60000,
         now,
       );
-    const match = await eligibility(
-      studentId,
-      email,
-      !!fullName && !!department,
-    );
-    if (!match) return false;
+    }
+    const pending = await activationAccount(studentId, email);
+    if (!pending) return undefined;
     await execute(
-      "INSERT INTO student_registrations(token_hash,email,student_id,expires_at,display_name,department,review_required) VALUES(?,?,?,?,?,?,?)",
+      "INSERT INTO student_registrations(token_hash,user_id,email,student_id,expires_at) VALUES(?,?,?,?,?)",
       hash,
-      email,
-      match.studentId,
+      pending.id,
+      pending.email,
+      pending.student_id,
       now + 30 * 60000,
-      fullName || null,
-      department || null,
-      match.review ? 1 : 0,
     );
-    return true;
+    return pending;
   });
-  if (eligible) {
+  if (account) {
     try {
-      await sendVerificationEmail(email, token);
+      await sendVerificationEmail(account.email, token);
       await transaction(async () => {
-        await execute(
-          "UPDATE student_registrations SET delivered=1 WHERE token_hash=?",
+        const delivered = await first(
+          "UPDATE student_registrations SET delivered=1 WHERE token_hash=? RETURNING token_hash",
           hash,
         );
-        await execute(
-          "DELETE FROM student_registrations WHERE (email=? OR lower(student_id)=lower(?)) AND token_hash<>?",
-          email,
-          studentId,
-          hash,
-        );
+        if (delivered)
+          await execute(
+            "DELETE FROM student_registrations WHERE user_id=? AND expires_at<?",
+            account.id,
+            now + 30 * 60000,
+          );
       });
     } catch {
       await execute(
         "DELETE FROM student_registrations WHERE token_hash=?",
         hash,
       );
-      // A delivery outage must not disclose which roster details matched.
       console.error(
-        "Student verification email could not be delivered. Check the email provider configuration.",
+        "Student activation email could not be delivered. Check the email provider configuration.",
       );
     }
   }
-  // Identical public response for unknown IDs, mismatches and existing accounts.
   return { ok: true, delivery: config.mode };
 }
 
-export async function verifyStudentRegistration(input: unknown) {
+async function findActivation(hash: string) {
+  return first<{ user_id: string; email: string; student_id: string }>(
+    "SELECT user_id,email,student_id FROM student_registrations WHERE token_hash=? AND user_id IS NOT NULL AND delivered=1 AND expires_at>?",
+    hash,
+    Date.now(),
+  );
+}
+
+export async function verifyStudentActivation(input: unknown) {
   const { token, password } = registrationVerification.parse(input);
   const hash = tokenHash(token);
-  const pending = await first<Pending>(
-    "SELECT email,student_id,expires_at,delivered,display_name,department,review_required FROM student_registrations WHERE token_hash=?",
-    hash,
-  );
-  if (!pending?.delivered || Number(pending.expires_at) <= Date.now())
-    throw invalidLink();
-  // Choose the password only after email ownership, never before sending the link.
+  if (!(await findActivation(hash))) throw invalidLink();
+
   const passwordHash = await hashPassword(password);
   return transaction(async () => {
-    const current = await first<Pending>(
-      "SELECT email,student_id,expires_at,delivered,display_name,department,review_required FROM student_registrations WHERE token_hash=?",
-      hash,
-    );
-    if (!current?.delivered || Number(current.expires_at) <= Date.now())
-      throw invalidLink();
-    if (current.review_required) {
-      if (
-        !current.display_name ||
-        !current.department ||
-        !(await eligibility(current.student_id, current.email, true))
-      )
-        throw invalidLink();
-      const id = randomUUID(),
-        now = new Date().toISOString();
-      await execute(
-        "INSERT INTO student_access_requests(id,student_id,email,display_name,department,password_hash,created_at,email_verified_at) VALUES(?,?,?,?,?,?,?,?)",
-        id,
-        current.student_id,
-        current.email,
-        current.display_name,
-        current.department,
-        passwordHash,
-        now,
-        now,
-      );
-      await execute(
-        "DELETE FROM student_registrations WHERE email=? OR lower(student_id)=lower(?)",
-        current.email,
-        current.student_id,
-      );
-      await audit(
-        "STUDENT",
-        "STUDENT_ACCESS_REQUESTED",
-        id,
-        "Email verified; student access awaits Registrar approval.",
-        "LOGGED",
-        {
-          mode: "account",
-          displayName: current.display_name,
-          studentId: current.student_id,
-        },
-      );
-      return { ok: true, pendingApproval: true };
-    }
-    const student = await available(current.student_id, current.email);
-    if (!student) throw invalidLink();
-    const id = randomUUID();
+    const current = await findActivation(hash);
+    if (!current) throw invalidLink();
+    const account = await activationAccount(current.student_id, current.email);
+    if (!account || account.id !== current.user_id) throw invalidLink();
     await execute(
-      "INSERT INTO users(id,email,display_name,password_hash,role,student_id) VALUES(?,?,?,?,?,?)",
-      id,
-      current.email,
-      student.fullName,
+      "UPDATE users SET password_hash=?,activation_required=FALSE WHERE id=?",
       passwordHash,
-      "STUDENT",
-      current.student_id,
+      account.id,
     );
     await execute(
-      "DELETE FROM student_registrations WHERE email=? OR lower(student_id)=lower(?)",
-      current.email,
-      current.student_id,
+      "DELETE FROM student_registrations WHERE user_id=?",
+      account.id,
     );
-    await execute("DELETE FROM login_attempts WHERE email=?", current.email);
+    await execute("DELETE FROM sessions WHERE user_id=?", account.id);
+    await execute("DELETE FROM password_resets WHERE user_id=?", account.id);
+    await execute(
+      "DELETE FROM registration_limits WHERE key=? OR key=?",
+      tokenHash(`reset-email:${account.email}`),
+      tokenHash(`reset-student:${account.student_id.toLowerCase()}`),
+    );
+    await execute(
+      "DELETE FROM login_attempts WHERE email=? OR email=?",
+      account.email,
+      account.student_id.toLowerCase(),
+    );
     await audit(
       "STUDENT",
       "STUDENT_REGISTERED",
-      current.student_id,
-      "Student account activated after email verification.",
+      account.student_id,
+      "Student set their first password using a single-use link sent to their enrollment email.",
       "ALLOWED",
       {
         mode: "account",
-        userId: id,
-        displayName: student.fullName,
-        studentId: current.student_id,
+        userId: account.id,
+        displayName: account.display_name,
+        studentId: account.student_id,
       },
     );
     return { ok: true };

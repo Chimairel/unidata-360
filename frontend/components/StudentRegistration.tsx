@@ -5,9 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { AccountAccess } from "./AccountAccess";
 import { NeuralSubmit } from "./ui/neural-access-login";
-import { DEPARTMENTS, type Department } from "@/shared/school";
 
-type Stage = "request" | "sent" | "password" | "complete" | "approval";
+type Stage = "request" | "sent" | "password" | "complete";
 export function StudentRegistration({
   purpose = "registration",
 }: { purpose?: "registration" | "recovery" } = {}) {
@@ -15,8 +14,6 @@ export function StudentRegistration({
   const [stage, setStage] = useState<Stage>("request");
   const [studentId, setStudentId] = useState("");
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [department, setDepartment] = useState<Department | "">("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [token, setToken] = useState("");
@@ -53,29 +50,26 @@ export function StudentRegistration({
   const titles = {
     request: recovery
       ? "Reset your student password"
-      : "Create your student account",
+      : "Activate your student account",
     sent: preview ? "Local email preview" : "Check your email",
     password: recovery ? "Choose a new password" : "Choose your password",
     complete: recovery ? "Your password is updated" : "Your account is ready",
-    approval: "Awaiting Registrar approval",
   };
   const descriptions = {
     request: recovery
       ? "Enter your school ID and the email registered to your student account."
-      : "Use your school details. New IDs need Registrar approval.",
+      : "Use your school ID and enrollment email.",
     sent: preview
       ? "Eligible links are saved locally, not emailed. Links expire in 30 minutes."
       : recovery
         ? "If your details match, you’ll receive a reset link valid for 30 minutes."
-        : "If your record is eligible, you’ll receive a verification link valid for 30 minutes.",
+        : "If your details match, you’ll receive an activation link valid for 30 minutes.",
     password: recovery
       ? "Choose a new password. This will sign out your existing account sessions."
-      : "Choose a password to finish email verification.",
+      : "Set the password you’ll use to sign in.",
     complete: recovery
       ? "Sign in with your school ID and new password. Previous sessions have been signed out."
       : "Sign in with your school ID and password.",
-    approval:
-      "Your email is verified. You can sign in after the Registrar approves your request.",
   };
   return (
     <AccountAccess current={recovery ? "recovery" : "register"}>
@@ -110,9 +104,7 @@ export function StudentRegistration({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(
                     stage === "request"
-                      ? recovery
-                        ? { studentId, email }
-                        : { studentId, email, fullName, department }
+                      ? { studentId, email }
                       : { token, password },
                   ),
                 },
@@ -127,7 +119,7 @@ export function StudentRegistration({
                 setPassword("");
                 setConfirmPassword("");
                 setToken("");
-                setStage(result.pendingApproval ? "approval" : "complete");
+                setStage("complete");
               }
             } catch (failure) {
               setError(
@@ -142,22 +134,6 @@ export function StudentRegistration({
         >
           {stage === "request" ? (
             <>
-              {!recovery && (
-                <label htmlFor="register-name">
-                  Full name
-                  <input
-                    id="register-name"
-                    name="fullName"
-                    autoComplete="name"
-                    required
-                    minLength={2}
-                    maxLength={100}
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    disabled={pending}
-                  />
-                </label>
-              )}
               <label htmlFor="register-student">
                 School ID
                 <input
@@ -171,30 +147,8 @@ export function StudentRegistration({
                   disabled={pending}
                 />
               </label>
-              {!recovery && (
-                <label htmlFor="register-department">
-                  Department
-                  <select
-                    id="register-department"
-                    name="department"
-                    value={department}
-                    onChange={(e) =>
-                      setDepartment(e.target.value as Department)
-                    }
-                    required
-                    disabled={pending}
-                  >
-                    <option value="">Choose department</option>
-                    {DEPARTMENTS.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
               <label htmlFor="register-email">
-                {recovery ? "Registered email" : "Email address"}
+                {recovery ? "Registered email" : "Enrollment email"}
                 <input
                   id="register-email"
                   name="email"
@@ -258,10 +212,10 @@ export function StudentRegistration({
                 : stage === "request"
                   ? recovery
                     ? "Send password reset link"
-                    : "Send verification link"
+                    : "Send activation link"
                   : recovery
                     ? "Reset password"
-                    : "Verify and continue"}
+                    : "Activate account"}
               <ArrowRight size={16} />
             </button>
           </NeuralSubmit>
@@ -320,7 +274,7 @@ export function StudentRegistration({
       )}
       {stage === "request" && (
         <p className="small sign-in-help muted">
-          Staff access: contact your administrator.
+          Missing or outdated email? Contact the Registrar.
         </p>
       )}
     </AccountAccess>

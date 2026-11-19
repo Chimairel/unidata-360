@@ -36,7 +36,7 @@ export function AccountHeader({
             href="/register"
             aria-current={current === "register" ? "page" : undefined}
           >
-            Student registration
+            Activate student account
           </Link>
           <ThemeToggle />
         </nav>

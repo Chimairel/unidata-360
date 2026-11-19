@@ -97,11 +97,13 @@ export async function resetPassword(email: string, password: string) {
   z.string().min(12).max(128).parse(password);
   const hash = await hashPassword(password);
   await transaction(async () => {
-    const user = await first<{ id: string }>(
-      "SELECT id FROM users WHERE email=?",
+    const user = await first<{ id: string; activation_required: boolean }>(
+      "SELECT id,activation_required FROM users WHERE email=?",
       normalized,
     );
     if (!user) throw new Error("Account not found.");
+    if (user.activation_required)
+      throw new Error("This student must activate their account first.");
     await execute("UPDATE users SET password_hash=? WHERE id=?", hash, user.id);
     await execute("DELETE FROM sessions WHERE user_id=?", user.id);
     await execute("DELETE FROM password_resets WHERE user_id=?", user.id);
@@ -115,6 +117,14 @@ export async function issueSession(role: UserRole, userId?: string) {
   const token = randomBytes(32).toString("hex"),
     maxAge = userId ? 8 * 3600 : 24 * 3600;
   await transaction(async () => {
+    if (
+      userId &&
+      !(await first(
+        "SELECT 1 FROM users WHERE id=? AND active=1 AND NOT activation_required",
+        userId,
+      ))
+    )
+      throw new Error("Account is not ready to sign in.");
     await execute("DELETE FROM sessions WHERE expires_at<=?", Date.now());
     await execute(
       "INSERT INTO sessions(id,role,expires_at,user_id) VALUES(?,?,?,?)",
@@ -139,14 +149,16 @@ export async function readSession(
     student_id: string | null;
     department: string | null;
     active: number | null;
+    activation_required: boolean | null;
   }>(
-    "SELECT s.id,s.role,s.user_id,u.role AS account_role,u.display_name,u.student_id,u.department,u.active FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.expires_at>?",
+    "SELECT s.id,s.role,s.user_id,u.role AS account_role,u.display_name,u.student_id,u.department,u.active,u.activation_required FROM sessions s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=? AND s.expires_at>?",
     tokenHash(token),
     Date.now(),
   );
   if (!row) return null;
   if (row.user_id) {
-    if (!row.active || !row.account_role) return null;
+    if (!row.active || row.activation_required || !row.account_role)
+      return null;
     if (row.account_role === "DEAN" && !isDepartment(row.department))
       return null;
     return {
@@ -176,10 +188,11 @@ export async function authenticate(identifier: string, password: string) {
     password_hash: string;
     role: UserRole;
     active: number;
+    activation_required: boolean;
   }>(
     normalized.includes("@")
-      ? "SELECT id,email,password_hash,role,active FROM users WHERE email=? AND role<>'STUDENT'"
-      : "SELECT id,email,password_hash,role,active FROM users WHERE lower(student_id)=? AND role='STUDENT'",
+      ? "SELECT id,email,password_hash,role,active,activation_required FROM users WHERE email=? AND role<>'STUDENT'"
+      : "SELECT id,email,password_hash,role,active,activation_required FROM users WHERE lower(student_id)=? AND role='STUDENT'",
     normalized,
   );
   // Keep one lockout key per account, including existing email-keyed lockouts.
@@ -194,7 +207,7 @@ export async function authenticate(identifier: string, password: string) {
     password,
     user?.password_hash || dummyHash,
   );
-  if (!verified || !user?.active) {
+  if (!verified || !user?.active || user.activation_required) {
     await transaction(async () => {
       const now = Date.now();
       const latest = await first<LoginAttempt>(

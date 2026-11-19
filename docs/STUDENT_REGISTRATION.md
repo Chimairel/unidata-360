@@ -1,29 +1,24 @@
-# Student registration, school ID sign-in and recovery
+# Student account activation and recovery
 
-Students register themselves at `/register`. Registrar, department-assigned Dean, Academic Advisor and Compliance Auditor accounts are created by System Admin in the Accounts dashboard. The CLI remains available for initial setup and recovery. There is no public staff registration.
+## Registrar enrollment
 
-## Student flow
+Sign in as Registrar and upload a SIS CSV or JSON file in **Pipeline**. The import creates pending accounts for active students with a unique school ID and email. Import the same roster again to update SIS records and preserve existing credentials. Run ETL to publish the records to Student 360. For rosters already stored in Estante, open **Student 360 → Student accounts → Provision from SIS**.
 
-1. Enter full name, school ID, email and one of BSIT/BEED/BSED/BSHM at `/register`.
-2. Estante prepares a single-use verification link, valid for 30 minutes. A school ID already in the master must match its SIS email; self-entered details do not replace that school record. Existing accounts and ineligible details receive a generic public response.
-3. Open the link and choose a 12–128-character password. Matching published SIS students activate directly. Unlisted IDs become **Pending** verified requests; they cannot sign in yet.
-4. Registrar opens **Student 360 → Student registration requests**, confirms enrollment and approves or rejects the request. Other roles, including System Admin, cannot review it. Rejection requires an internal reason; decisions are audited and an email notification is prepared.
-5. Approved students sign in with **school ID + password**. Approval creates only the account. Until SIS data is imported and ETL runs, the student sees their approved account identity and an academic-records-pending message; no grades, attendance or clearance are fabricated.
+Rows with conflicting IDs or emails need Registrar review. If a current SIS upload changes the email of a pending student, activation waits until the Registrar verifies the student’s identity and corrects their email in **Student accounts**. That form updates the account and the SIS source if present. Changing an account email invalidates its outstanding links and sessions. Run ETL to publish corrections to the master view.
 
-The Registrar checks any SIS record published while a request was pending. Conflicting email/department details block approval. Request password hashes are cleared after approval/rejection. Rejected students may submit a fresh verified request; previous decisions remain recorded. If a decision notification fails, the approved account remains usable and the Registrar is told to contact the student.
+## First sign-in
 
-A personal Gmail address is accepted; existing SIS students must use the email on that record. This does not implement Google sign-in. Email is used for verification and recovery, not as the student login name. School-ID sign-in ignores letter case and surrounding spaces; passwords remain case-sensitive.
+1. Select **Activate student account** and enter the school ID and enrollment email. The screen returns the same response whether or not the details match.
+2. Open the single-use email link within 30 minutes and set your first password. Pending accounts have no password and cannot sign in or access records.
+3. Sign in with the school ID and new password. Student 360 shows the linked record after ETL publishes it.
+
+Previous self-registration requests are available as read-only history in the Registrar workspace. To enroll a student with an archived request, import their verified SIS record and have them activate through the new flow. Previously activated students can keep using their existing passwords.
 
 ## Student password recovery
 
-1. Choose **Forgot your student password?** or open `/reset-password`.
-2. Enter the school ID and registered account email. Unknown IDs, mismatches and staff accounts receive the same public response.
-3. Open the emailed link and choose a new 12–128-character password. The link expires after 30 minutes and can be used once.
-4. Sign in with the school ID and new password. All previous sessions are revoked, login lockouts are cleared, and a password-reset audit event is appended.
+Active students can select **Forgot student password?** and enter their school ID and registered email. The single-use reset link expires after 30 minutes. Resetting a password revokes prior sessions. If the inbox is unavailable, the Registrar verifies the student’s identity before correcting the address.
 
-Recovery tokens are hashed and bound to the registered account email. An expired, undelivered, consumed or registration-verification token cannot reset a password. Changing the registered email invalidates pending recovery links. Administrator password resets also clear pending recovery tokens. Requests have a 60-second cooldown and a five-request/15-minute limit per school ID/email. Staff recovery stays with System Admin through the Accounts dashboard; protected Admin accounts use the local CLI.
-
-The database stores a hash of the verification token. The browser clears the token fragment from its address bar. Activation rechecks the record, prevents duplicate accounts for a student ID, consumes pending links, and appends an audit event in one transaction. Requests have a 60-second cooldown and a limit of five per email/student ID every 15 minutes.
+Both flows store only token hashes, rate-limit requests, and use different tokens. The browser clears the link token from the address bar. Admin creates staff accounts in **Accounts**.
 
 ## Real email with Brevo
 
@@ -38,7 +33,7 @@ EDM_PUBLIC_ORIGIN=https://YOUR_FRONTEND_DOMAIN
 
 Save these in `backend/.env.local` and restart the backend. For testing on this computer, set `EDM_PUBLIC_ORIGIN=http://localhost:3005` and open the email link here. For the hosted app, put the variables in Railway and use the public Vercel origin. Brevo's [HTTPS endpoint](https://developers.brevo.com/reference/send-transac-email) works with [Railway's SMTP restrictions](https://docs.railway.com/networking/outbound-networking).
 
-Submit a registration using an unused school ID and an inbox you can access. Check the [Brevo transactional logs](https://help.brevo.com/hc/en-us/articles/360021533839-Manage-your-transactional-logs-and-email-previews) if the message is delayed, then open the link and confirm the expected account status. Use a fresh registration after switching from preview mode.
+Import a synthetic student record with a new school ID and an inbox you can access, then request activation. Check the [Brevo transactional logs](https://help.brevo.com/hc/en-us/articles/360021533839-Manage-your-transactional-logs-and-email-previews) if the message is delayed, then open the link and set a password. Request a fresh activation link after switching from preview mode.
 
 ## Real email with Resend
 
@@ -64,10 +59,10 @@ EDM_EMAIL_MODE=preview
 EDM_PUBLIC_ORIGIN=http://localhost:3005
 ```
 
-Run `npm run dev` from the project root. Each eligible registration or recovery request saves a text message in `backend/.local-email/`. **Preview mode sends no inbox email.** Open the newest message and copy its complete verification URL into the browser. Set a password, then follow the account status shown; unlisted IDs still require Registrar approval. The UI explicitly says **Local email preview**. Decision notifications are saved locally too. These private messages are ignored by Git and excluded from deployments.
+Run `npm run dev` from the project root. Each eligible activation or recovery request saves a text message in `backend/.local-email/`. **Preview mode sends no inbox email.** Open the newest message and copy its complete verification URL into the browser. Set a password, then sign in with the school ID. The UI explicitly says **Local email preview**. These private messages are ignored by Git and excluded from deployments.
 
-Preview delivery is restricted to loopback frontend origins and disabled on Vercel and Railway. Production requires real email configuration. For real registration, SIS email addresses must be mailboxes students can access; do not send to the synthetic seed addresses.
+Preview delivery is restricted to loopback frontend origins and disabled on Vercel and Railway. Production requires real email configuration. For real activation, SIS email addresses must be mailboxes students can access; do not send to the synthetic seed addresses.
 
 ## Verification
 
-`npm test` includes registration, role-injection, duplicate activation, expiry, changed-roster, throttling, delivery failures and mocked Brevo and Resend requests. Database tests require an isolated `EDM_TEST_DATABASE_URL`. `npm run test:registration` checks signup, school ID login, password recovery and session revocation through the running production frontend/backend proxy with a fresh isolated database and private temporary email previews. No real emails are sent by these tests.
+`npm test` covers provisioned accounts, permission checks, repeat imports, link expiry, email corrections, and mocked Brevo and Resend requests. Database tests require an isolated `EDM_TEST_DATABASE_URL`. `npm run test:registration` checks enrollment import, activation, school ID login, password recovery and session revocation through the running production frontend/backend proxy with a fresh isolated database and private temporary email previews. No real emails are sent by these tests.

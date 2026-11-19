@@ -8,7 +8,7 @@ The source now has two npm workspaces. The frontend starts on port **3005** and 
 
 The backend's environment contains `DATABASE_URL`, `EDM_PUBLIC_ORIGIN`, `EDM_AUTH_MODE=accounts`, and `EDM_SECURE_COOKIES=true`. Only the backend connects to Neon. The production hostname above currently uses the earlier deployment. Deploying this new two-service source requires configuring the separate backend and frontend services.
 
-Student self-registration requires a configured transactional email provider. For Brevo, set `EDM_EMAIL_MODE=brevo`, `BREVO_API_KEY` and `EDM_BREVO_FROM_EMAIL` on the backend. See [student registration setup](STUDENT_REGISTRATION.md) for sender verification and Resend setup. Public student registration activates only the Student role. Local email preview is available on loopback development origins.
+Student account activation requires a configured transactional email provider. For Brevo, set `EDM_EMAIL_MODE=brevo`, `BREVO_API_KEY` and `EDM_BREVO_FROM_EMAIL` on the backend. See [student registration setup](STUDENT_REGISTRATION.md) for sender verification and Resend setup. The Registrar provisions pending Student accounts from the SIS roster. Local email preview is available on loopback development origins.
 
 ### Provision users
 

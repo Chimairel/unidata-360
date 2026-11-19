@@ -46,7 +46,7 @@ Keep the existing shared PostgreSQL connection in `backend/.env.local`. Stop run
 
 Only one device needs to run the upgrade against the shared database. Transfer the refreshed private account guide to the presentation device; Git carries the code and public email list. The hosted application needs the current code before these new roles are used online. Hosting deployment remains a separate step.
 
-For additional staff, use System Admin → Accounts, or run `npm run account:create`; a `DEAN` requires a department code. Students continue to self-register using their matching existing student ID and email.
+For additional staff, use System Admin → Accounts, or run `npm run account:create`; a `DEAN` requires a department code. Import the SIS roster as Registrar so students can activate with their school ID and enrollment email.
 
 ## Classroom demo mode
 

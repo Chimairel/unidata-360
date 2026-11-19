@@ -60,25 +60,11 @@ async function sendAccountEmail(
   const subject =
     purpose === "recovery"
       ? "Reset your Estante student password"
-      : "Verify your Estante student account";
+      : "Activate your Estante student account";
   const text =
     purpose === "recovery"
       ? `${subject}\n\nOpen this link to choose a new password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request this reset, ignore this email; your password stays unchanged. After resetting, sign in with your school ID and new password.`
-      : `${subject}\n\nOpen this link to choose your password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request an account, ignore this email. New school IDs require Registrar approval after verification. Once active, sign in with your school ID and password.`;
-  return deliverMessage(config, email, subject, text);
-}
-
-export async function sendRegistrationDecisionEmail(
-  email: string,
-  approved: boolean,
-) {
-  const config = emailConfiguration();
-  const subject = approved
-    ? "Your Estante student access is approved"
-    : "Your Estante registration request was reviewed";
-  const text = approved
-    ? `Your student access is approved. Sign in with your school ID and the password you chose:\n${config.origin}/login`
-    : "Your registration request was not approved. Contact the registrar to confirm your school details.";
+      : `${subject}\n\nOpen this link to choose your first password:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request activation, ignore this email. Once active, sign in with your school ID and password.`;
   return deliverMessage(config, email, subject, text);
 }
 

@@ -4,19 +4,19 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  requestStudentRegistration,
-  verifyStudentRegistration,
+  requestStudentActivation,
+  verifyStudentActivation,
 } from "../backend/registration";
 import {
   emailConfiguration,
   sendPasswordResetEmail,
-  sendRegistrationDecisionEmail,
   sendVerificationEmail,
 } from "../backend/email";
 import {
   POST as register,
   verify as confirmRegistration,
 } from "../backend/api/register";
+import { provisionStudentAccounts } from "../backend/studentAccounts";
 import { parseImport } from "../backend/validation";
 import { runETLPipeline } from "../backend/etl/pipeline";
 import {
@@ -48,6 +48,7 @@ import {
   revokeSession,
   resetPassword,
   tokenHash,
+  type SessionIdentity,
 } from "../backend/auth";
 
 const testUrl = process.env.EDM_TEST_DATABASE_URL;
@@ -150,8 +151,28 @@ databaseTest(
   },
 );
 
+async function provisionTestRoster(tag: string, ...ids: string[]) {
+  const registrar = await createAccount({
+    email: `activation-${tag}@example.test`,
+    displayName: "Activation Registrar",
+    password: "Registrar-test-password-347!",
+    role: "REGISTRAR",
+  });
+  const identity: SessionIdentity = {
+    id: registrar.id,
+    userId: registrar.id,
+    role: "REGISTRAR",
+    displayName: "Activation Registrar",
+    mode: "account",
+  };
+  await provisionStudentAccounts(
+    identity,
+    new Set(ids.map((id) => id.toLowerCase())),
+  );
+}
+
 databaseTest(
-  "student registration verifies email, consumes links and enforces student-only access",
+  "student activation verifies email, consumes links and enforces student-only access",
   async () => {
     const directory = await mkdtemp(
       path.join(tmpdir(), "unidata-registration-"),
@@ -180,6 +201,8 @@ databaseTest(
       return message.match(/#token=([a-f0-9]{64})/)![1];
     }
     try {
+      await provisionTestRoster("single", student.studentId);
+      assert.equal((await authenticate(student.studentId, "123456")).ok, false);
       assert.equal(
         (await register(request({ ...details, role: "REGISTRAR" }))).status,
         400,
@@ -218,8 +241,8 @@ databaseTest(
         400,
       );
       const results = await Promise.allSettled([
-        verifyStudentRegistration({ token, password }),
-        verifyStudentRegistration({ token, password }),
+        verifyStudentActivation({ token, password }),
+        verifyStudentActivation({ token, password }),
       ]);
       assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
       assert.equal(results.filter((r) => r.status === "rejected").length, 1);
@@ -244,7 +267,7 @@ databaseTest(
         /already exists/,
       );
       await execute("DELETE FROM registration_limits");
-      assert.deepEqual(await requestStudentRegistration(details), {
+      assert.deepEqual(await requestStudentActivation(details), {
         ok: true,
         delivery: "preview",
       });
@@ -272,7 +295,12 @@ databaseTest(
     try {
       const student = initialSISRecords[6];
       const details = { studentId: student.studentId, email: student.email };
-      await requestStudentRegistration(details);
+      await provisionTestRoster(
+        "failures",
+        student.studentId,
+        initialSISRecords[7].studentId,
+      );
+      await requestStudentActivation(details);
       const filename = (await readdir(directory))[0];
       const token = (
         await readFile(path.join(directory, filename), "utf8")
@@ -283,7 +311,7 @@ databaseTest(
       );
       await assert.rejects(
         () =>
-          verifyStudentRegistration({
+          verifyStudentActivation({
             token,
             password: "Verified-password-234!",
           }),
@@ -295,11 +323,11 @@ databaseTest(
         tokenHash(token),
       );
       const original = await first<{ payload: string }>(
-        "SELECT payload FROM master WHERE id=?",
+        "SELECT payload FROM sources WHERE feed='SIS' AND record_key=?",
         student.studentId,
       );
       await execute(
-        "UPDATE master SET payload=? WHERE id=?",
+        "UPDATE sources SET payload=? WHERE feed='SIS' AND record_key=?",
         JSON.stringify({
           ...JSON.parse(original!.payload),
           email: "changed@example.edu",
@@ -308,14 +336,14 @@ databaseTest(
       );
       await assert.rejects(
         () =>
-          verifyStudentRegistration({
+          verifyStudentActivation({
             token,
             password: "Verified-password-234!",
           }),
         /expired/,
       );
       await execute(
-        "UPDATE master SET payload=? WHERE id=?",
+        "UPDATE sources SET payload=? WHERE feed='SIS' AND record_key=?",
         original!.payload,
         student.studentId,
       );
@@ -326,7 +354,7 @@ databaseTest(
         "cannot-create",
       );
       assert.deepEqual(
-        await requestStudentRegistration({
+        await requestStudentActivation({
           studentId: another.studentId,
           email: another.email,
         }),
@@ -339,9 +367,12 @@ databaseTest(
         ),
         undefined,
       );
-      assert.equal(
-        await first("SELECT 1 FROM users WHERE email=?", another.email),
-        undefined,
+      assert.deepEqual(
+        await first(
+          "SELECT activation_required FROM users WHERE email=?",
+          another.email,
+        ),
+        { activation_required: true },
       );
       const originalFetch = globalThis.fetch;
       process.env.EDM_EMAIL_MODE = "resend";
@@ -458,10 +489,8 @@ test("Brevo sends each account message through HTTPS using the configured sender
     const token = "a".repeat(64);
     await sendVerificationEmail(recipient, token);
     await sendPasswordResetEmail(recipient, token);
-    await sendRegistrationDecisionEmail(recipient, true);
-    await sendRegistrationDecisionEmail(recipient, false);
 
-    assert.equal(messages.length, 4);
+    assert.equal(messages.length, 2);
     assert.ok(
       messages[0].textContent.includes(`${origin}/register#token=${token}`),
     );
@@ -470,8 +499,6 @@ test("Brevo sends each account message through HTTPS using the configured sender
         `${origin}/reset-password#token=${token}`,
       ),
     );
-    assert.ok(messages[2].textContent.includes(`${origin}/login`));
-    assert.match(messages[3].textContent, /Contact the registrar/);
 
     globalThis.fetch = async () =>
       Response.json({ message: "sender rejected" }, { status: 403 });

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import {
-  registrationRequest,
+  studentContact,
   registrationVerification,
   RegistrationError,
 } from "./registration";
@@ -26,7 +26,7 @@ type Student = {
 };
 
 export async function requestStudentPasswordReset(input: unknown) {
-  const { studentId, email } = registrationRequest.parse(input);
+  const { studentId, email } = studentContact.parse(input);
   const config = emailConfiguration();
   const token = randomBytes(32).toString("hex"),
     hash = tokenHash(token),
@@ -61,7 +61,7 @@ export async function requestStudentPasswordReset(input: unknown) {
       );
     }
     const user = await first<Student>(
-      "SELECT id,email,display_name,student_id FROM users WHERE role='STUDENT' AND active=1 AND lower(student_id)=? AND email=?",
+      "SELECT id,email,display_name,student_id FROM users WHERE role='STUDENT' AND active=1 AND NOT activation_required AND lower(student_id)=? AND email=?",
       studentId.toLowerCase(),
       email,
     );
@@ -118,7 +118,7 @@ export async function resetStudentPassword(input: unknown) {
     if (!current?.delivered || Number(current.expires_at) <= Date.now())
       throw invalidLink();
     const user = await first<Student>(
-      "SELECT id,email,display_name,student_id FROM users WHERE id=? AND role='STUDENT' AND active=1",
+      "SELECT id,email,display_name,student_id FROM users WHERE id=? AND role='STUDENT' AND active=1 AND NOT activation_required",
       current.user_id,
     );
     if (!user || user.email !== current.email) throw invalidLink();

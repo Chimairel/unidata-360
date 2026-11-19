@@ -86,7 +86,7 @@ function StaffEditor({
           <p>
             {account
               ? `${account.email} · Updating access signs out existing sessions.`
-              : "Students self-register."}
+              : "The Registrar provisions student accounts from SIS."}
           </p>
         </div>
       </div>

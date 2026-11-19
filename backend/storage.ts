@@ -104,6 +104,7 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL, student_id TEXT, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS login_attempts (email TEXT PRIMARY KEY, failures INTEGER NOT NULL, retry_at BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS student_registrations (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, student_id TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);
+    ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS user_id TEXT;
     ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS display_name TEXT;
     ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS department TEXT;
     ALTER TABLE student_registrations ADD COLUMN IF NOT EXISTS review_required INTEGER NOT NULL DEFAULT 0;
@@ -123,6 +124,7 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS quality_issues (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS quality_state (id TEXT PRIMARY KEY, checked_at TEXT NOT NULL);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_required BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE UNIQUE INDEX IF NOT EXISTS student_account_id_unique ON users(lower(student_id)) WHERE role='STUDENT' AND student_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, email TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);
     ALTER TABLE password_resets ADD COLUMN IF NOT EXISTS email TEXT;

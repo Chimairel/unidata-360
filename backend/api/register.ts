@@ -3,8 +3,8 @@ import { checkOrigin } from "@/backend/session";
 import { EmailUnavailable } from "@/backend/email";
 import {
   RegistrationError,
-  requestStudentRegistration,
-  verifyStudentRegistration,
+  requestStudentActivation,
+  verifyStudentActivation,
 } from "@/backend/registration";
 
 const headers = { "Cache-Control": "no-store" };
@@ -14,13 +14,13 @@ async function handle(request: Request, verify: boolean) {
     const body = await request.text();
     if (body.length > 2048)
       return Response.json(
-        { error: "Registration request is too large." },
+        { error: "Activation request is too large." },
         { status: 413, headers },
       );
     const input: unknown = JSON.parse(body);
     const result = verify
-      ? await verifyStudentRegistration(input)
-      : await requestStudentRegistration(input);
+      ? await verifyStudentActivation(input)
+      : await requestStudentActivation(input);
     return Response.json(result, { headers });
   } catch (error) {
     if (error instanceof RegistrationError || error instanceof EmailUnavailable)
@@ -35,8 +35,8 @@ async function handle(request: Request, verify: boolean) {
       {
         error:
           error instanceof z.ZodError
-            ? "Check your details. Passwords must be 12–128 characters; only students can self-register."
-            : "Registration could not be completed. Check your details and try again.",
+            ? "Check your school ID and enrollment email. Passwords must be 12–128 characters."
+            : "Activation could not be completed. Try again.",
       },
       { status: 400, headers },
     );

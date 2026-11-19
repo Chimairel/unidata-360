@@ -3991,6 +3991,16 @@ body {
 .workflow-page textarea {
   resize: vertical;
 }
+.workflow-page .student-email-confirm {
+  align-items: center;
+  flex-direction: row;
+}
+.workflow-page .student-email-confirm input {
+  accent-color: var(--primary);
+  height: 18px;
+  min-height: 0;
+  width: 18px;
+}
 .workflow-span {
   grid-column: 1 / -1;
 }

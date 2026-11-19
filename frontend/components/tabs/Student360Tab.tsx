@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { CohortInsights } from "@/frontend/components/CohortInsights";
 import { StudentDirectory } from "@/frontend/components/StudentDirectory";
-import { RegistrationRequests } from "@/frontend/components/RegistrationRequests";
+import { StudentAccounts } from "@/frontend/components/StudentAccounts";
 import { ShieldCheck, Users, GraduationCap, ArrowUpRight } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import {
@@ -93,7 +93,7 @@ export function Student360Tab() {
             <ArrowUpRight size={20} />
           </div>
           {currentRole === "REGISTRAR" && accessMode === "account" && (
-            <RegistrationRequests key={actorName} />
+            <StudentAccounts key={actorName} />
           )}
           <StudentDirectory
             students={masterRecords}

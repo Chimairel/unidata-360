@@ -20,6 +20,10 @@ import {
 import { parseImport } from "@/backend/validation";
 import type { UserRole } from "@/shared/types";
 import { canAccessStudent, canImport, canFollowUp } from "@/backend/access";
+import {
+  provisionStudentAccounts,
+  studentProvisionSummary,
+} from "@/backend/studentAccounts";
 
 const command = z.discriminatedUnion("type", [
   z.object({
@@ -166,6 +170,13 @@ export async function POST(request: Request) {
       await transaction(async () => {
         const result = await upsert(cmd.feed, rows, s);
         message = `${result.inserted} inserted, ${result.updated} updated; ${result.duplicates} duplicate keys merged. Run ETL to update the master store.`;
+        if (cmd.feed === "SIS" && s.mode === "account") {
+          const { created, conflicts } = await provisionStudentAccounts(
+            s,
+            new Set(rows.map((row) => row.studentId.toLowerCase())),
+          );
+          message += ` ${studentProvisionSummary(created, conflicts)}`;
+        }
         await audit(role, "IMPORT_DATA", cmd.feed, message, "ALLOWED", s);
       });
     } else if (cmd.type === "intervention") {

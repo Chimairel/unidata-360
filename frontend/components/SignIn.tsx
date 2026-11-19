@@ -131,7 +131,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       )}
       <p className="small sign-in-help">
         <Link className="text-link" href="/register">
-          Create student account
+          Activate student account
         </Link>
       </p>
       <p className="small sign-in-help muted">
