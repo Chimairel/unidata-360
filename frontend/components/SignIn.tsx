@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LockKeyhole, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
 import { AccountHeader } from "./AccountHeader";
+import { NeuralAccessLogin, NeuralSubmit } from "./ui/neural-access-login";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const router = useRouter();
@@ -43,23 +43,12 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
     };
   }, []);
   return (
-    <div className="account-page">
+    <NeuralAccessLogin>
       <AccountHeader current="login" />
-      <main className="sign-in-shell login-shell">
-        <div className="login-campus" aria-hidden="true">
-          <Image
-            src="/illustrations/campus-outline-bold.png"
-            alt=""
-            width={1536}
-            height={1024}
-            sizes="(max-width: 960px) min(100vw, 560px), (max-width: 1440px) 52vw, 720px"
-            className="login-campus-image"
-          />
-        </div>
+      <main className="neural-auth-shell">
         <section className="sign-in-content">
           <div className="panel sign-in-panel">
             <div className="panel-body">
-              <LockKeyhole className="text-accent" size={24} />
               <h1>Sign in</h1>
               {error && (
                 <div className="message error" role="alert">
@@ -137,10 +126,12 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
                       disabled={pending}
                     />
                   </label>
-                  <button className="button primary" disabled={pending}>
-                    {pending ? "Signing in…" : "Sign in"}
-                    <ArrowRight size={16} />
-                  </button>
+                  <NeuralSubmit>
+                    <button className="button primary" disabled={pending}>
+                      {pending ? "Signing in…" : "Sign in"}
+                      <ArrowRight size={16} />
+                    </button>
+                  </NeuralSubmit>
                 </form>
               )}
               <p className="small sign-in-help">
@@ -167,6 +158,6 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
           </div>
         </section>
       </main>
-    </div>
+    </NeuralAccessLogin>
   );
 }

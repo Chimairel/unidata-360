@@ -1,6 +1,6 @@
 ---
 name: UniData 360
-description: A light monochrome university workspace with a black rail, soft gray records and clear operational actions.
+description: A monochrome university workspace with light and dark themes, a black rail and a MercuryLogin account entrance.
 colors:
   canvas: "#f1f1f3"
   rail: "#111113"
@@ -23,6 +23,29 @@ colors:
   success-background: "#e5f4ec"
   warning-background: "#fff2d9"
   danger-background: "#fbe9ed"
+  on-primary: "#ffffff"
+  dark-background: "#0b0b0d"
+  dark-surface: "#19191d"
+  dark-surface-raised: "#27272d"
+  dark-line: "#36363d"
+  dark-foreground: "#f4f4f5"
+  dark-muted: "#b5b5bf"
+  dark-accent: "#e6e6eb"
+  dark-primary: "#f4f4f5"
+  dark-on-primary: "#151517"
+  dark-primary-hover: "#d6d6de"
+  dark-success: "#8fdbb2"
+  dark-warning: "#f2c778"
+  dark-danger: "#ff9aad"
+  dark-success-background: "#163a2b"
+  dark-warning-background: "#3b2e16"
+  dark-danger-background: "#421f2a"
+  mercury-light: "#dedee4"
+  mercury-dark: "#bcbcc6"
+  dark-mercury-light: "#9b9b9f"
+  dark-mercury-dark: "#45454a"
+  sign-in-underline: "#90909a"
+  dark-sign-in-underline: "#70707b"
 typography:
   greeting:
     fontFamily: "Geist, Arial, sans-serif"
@@ -95,28 +118,16 @@ typography:
     letterSpacing: "-0.03em"
   sign-in-headline:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "38px"
-    fontWeight: 650
-    lineHeight: 1.2
-    letterSpacing: "-0.035em"
+    fontSize: "64px"
+    fontWeight: 800
+    lineHeight: 0.92
+    letterSpacing: "-0.04em"
   sign-in-headline-mobile:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "29px"
-    fontWeight: 650
-    lineHeight: 1.2
-    letterSpacing: "-0.035em"
-  sign-in-title:
-    fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "22px"
-    fontWeight: 620
-    lineHeight: 1.4
-    letterSpacing: "-0.02em"
-  sign-in-brand:
-    fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "21px"
-    fontWeight: 600
-    lineHeight: 1.55
-    letterSpacing: "-0.03em"
+    fontSize: "56px"
+    fontWeight: 800
+    lineHeight: 0.92
+    letterSpacing: "-0.04em"
 rounded:
   frame: "28px"
   rail: "20px"
@@ -129,6 +140,8 @@ rounded:
   panel: "12px"
   dialog: "16px"
   circle: "50%"
+  sign-in-action: "16px"
+  sign-in-drop: "20px"
 spacing:
   compact: "8px"
   small: "12px"
@@ -229,24 +242,29 @@ components:
     rounded: "{rounded.dialog}"
     padding: "0"
   sign-in-panel:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "transparent"
     textColor: "{colors.foreground}"
-    rounded: "{rounded.panel}"
-    padding: "32px"
-  sign-in-panel-mobile:
-    padding: "24px"
+    padding: "0"
   sign-in-input:
+    backgroundColor: "transparent"
+    textColor: "{colors.foreground}"
+    rounded: "0"
+    padding: "12px 0"
+    height: "56px"
+  sign-in-action:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    rounded: "{rounded.sign-in-action}"
+    padding: "8px 14px"
+    height: "58px"
+  sign-in-action-dark:
+    backgroundColor: "{colors.dark-primary}"
+    textColor: "{colors.dark-on-primary}"
+  theme-toggle:
     backgroundColor: "{colors.background}"
     textColor: "{colors.foreground}"
     rounded: "{rounded.control}"
-    padding: "9px 12px"
-    height: "44px"
-  sign-in-action:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.white}"
-    typography: "{typography.label}"
-    rounded: "{rounded.control}"
-    padding: "8px 14px"
+    width: "44px"
     height: "44px"
 ---
 
@@ -258,9 +276,11 @@ components:
 
 The supplied learning-dashboard reference establishes a light, monochrome university workspace: a white application workspace fills the browser viewport, with an inset black navigation rail. Soft gray records and confident black actions give operational data a friendly, composed rhythm.
 
-Geist typography, compact labeled controls and generous separation between dashboard columns support UniData 360. Restrained green, amber and rose identify status; they accompany readable labels. Presentation, account access and modal tasks share the same light materials.
+Geist typography, compact labeled controls and generous separation between dashboard columns support UniData 360. Restrained green, amber and rose identify status; they accompany readable labels. Light remains the default; the persistent dark theme maps the same workspace, presentation, account and modal roles to dark neutrals and contrasting actions.
 
-The user's supplied reference replaces the former navy identity. This document records the shipped CSS and component patterns; the frontmatter owns normative primitives. The final reference-led stylesheet section and scoped responsive overrides take precedence over inherited rules.
+The user's supplied 21st.dev MercuryLogin template replaces the campus-illustration sign-in surface. Its stacked heading, underlined fields, gray liquid backdrop and liquid submit action are scoped to sign-in; the operational workspace keeps its existing monochrome hierarchy.
+
+The user's supplied reference replaces the former navy identity. The frontmatter owns normative primitives. The final reference-led stylesheet section and scoped responsive overrides take precedence over inherited rules. This merge records the requested sign-in replacement and themes only; unrelated pre-existing documentation/layout drift has been preserved rather than rescanned.
 
 **Key Characteristics:**
 
@@ -268,6 +288,7 @@ The user's supplied reference replaces the former navy identity. This document r
 - Soft gray student rows, black record actions and a complementary statistics column.
 - Bold greeting and large cohort counts above compact operational typography.
 - Geist text, tabular metrics and Geist Mono identifiers.
+- Default light theme, persistent dark choice and a MercuryLogin sign-in entrance.
 - Visible keyboard focus, readable status labels and reduced-motion support.
 
 ## Colors
@@ -294,7 +315,13 @@ The palette is near-monochrome, supported by restrained semantic status hues.
 - **Reading ink** (`foreground`) and **supporting gray** (`muted`): primary content and secondary copy. Inactive chart tabs and the app footer use supporting gray. Text selection uses foreground ink on a pale gray fill.
 - Secondary buttons use the distinct `secondary-button` and `secondary-hover` fills. Neutral and informational badges use gray.
 
-**The Monochrome Anchor Rule.** Use black for primary actions and selected filters; reserve status hues for meaningful record or process states.
+**The Monochrome Anchor Rule.** Use black for primary actions and selected filters in light mode, reversing their contrast in dark mode; reserve status hues for meaningful record or process states.
+
+### Theme Mapping
+
+The unprefixed tokens describe light mode. Under `data-theme="dark"`, the `dark-` tokens map to the corresponding CSS roles: background, surface, raised surface, line, foreground, muted, accent, primary, on-primary, hover and semantic status. Primary actions reverse to pale fill and dark text; readable semantic labels retain their brighter status colors over dark status fills. The black rail and workspace structure remain. Mercury backdrop endpoints and sign-in underlines have their own theme pairs.
+
+The account and workspace headers expose a named moon/sun theme toggle. It stores the selection under `unidata-theme` in localStorage, restores it before the page becomes interactive and synchronizes other tabs. A new visitor starts in light mode. Switching still works when storage is unavailable; persistence then cannot be guaranteed.
 
 ## Typography
 
@@ -313,7 +340,7 @@ The hierarchy pairs a bold greeting and large counts with compact operational te
 - **Records:** list names use 12px and weight 680, reducing to 11px at 760px. Metadata uses 10px, reducing to 9px. Black record actions use 9px, reducing to 8px. These are scoped compact details rather than the default label scale.
 - **Labels:** `label` uses 12px, weight 550. Badges and metadata use 9–10px; rail labels use 9px. `mono` uses 11px, with student IDs scoped to 10px.
 - **Metrics:** `insight-value` uses 39px, weight 760 and line height 1, reducing to 34px at 1200px and becoming 40px on mobile. Existing summary strips retain `summary-value` (30px, weight 600), with inherited responsive reductions.
-- **Account access:** `sign-in-headline` is 38px, reducing to `sign-in-headline-mobile` (29px) at 760px. Form title uses 22px and standalone brand 21px. Introduction copy is 14px, benefit titles 13px, field labels 12px and footer 11px.
+- **Sign-in:** the uppercase `sign-in-headline` is stacked within 4ch (64px, weight 800, line height 0.92), reducing to `sign-in-headline-mobile` (56px) at 760px. Fields use 17px text and 12px muted labels. The shared account-header brand uses 20px; helper links use 14px.
 
 **The Scoped Hierarchy Rule.** Keep greeting and cohort counts prominent while using compact labeled type for records and controls.
 
@@ -331,7 +358,7 @@ At 760px, the frame fills the viewport, with no outer padding, radius or shadow.
 
 Panels retain 24px body padding and 20px by 22px heading padding. Split panels and forms stack at 760px; pipeline connectors turn downward. Standard dialogs are limited to 640px wide, wide dialogs to 1050px, with 16px viewport gutters and internal scrolling. Presentation reaches 1440px wide and 94dvh high, switching to 8px gutters and 96dvh on narrow screens. Mobile slides start at the top; comparative tables keep local scrolling.
 
-Sign-in places a generated black campus outline on the left and the existing form on the right, in a 1440px maximum-width shell with a form column up to 480px. At 960px and below it stacks the form first and illustration below. Registration and recovery retain a compact 560px shell. At 760px account forms use 24px padding and start at the top. Keep the task heading, labeled fields, state feedback and account-help links; omit promotional introductions and benefit lists.
+Sign-in places a centered form in a 440px maximum-width shell, with 56px/40px/64px top/horizontal/bottom padding and vertical centering below the shared account header. The transparent panel has no internal padding or border. Its stacked heading has 52px bottom spacing; form rows have a 28px gap. At 760px, the shell uses 40px/28px/48px padding, starts at the top and reduces heading spacing to 40px. The decorative liquid layer sits behind the form and cannot intercept input. Registration and recovery retain their existing compact forms with shared theme colors. Keep labeled fields, state feedback and account-help links.
 
 ## Elevation & Depth
 
@@ -341,17 +368,19 @@ Ordinary rows, cards and panels use tonal separation and fine borders. The selec
 
 State feedback uses 160ms background, text and border-color transitions. Existing ETL progress and loading animation remain. Reduced-motion preferences remove animations, transitions and smooth scrolling.
 
+Sign-in alone uses six blurred gray gradient blobs combined through an SVG goo filter, with backdrop opacity 0.48 in light and 0.38 in dark. They drift over 24s or 30s with staggered delays; mouse movement adds small background parallax. The submit wrapper applies the same local goo filter to its button and decorative drop. Hover or keyboard focus expands the drop with a 400ms transition; the wrapper retains a separate 2px focus outline with 6px offset. Pending submission prevents the expansion. Reduced motion stops backdrop drift, parallax and drop expansion.
+
 ## Shapes
 
 The outer workspace has square edges; the inset rail retains its rounded silhouette. Welcome and source-health blocks are softly rounded; panels retain the shared 12px radius. List rows use 11px corners, controls 8px and record actions 6px. Badges use 5px; dialogs 16px. List avatars are rounded rectangles; dossier avatars and small indicators may remain circular. Fine borders define fields and tables; upload targets use dashed edges.
 
-The greeting emblem is a Lucide graduation-cap SVG inside an outlined circle with small rotated SIS, LMS and Library tags. The tags correspond to implemented feeds. Sign-in uses a decorative generated campus raster with thick solid black contours on white; it depicts an imagined school rather than an actual campus.
+The greeting emblem is a Lucide graduation-cap SVG inside an outlined circle with small rotated SIS, LMS and Library tags. The tags correspond to implemented feeds. Sign-in uses circular gray liquid blobs, square underlined fields and a rounded (16px) submit action with a decorative drop (20px corners). The former campus raster is removed.
 
 ## Components
 
 ### Buttons
 
-Shared controls have a 38px minimum height, 8px icon gap and 12px medium-weight labels. Primary actions are black with white text. Secondary actions use soft gray; quiet actions use supporting text on transparent fill. Destructive actions use pale rose fill and dark rose text with a fine rose border. Disabled controls use opacity 0.48 and a not-allowed cursor. Icon buttons are 36px squares with accessible names. No button translates or scales on hover.
+Shared controls have a 38px minimum height, 8px icon gap and 12px medium-weight labels. Primary actions are black with white text in light mode and pale with dark text in dark mode. Secondary actions use soft gray; quiet actions use supporting text on transparent fill. Destructive actions use pale rose fill and dark rose text with a fine rose border, mapped to dark rose surfaces in dark mode. Disabled controls use opacity 0.48 and a not-allowed cursor. Icon buttons are 36px squares with accessible names. Shared buttons remain stationary; sign-in's decorative submit drop has the scoped liquid response described below.
 
 Focus uses a 2px ink outline and 4px offset. Rail controls use a white outline with 3px offset against black.
 
@@ -373,7 +402,7 @@ Inputs, selects and textareas use white fill, foreground text, a fine gray borde
 
 The black rail starts with a compact **U.** home mark, followed by labeled SVG buttons for Students, Pipeline, Analytics and Governance. Active fill is charcoal with white text; hover adds charcoal feedback. Course matrix and account controls occupy the lower area. Rail buttons are 66px wide and at least 65px high, narrowing to 60px at 1200px.
 
-The header retains UniData 360, current location, Present, Run ETL and actor controls. Location hides at 1200px. At 960px compact navigation and course/account controls replace the rail. Selected compact navigation is black with white text. At 760px Present and Run ETL hide visible labels but retain accessible names. Account mode keeps the assigned **Account role** readable in a disabled selector; demo mode permits **Demo persona** switching.
+The header retains UniData 360, current location, Present, Run ETL and actor controls, plus a theme toggle. The same toggle appears in account navigation. It is a bordered 44px square, reducing to 40px in the mobile workspace header, and names its next action (**Use dark theme** or **Use light theme**). Location hides at 1200px. At 960px compact navigation and course/account controls replace the rail. Selected compact navigation follows primary/on-primary colors. At 760px Present and Run ETL hide visible labels but retain accessible names. Account mode keeps the assigned **Account role** readable in a disabled selector; demo mode permits **Demo persona** switching.
 
 ### Cohort Statistics
 
@@ -381,7 +410,9 @@ The black line plot switches between cumulative GPA and LMS attendance through l
 
 ### Account Access
 
-Sign-in extends shared light surfaces and black primary actions. Panel padding is 32px, reducing to 24px at 760px. Fields and submit have a 44px minimum height; form rows have an 18px gap and labels a 7px field gap. Pending submission disables fields and changes the action to **Signing in…**. Errors appear above the form in the rose alert message. An active session replaces credentials with **Open workspace**. Administrator help remains below; available demo access uses a separate divided row.
+Sign-in adapts the supplied MercuryLogin template to real school-ID/staff-email authentication. Transparent fields use a single fine underline, square corners, 12px vertical padding and a 56px minimum height; focus strengthens the underline to the foreground color while retaining visible keyboard focus. The full-width submit action is at least 58px high, with 16px corners and weight 750. Its localized SVG-filtered drop expands on hover and keyboard focus without moving the button label; reduced motion keeps it still.
+
+Pending submission disables fields and changes the action to **Signing in…**. Errors appear above the form in the semantic alert message. An active session replaces credentials with **Open workspace**. Student registration, student password recovery and administrator help remain below; available demo access uses a separate divided row. The backdrop is decorative and hidden from assistive technology. Theme selection carries into registration, recovery and permitted workspaces.
 
 ### Presentation and Dialogs
 
@@ -393,7 +424,8 @@ Native dialogs retain Escape behavior, sticky headings, named close controls and
 
 ### Do:
 
-- **Do** reuse the white, gray and black materials across workspace, presentation and account surfaces.
+- **Do** reuse the monochrome materials and their theme mappings across workspace, presentation and account surfaces.
+- **Do** keep MercuryLogin's liquid decoration scoped to sign-in and preserve readable fields, keyboard focus and reduced motion in both themes.
 - **Do** pair status colors with explicit readable labels.
 - **Do** plot GPA or attendance from records available to the current role and label the metric and scale.
 - **Do** retain tabular figures for comparable metrics and Geist Mono for identifiers.

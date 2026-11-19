@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function AccountHeader({ current }: { current: "login" | "register" }) {
   return (
@@ -33,6 +34,7 @@ export function AccountHeader({ current }: { current: "login" | "register" }) {
           >
             Student registration
           </Link>
+          <ThemeToggle />
         </nav>
       </div>
     </header>

@@ -19,6 +19,7 @@ import {
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { UserRole } from "@/shared/types";
 import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
+import { ThemeToggle } from "./ThemeToggle";
 export type { TabId } from "@/frontend/lib/workspaceAccess";
 const tabs = [
   { id: "accounts", label: "Staff accounts", short: "Accounts", icon: UserCog },
@@ -174,6 +175,7 @@ export function Navbar({
             </strong>
           </div>
           <div className="workspace-actions">
+            <ThemeToggle />
             {staff && (
               <button
                 className="button secondary present-action"

@@ -11,9 +11,27 @@
   --success: #267053;
   --warning: #8a590d;
   --danger: #ae3349;
+  --on-primary: #ffffff;
+  --primary-hover: #35353b;
   --radius: 12px;
   --font-sans: var(--font-geist-sans);
   color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --background: #0b0b0d;
+  --surface: #19191d;
+  --surface-raised: #27272d;
+  --line: #36363d;
+  --foreground: #f4f4f5;
+  --muted: #b5b5bf;
+  --accent: #e6e6eb;
+  --primary: #f4f4f5;
+  --on-primary: #151517;
+  --primary-hover: #d6d6de;
+  --success: #8fdbb2;
+  --warning: #f2c778;
+  --danger: #ff9aad;
+  color-scheme: dark;
 }
 @theme inline {
   --color-background: var(--background);
@@ -1556,22 +1574,6 @@ td .badge {
 .sign-in-content {
   width: 100%;
 }
-.login-shell {
-  max-width: 1440px;
-  padding: 48px clamp(24px, 4vw, 64px);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
-  align-items: center;
-  gap: clamp(32px, 5vw, 80px);
-}
-.login-campus {
-  min-width: 0;
-}
-.login-campus-image {
-  display: block;
-  width: 100%;
-  height: auto;
-}
 .sign-in-panel .panel-body {
   padding: clamp(28px, 2.5vw, 40px);
 }
@@ -1651,17 +1653,6 @@ td .badge {
   align-items: center;
   gap: 6px;
   min-height: 44px;
-}
-@media (max-width: 960px) {
-  .login-shell {
-    display: flex;
-    max-width: 560px;
-    gap: 32px;
-  }
-  .login-campus {
-    order: 2;
-    width: 100%;
-  }
 }
 @media (max-width: 760px) {
   .account-header-inner {
@@ -3695,10 +3686,10 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #f5f5f7;
+    background: var(--surface);
     border: 0;
     border-radius: 8px;
-    color: #65656f;
+    color: var(--muted);
     min-height: 44px;
     font-size: 11px;
     padding: 10px 8px;
@@ -3714,7 +3705,7 @@ body {
 @media (max-width: 760px) {
   body {
     padding: 0;
-    background: #fff;
+    background: var(--background);
   }
   .app-shell {
     width: 100%;
@@ -4191,5 +4182,393 @@ body {
 @media (max-width: 760px) {
   .student-dashboard .directory-controls .search-field {
     grid-column: 1 / -1;
+  }
+}
+
+/* 21st.dev MercuryLogin adaptation: real UniData authentication and themes. */
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  color: var(--foreground);
+  background: var(--background);
+}
+.account-header-nav .theme-toggle {
+  margin-left: 8px;
+}
+.neural-access-page {
+  position: relative;
+  isolation: isolate;
+  --mercury-light: #dedee4;
+  --mercury-dark: #bcbcc6;
+}
+.neural-access-page .account-header {
+  position: relative;
+  z-index: 1;
+  border-bottom: 0;
+}
+.neural-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.neural-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.neural-liquid {
+  position: absolute;
+  width: min(80vw, 900px);
+  height: min(65vw, 700px);
+  min-height: 460px;
+  left: calc(50% - 180px);
+  top: 29%;
+  opacity: 0.48;
+  transform: translate(var(--mercury-x, 0px), var(--mercury-y, 0px));
+}
+.neural-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--mercury-light),
+    var(--mercury-dark)
+  );
+  filter: blur(18px);
+  animation: mercury-drift 24s infinite alternate cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.neural-blob:nth-child(2n) {
+  animation-delay: -9s;
+  animation-duration: 30s;
+}
+.neural-blob:nth-child(3n) {
+  animation-delay: -18s;
+}
+@keyframes mercury-drift {
+  0% {
+    transform: translate(-5%, 3%) scale(0.95);
+  }
+  50% {
+    transform: translate(8%, -8%) scale(1.12);
+  }
+  100% {
+    transform: translate(-8%, 10%) scale(1.03);
+  }
+}
+.neural-auth-shell {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  flex: 1;
+  margin: auto;
+  padding: 56px 40px 64px;
+  display: flex;
+  align-items: center;
+}
+.neural-auth-shell .sign-in-panel {
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.neural-auth-shell .panel-body {
+  padding: 0;
+}
+.neural-auth-shell h1 {
+  max-width: 4ch;
+  font-size: 64px;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  font-weight: 800;
+  margin: 0 0 52px;
+}
+.neural-auth-shell .sign-in-form {
+  margin-top: 0;
+  gap: 28px;
+}
+.neural-auth-shell .sign-in-form label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.neural-auth-shell .sign-in-form input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #90909a;
+  border-radius: 0;
+  padding: 12px 0;
+  min-height: 56px;
+  font-size: 17px;
+}
+.neural-auth-shell .sign-in-form .primary {
+  margin-top: 0;
+  min-height: 58px;
+  border-radius: 16px;
+  font-weight: 750;
+  font-size: 14px;
+}
+.neural-submit-wrap {
+  position: relative;
+  margin-top: 14px;
+}
+.neural-submit-liquid {
+  position: relative;
+}
+.neural-submit-wrap .primary {
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+.neural-submit-drop {
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  border-radius: 20px;
+  transition: transform 400ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.neural-submit-wrap:is(:hover, :focus-within):not(:has(button:disabled))
+  .neural-submit-drop {
+  transform: scale(1.04, 1.14);
+}
+.neural-submit-wrap:has(button:disabled) .neural-submit-drop {
+  opacity: 0.48;
+}
+.neural-submit-wrap:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 10px;
+  border-radius: 16px;
+}
+.neural-auth-shell .sign-in-help {
+  margin-top: 24px;
+}
+.neural-auth-shell .sign-in-help .text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.neural-auth-shell .message {
+  margin: 0 0 24px;
+}
+:root[data-theme="dark"] .neural-access-page {
+  --mercury-light: #9b9b9f;
+  --mercury-dark: #45454a;
+}
+:root[data-theme="dark"] .neural-liquid {
+  opacity: 0.38;
+}
+:root[data-theme="dark"] .neural-auth-shell .sign-in-form input {
+  border-bottom-color: #70707b;
+}
+.neural-auth-shell .sign-in-form input:focus {
+  border-bottom-color: var(--foreground);
+}
+
+/* Theme existing workspaces, reports and account flows without changing scope. */
+:root[data-theme="dark"] ::selection {
+  background: #45454e;
+}
+:root[data-theme="dark"] * {
+  scrollbar-color: #63636e var(--background);
+}
+:root[data-theme="dark"] :is(input, textarea)::placeholder {
+  color: #a6a6b1;
+}
+:root[data-theme="dark"]
+  :is(
+    .panel,
+    .summary-strip,
+    .welcome-banner,
+    .connected-record-strip,
+    .student-list-record,
+    .student-card,
+    .records-content .student-card,
+    .directory-table th,
+    .insight-counters > div,
+    .insight-counters > button,
+    .source-health,
+    .view-switch,
+    .directory-controls input,
+    .directory-controls select,
+    .sort-control,
+    .inline-note,
+    .bar-track,
+    th
+  ) {
+  background: var(--surface);
+}
+:root[data-theme="dark"]
+  :is(
+    .modal,
+    .modal-heading,
+    .presentation.modal,
+    .presentation-slide,
+    .presentation .modal-heading,
+    .signin-shell,
+    .record-strip-icon,
+    .welcome-emblem .emblem-tag,
+    .view-switch button[aria-pressed="true"]
+  ) {
+  background: var(--background);
+}
+:root[data-theme="dark"]
+  :is(
+    .student-list-record:hover,
+    .student-card:hover,
+    .directory-table tbody tr:hover,
+    tbody tr:hover,
+    .insight-counters > button:hover,
+    .button.secondary,
+    .icon-button:hover,
+    .upload-zone.dragging
+  ) {
+  background: var(--surface-raised);
+}
+:root[data-theme="dark"]
+  :is(
+    .panel-header,
+    .source-health > small,
+    .student-card:hover,
+    .student-list-record:hover,
+    .inline-note,
+    .modal
+  ) {
+  border-color: var(--line);
+}
+:root[data-theme="dark"]
+  :is(
+    .welcome-emblem,
+    .summary-item dd,
+    .metric-filter,
+    .chart-caption strong,
+    .cohort-line-chart,
+    .chart-tabs button[aria-pressed="true"],
+    .welcome-emblem .emblem-tag
+  ) {
+  color: var(--foreground);
+}
+:root[data-theme="dark"]
+  :is(
+    .welcome-banner p,
+    .welcome-banner div > span,
+    .list-record-identity > span,
+    .insight-heading > span,
+    .chart-caption,
+    .health-score span,
+    .source-health-feeds div > span,
+    .source-health > small,
+    .insights-note,
+    .inline-note,
+    .flow-arrow
+  ) {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .cohort-line-chart text {
+  fill: var(--muted);
+}
+:root[data-theme="dark"] .chart-gridline {
+  stroke: var(--line);
+}
+:root[data-theme="dark"] .chart-tabs button[aria-pressed="true"] {
+  border-color: var(--foreground);
+}
+:root[data-theme="dark"]
+  :is(
+    .button.primary,
+    .list-record-action,
+    .risk-filters > button[aria-pressed="true"],
+    .compact-nav button.active
+  ) {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: transparent;
+}
+:root[data-theme="dark"] .button.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+:root[data-theme="dark"]
+  .risk-filters
+  > button[aria-pressed="true"]
+  .filter-count {
+  color: var(--on-primary);
+}
+:root[data-theme="dark"] .bar-fill {
+  background: var(--foreground);
+}
+:root[data-theme="dark"]
+  :is(
+    .badge,
+    .badge.info,
+    .avatar,
+    .user-initials,
+    .modal-body .avatar,
+    .student-list-record .avatar
+  ) {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+:root[data-theme="dark"] :is(.badge.success, .message.success) {
+  background: #163a2b;
+  color: var(--success);
+}
+:root[data-theme="dark"] .badge.warning {
+  background: #3b2e16;
+  color: var(--warning);
+}
+:root[data-theme="dark"]
+  :is(.badge.danger, .message.error, .button.danger-button) {
+  background: #421f2a;
+  color: var(--danger);
+}
+:root[data-theme="dark"] .button.danger-button {
+  border-color: #743447;
+}
+:root[data-theme="dark"] .neural-auth-shell .sign-in-panel {
+  background: transparent;
+}
+@media (max-width: 760px) {
+  .neural-auth-shell {
+    padding: 40px 28px 48px;
+    align-items: flex-start;
+  }
+  .neural-auth-shell h1 {
+    font-size: 56px;
+    margin-bottom: 40px;
+  }
+  .neural-liquid {
+    width: 180vw;
+    left: 14%;
+    top: 30%;
+  }
+  .workspace-actions .theme-toggle {
+    width: 40px;
+    height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .neural-blob {
+    animation: none;
+  }
+  .neural-liquid {
+    transform: none;
+  }
+  .neural-submit-drop {
+    transition: none;
+    transform: none !important;
+  }
+}
+@media print {
+  :root[data-theme="dark"] {
+    --background: #fff;
+    --surface: #f5f5f7;
+    --foreground: #171719;
+    --muted: #65656f;
+    --line: #e7e7eb;
+  }
+  .theme-toggle,
+  .neural-stage {
+    display: none;
   }
 }

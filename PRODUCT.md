@@ -23,7 +23,7 @@ The operational extension adds Registrar/Auditor Data Quality work and real-acco
 Unlisted school IDs can request Student access with a name, email and department. Email verification and password setup precede Registrar approval. Pending/rejected requests cannot sign in. Approval creates only the Student account; SIS imports remain authoritative for academic records. Registrar reviews these requests within Student 360. Local preview mode saves messages on the backend computer and does not send inbox email.
 
 ## Brand Commitments
-Preserve UniData's name and university data purpose. The user's latest supplied reference replaces the former navy direction with a light, monochrome learning dashboard: a black navigation rail, white canvas, soft gray rows, bold black actions, and a complementary statistics column.
+Preserve UniData's name and university data purpose. The supplied learning-dashboard reference replaces the former navy direction with a light, monochrome workspace: a black navigation rail, white canvas, soft gray rows, bold black actions, and a complementary statistics column. Light remains the default, with a persistent dark-theme toggle across account and workspace headers. The user's later supplied 21st.dev MercuryLogin template replaces the campus-illustration sign-in surface while retaining real school-ID/staff-email authentication, registration and recovery.
 
 ## Evidence on Hand
 Eight synthetic SIS students and matching learning/library seed data. Two supplied classroom reference slides. No real institution, live Canvas integration, regulatory certification or longitudinal retention dataset is supplied.
