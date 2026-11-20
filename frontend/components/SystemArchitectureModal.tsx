@@ -1,7 +1,8 @@
 "use client";
-import { ArrowRight } from "lucide-react";
 import { industryMatrix } from "@/frontend/lib/presentation";
+import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { Modal } from "./ui";
+import { EducationFlowchart } from "./EducationFlowchart";
 import {
   educationSourceMap,
   educationLifecycle,
@@ -13,25 +14,23 @@ export function SystemArchitectureModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { sourceCounts, masterRecords } = useEDM();
   if (!isOpen) return null;
   return (
     <Modal title="EDM course alignment" wide onClose={onClose}>
       <div className="modal-body">
-        <h3>Education / Universities</h3>
-        <div className="lifecycle-line">
-          <span>Sources</span>
-          <ArrowRight size={18} />
-          <span>Integration</span>
-          <ArrowRight size={18} />
-          <span>Governance</span>
-          <ArrowRight size={18} />
-          <span>Outputs</span>
-        </div>
-        <p className="small" style={{ marginBottom: 24 }}>
-          Implemented flow: SIS, LMS, Library → validated ingestion and ETL →
-          server role checks and masking → Student 360 and academic analytics.
+        <h3>Education / Universities — Integration flowchart</h3>
+        <p className="small" style={{ marginBottom: 16 }}>
+          Live feeds (SIS, LMS, Library) flow through Estante’s ETL, Data
+          Quality, and FERPA/GDPR Governance hub into scoped outputs. HR/Payroll
+          and Alumni CRM are mapped as future extensions.
         </p>
-        <div className="table-wrap">
+        <EducationFlowchart
+          sourceCounts={sourceCounts}
+          masterCount={masterRecords.length}
+        />
+        <h3 style={{ marginTop: 28 }}>Comparative industry matrix</h3>
+        <div className="table-wrap" style={{ marginTop: 12 }}>
           <table className="slide-matrix">
             <thead>
               <tr>

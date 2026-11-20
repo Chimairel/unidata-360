@@ -17,6 +17,7 @@ interface EDMContextType extends EDMSnapshot {
   importFile: (feed: Feed, file: File) => Promise<boolean>;
   importRecords: (feed: Feed, content: string) => Promise<boolean>;
   viewStudent: (studentId: string) => Promise<boolean>;
+  graduateStudent: (studentId: string) => Promise<boolean>;
   assignAdvisor: (studentId: string) => Promise<boolean>;
   updateCaseSummaries: (cases: Intervention[], ownerId: string) => void;
   refresh: () => Promise<void>;
@@ -29,11 +30,13 @@ const empty: EDMSnapshot = {
   sisRecords: [],
   lmsRecords: [],
   libraryRecords: [],
+  hrRecords: [],
+  alumniRecords: [],
   masterRecords: [],
   etlReports: [],
   auditLogs: [],
   interventions: [],
-  sourceCounts: { SIS: 0, LMS: 0, LIBRARY: 0 },
+  sourceCounts: { SIS: 0, LMS: 0, LIBRARY: 0, HR: 0, ALUMNI: 0 },
   auditIntegrity: true,
 };
 async function fetchSnapshot(): Promise<EDMSnapshot> {
@@ -115,7 +118,14 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
         }
         throw new Error(result.error);
       }
-      setData(result.snapshot);
+      if (result.snapshot) {
+        setData(result.snapshot);
+      } else if (result.auditEntry) {
+        setData((current) => ({
+          ...current,
+          auditLogs: [result.auditEntry, ...current.auditLogs],
+        }));
+      }
       if (!("studentId" in body)) setNotice(result.message);
       return true;
     } catch (e) {
@@ -172,7 +182,6 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
             setError(null);
             setRequiresSignIn(true);
             router.replace("/login");
-            router.refresh();
           } catch (e) {
             setError(e instanceof Error ? e.message : "Sign-out failed.");
           } finally {
@@ -191,6 +200,8 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
         executeETL: () => command({ type: "sync" }),
         resetAllData: () => command({ type: "reset" }),
         viewStudent: (studentId) => command({ type: "view", studentId }),
+        graduateStudent: (studentId) =>
+          command({ type: "graduate", studentId }),
         assignAdvisor: (studentId) =>
           command({ type: "intervention", studentId }),
         updateCaseSummaries: (interventions, ownerId) =>

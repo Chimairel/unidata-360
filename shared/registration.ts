@@ -18,8 +18,20 @@ export interface RegistrationWorkspace {
   message?: string;
 }
 
+export interface StudentAccountSummary {
+  id: string;
+  studentId: string;
+  displayName: string;
+  email: string;
+  department: Department | null;
+  activationRequired: boolean;
+  active: boolean;
+}
+
 export interface StudentAccountsWorkspace {
   pending: number;
   active: number;
+  disabled: number;
+  students: StudentAccountSummary[];
   message?: string;
 }

@@ -19,17 +19,28 @@ import {
   source,
   transaction,
   upsert,
-  masters,
 } from "./store";
 import { findQualityIssues } from "./quality-rules";
 import { parseImport } from "./validation";
-import { WorkflowError, requireWorkflowRole } from "./workflow";
+import {
+  assertWorkflowRole,
+  WorkflowError,
+  requireWorkflowRole,
+} from "./workflow";
 
-export async function reconcileQuality(at: string, identity?: AccessIdentity) {
+export async function reconcileQuality(
+  at: string,
+  identity?: AccessIdentity,
+  preloaded?: {
+    sis: SISRecord[];
+    lms: LMSRecord[];
+    library: LibraryRecord[];
+  },
+) {
   const findings = findQualityIssues(
-    await source<SISRecord>("SIS"),
-    await source<LMSRecord>("LMS"),
-    await source<LibraryRecord>("LIBRARY"),
+    preloaded ? preloaded.sis : await source<SISRecord>("SIS"),
+    preloaded ? preloaded.lms : await source<LMSRecord>("LMS"),
+    preloaded ? preloaded.library : await source<LibraryRecord>("LIBRARY"),
   );
   const existing = new Map(
     (await rows<{ payload: string }>("SELECT payload FROM quality_issues")).map(
@@ -40,6 +51,7 @@ export async function reconcileQuality(at: string, identity?: AccessIdentity) {
     ),
   );
   const current = new Set(findings.map((f) => f.id));
+  const upserts: QualityIssue[] = [];
   for (const finding of findings) {
     const old = existing.get(finding.id);
     const reopened = old?.status === "Resolved";
@@ -60,11 +72,7 @@ export async function reconcileQuality(at: string, identity?: AccessIdentity) {
         text: "Reopened: the source check failed again.",
       });
     }
-    await execute(
-      "INSERT INTO quality_issues(id,payload) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
-      issue.id,
-      JSON.stringify(issue),
-    );
+    upserts.push(issue);
   }
   for (const issue of existing.values())
     if (!current.has(issue.id) && issue.status !== "Resolved") {
@@ -76,11 +84,7 @@ export async function reconcileQuality(at: string, identity?: AccessIdentity) {
         actor: identity?.displayName || "ETL",
         text: "Resolved by a successful source recheck during ETL.",
       });
-      await execute(
-        "UPDATE quality_issues SET payload=? WHERE id=?",
-        JSON.stringify(issue),
-        issue.id,
-      );
+      upserts.push(issue);
       await audit(
         "REGISTRAR",
         "QUALITY_ISSUE_RESOLVED",
@@ -90,6 +94,15 @@ export async function reconcileQuality(at: string, identity?: AccessIdentity) {
         identity,
       );
     }
+  for (let start = 0; start < upserts.length; start += 500) {
+    const batch = upserts.slice(start, start + 500);
+    await execute(
+      "INSERT INTO quality_issues(id,payload) VALUES " +
+        batch.map(() => "(?,?)").join(",") +
+        " ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+      ...batch.flatMap((issue) => [issue.id, JSON.stringify(issue)]),
+    );
+  }
   await execute(
     "INSERT INTO quality_state(id,checked_at) VALUES('current',?) ON CONFLICT(id) DO UPDATE SET checked_at=excluded.checked_at",
     at,
@@ -99,91 +112,107 @@ export async function qualityWorkspace(
   s: SessionIdentity,
 ): Promise<QualityWorkspace> {
   await requireWorkflowRole(s, ["REGISTRAR", "COMPLIANCE_AUDITOR"]);
-  return transaction(async () => {
-    const issues = (
-      await rows<{ payload: string }>("SELECT payload FROM quality_issues")
-    )
-      .map((r) => JSON.parse(r.payload) as QualityIssue)
-      .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
-    const metadata = (
-      await rows<{
-        feed: SourceMetadata["feed"];
-        record_key: string;
-        received_at: string | null;
-        received_by: string;
-        revision: number;
-      }>("SELECT * FROM source_metadata ORDER BY feed,record_key")
-    ).map((r) => ({
-      feed: r.feed,
-      key: r.record_key,
-      receivedAt: r.received_at,
-      receivedBy: r.received_by,
-      revision: r.revision,
-    }));
-    const definitions = [
-      {
-        feed: "SIS" as const,
-        name: "Student Information System",
-        owner: "Registrar",
-        key: "studentId",
-      },
-      {
-        feed: "LMS" as const,
-        name: "Learning Management System",
-        owner: "Academic departments",
-        key: "studentId + courseCode",
-      },
-      {
-        feed: "LIBRARY" as const,
-        name: "Library",
-        owner: "Library services",
-        key: "studentId",
-      },
-    ];
-    const catalog = [];
-    for (const definition of definitions) {
-      const received = metadata.filter((m) => m.feed === definition.feed);
-      const known = received
-        .map((m) => m.receivedAt)
-        .filter((v): v is string => !!v)
-        .sort();
-      catalog.push({
-        ...definition,
-        rows: Number(
-          (await first<{ count: string }>(
-            "SELECT COUNT(*) AS count FROM sources WHERE feed=?",
-            definition.feed,
-          ))!.count,
-        ),
-        lastReceivedAt: known.at(-1) || null,
-        unknownProvenance: received.filter((m) => !m.receivedAt).length,
-      });
-    }
+  const row = await first<{
+    issues: Array<{ payload: string }>;
+    metadata: Array<{
+      feed: SourceMetadata["feed"];
+      record_key: string;
+      received_at: string | null;
+      received_by: string;
+      revision: number;
+    }>;
+    counts: Array<{ feed: SourceMetadata["feed"]; count: number }>;
+    checked_at: string | null;
+    runs: Array<{ payload: string }>;
+    stewards: Array<{ id: string; displayName: string }>;
+    students: Array<{ payload: string }>;
+  }>(
+    `SELECT
+       COALESCE((SELECT json_agg(json_build_object('payload', payload)) FROM quality_issues), '[]'::json) AS issues,
+       COALESCE((SELECT json_agg(m ORDER BY feed, record_key) FROM source_metadata m), '[]'::json) AS metadata,
+       COALESCE((SELECT json_agg(t) FROM (SELECT feed, COUNT(*)::int AS count FROM sources GROUP BY feed) t), '[]'::json) AS counts,
+       (SELECT checked_at FROM quality_state WHERE id='current') AS checked_at,
+       COALESCE((SELECT json_agg(json_build_object('payload', payload) ORDER BY seq DESC) FROM (SELECT seq, payload FROM etl_runs ORDER BY seq DESC LIMIT 30) e), '[]'::json) AS runs,
+       COALESCE((SELECT json_agg(json_build_object('id', id, 'displayName', display_name) ORDER BY display_name) FROM users WHERE active=1 AND role='REGISTRAR'), '[]'::json) AS stewards,
+       COALESCE((SELECT json_agg(json_build_object('payload', payload) ORDER BY id) FROM master), '[]'::json) AS students`,
+  );
+  const issues = (row?.issues || [])
+    .map((r) => JSON.parse(r.payload) as QualityIssue)
+    .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+  const metadata = (row?.metadata || []).map((r) => ({
+    feed: r.feed,
+    key: r.record_key,
+    receivedAt: r.received_at,
+    receivedBy: r.received_by,
+    revision: r.revision,
+  }));
+  const feedCounts = new Map<SourceMetadata["feed"], number>();
+  for (const item of row?.counts || [])
+    feedCounts.set(item.feed, Number(item.count));
+  const definitions = [
+    {
+      feed: "SIS" as const,
+      name: "Student Information System",
+      owner: "Registrar",
+      key: "studentId",
+    },
+    {
+      feed: "LMS" as const,
+      name: "Learning Management System",
+      owner: "Academic departments",
+      key: "studentId + courseCode",
+    },
+    {
+      feed: "LIBRARY" as const,
+      name: "Library",
+      owner: "Library services",
+      key: "studentId",
+    },
+    {
+      feed: "HR" as const,
+      name: "HR & Payroll",
+      owner: "Human Resources",
+      key: "facultyId",
+    },
+    {
+      feed: "ALUMNI" as const,
+      name: "Alumni CRM",
+      owner: "Alumni relations",
+      key: "studentId",
+    },
+  ];
+  const catalog = definitions.map((definition) => {
+    const received = metadata.filter((m) => m.feed === definition.feed);
+    const known = received
+      .map((m) => m.receivedAt)
+      .filter((v): v is string => !!v)
+      .sort();
     return {
-      issues,
-      metadata,
-      sources: catalog,
-      checkedAt:
-        (
-          await first<{ checked_at: string }>(
-            "SELECT checked_at FROM quality_state WHERE id='current'",
-          )
-        )?.checked_at || null,
-      runs: (
-        await rows<{ payload: string }>(
-          "SELECT payload FROM etl_runs ORDER BY seq DESC LIMIT 30",
-        )
-      ).map((r) => JSON.parse(r.payload) as ETLRunReport),
-      stewards: await rows<{ id: string; displayName: string }>(
-        "SELECT id,display_name AS \"displayName\" FROM users WHERE active=1 AND role='REGISTRAR' ORDER BY display_name",
-      ),
-      students: (await masters()).map(({ studentId, fullName }) => ({
+      ...definition,
+      rows: feedCounts.get(definition.feed) || 0,
+      lastReceivedAt: known.at(-1) || null,
+      unknownProvenance: received.filter((m) => !m.receivedAt).length,
+    };
+  });
+  return {
+    issues,
+    metadata,
+    sources: catalog,
+    checkedAt: row?.checked_at || null,
+    runs: (row?.runs || []).map((r) => JSON.parse(r.payload) as ETLRunReport),
+    stewards: row?.stewards || [],
+    students: (row?.students || []).map((r) => {
+      const { studentId, fullName } = JSON.parse(r.payload) as {
+        studentId: string;
+        fullName: string;
+      };
+      return {
         studentId,
         fullName:
           s.role === "COMPLIANCE_AUDITOR" ? `Student ${studentId}` : fullName,
-      })),
-    };
-  });
+      };
+    }),
+  };
 }
 export const qualityCommand = z.discriminatedUnion("type", [
   z
@@ -204,7 +233,7 @@ export const qualityCommand = z.discriminatedUnion("type", [
     .strict(),
 ]);
 export async function manageQuality(s: SessionIdentity, input: unknown) {
-  await requireWorkflowRole(s, ["REGISTRAR"]);
+  assertWorkflowRole(s, ["REGISTRAR"]);
   const cmd = qualityCommand.parse(input);
   return transaction(async () => {
     await requireWorkflowRole(s, ["REGISTRAR"]);

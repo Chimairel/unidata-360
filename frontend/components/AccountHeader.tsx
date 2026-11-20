@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { BrandMark } from "./BrandMark";
 
 export function AccountHeader({
   current,
 }: {
-  current: "login" | "register" | "recovery";
+  current: "login" | "register" | "recovery" | "onboarding";
 }) {
   return (
     <header className="account-header">
@@ -16,7 +16,7 @@ export function AccountHeader({
           aria-label="Estante sign in"
         >
           <span className="brand-mark">
-            <GraduationCap size={23} />
+            <BrandMark size={22} compact />
           </span>
           <span>
             <strong>Estante</strong>
@@ -26,18 +26,14 @@ export function AccountHeader({
           </span>
         </Link>
         <nav className="account-header-nav" aria-label="Account navigation">
-          <Link
-            href="/login"
-            aria-current={current === "login" ? "page" : undefined}
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/register"
-            aria-current={current === "register" ? "page" : undefined}
-          >
-            Activate student account
-          </Link>
+          {current !== "onboarding" && (
+            <Link
+              href="/login"
+              aria-current={current === "login" ? "page" : undefined}
+            >
+              Sign in
+            </Link>
+          )}
           <ThemeToggle />
         </nav>
       </div>

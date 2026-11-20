@@ -11,7 +11,11 @@ import type {
 } from "@/shared/types";
 import { canAccessStudent, canFollowUp } from "./access";
 import { audit, execute, first, masters, rows, transaction } from "./store";
-import { WorkflowError, requireWorkflowRole } from "./workflow";
+import {
+  assertWorkflowRole,
+  WorkflowError,
+  requireWorkflowRole,
+} from "./workflow";
 
 const roles = ["REGISTRAR", "DEAN", "ACADEMIC_ADVISOR"] as const;
 export function normalizeCase(
@@ -118,21 +122,47 @@ export async function caseWorkspace(
   s: SessionIdentity,
 ): Promise<CaseWorkspace> {
   await requireWorkflowRole(s, roles);
-  const students = (await masters()).filter((student) =>
-    canAccessStudent(s.role, s, student),
+  const row = await first<{
+    master: Array<{ payload: string }>;
+    interventions: Array<{ payload: string }>;
+    assignees: Array<{
+      id: string;
+      display_name: string;
+      role: CaseAssignee["role"];
+      department: string | null;
+    }>;
+  }>(
+    `SELECT
+       COALESCE((SELECT json_agg(json_build_object('payload', payload) ORDER BY id) FROM master), '[]'::json) AS master,
+       COALESCE((SELECT json_agg(json_build_object('payload', payload)) FROM interventions), '[]'::json) AS interventions,
+       COALESCE((SELECT json_agg(u ORDER BY display_name) FROM (
+         SELECT id, display_name, role, department FROM users
+         WHERE active=1 AND role IN ('REGISTRAR','DEAN','ACADEMIC_ADVISOR')
+         ORDER BY display_name
+       ) u), '[]'::json) AS assignees`,
   );
+  const students = (row?.master || [])
+    .map((r) => JSON.parse(r.payload) as UnifiedStudentRecord)
+    .filter((student) => canAccessStudent(s.role, s, student));
   const permitted = new Set(students.map((st) => st.studentId));
-  const cases = (
-    await rows<{ payload: string }>("SELECT payload FROM interventions")
-  )
+  const cases = (row?.interventions || [])
     .map((r) => normalizeCase(JSON.parse(r.payload)))
     .filter((c) => permitted.has(c.studentId) && canReadCase(s, c))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const staff = (await assignees()).filter((a) =>
-    s.role === "ACADEMIC_ADVISOR"
-      ? a.id === s.userId
-      : s.role !== "DEAN" || a.role !== "DEAN" || a.department === s.department,
-  );
+  const staff = (row?.assignees || [])
+    .map((r) => ({
+      id: r.id,
+      displayName: r.display_name,
+      role: r.role,
+      ...(r.department ? { department: r.department } : {}),
+    }))
+    .filter((a) =>
+      s.role === "ACADEMIC_ADVISOR"
+        ? a.id === s.userId
+        : s.role !== "DEAN" ||
+          a.role !== "DEAN" ||
+          a.department === s.department,
+    );
   return {
     cases,
     students: students.map(({ studentId, fullName, department }) => ({
@@ -145,7 +175,7 @@ export async function caseWorkspace(
   };
 }
 export async function manageCase(s: SessionIdentity, input: unknown) {
-  await requireWorkflowRole(s, roles);
+  assertWorkflowRole(s, roles);
   const cmd = caseCommand.parse(input);
   return transaction(async () => {
     await requireWorkflowRole(s, roles);

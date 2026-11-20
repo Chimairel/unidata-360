@@ -10,7 +10,7 @@ export class WorkflowError extends Error {
     super(message);
   }
 }
-export async function requireWorkflowRole(
+export function assertWorkflowRole(
   s: SessionIdentity,
   roles: readonly UserRole[],
 ) {
@@ -18,11 +18,17 @@ export async function requireWorkflowRole(
     throw new WorkflowError(
       "Sign in with a permitted staff account to use this workspace.",
     );
+}
+export async function requireWorkflowRole(
+  s: SessionIdentity,
+  roles: readonly UserRole[],
+) {
+  assertWorkflowRole(s, roles);
   const user = await first<{
     role: string;
     active: number;
     department: string | null;
-  }>("SELECT role,active,department FROM users WHERE id=?", s.userId);
+  }>("SELECT role,active,department FROM users WHERE id=?", s.userId!);
   if (
     !user?.active ||
     user.role !== s.role ||

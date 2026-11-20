@@ -18,11 +18,18 @@ import {
 } from "../backend/api/register";
 import { provisionStudentAccounts } from "../backend/studentAccounts";
 import { parseImport } from "../backend/validation";
-import { runETLPipeline } from "../backend/etl/pipeline";
+import {
+  runETLPipeline,
+  standardizePersonName,
+} from "../backend/etl/pipeline";
+import { applyFERPAMasking } from "../backend/governance/masking";
+import { studentLifecycleSummary } from "../frontend/lib/courseAlignment";
 import {
   initialSISRecords,
   initialLMSRecords,
   initialLibraryRecords,
+  initialHRRecords,
+  initialAlumniRecords,
 } from "../backend/data/mockData";
 import {
   assignIntervention,
@@ -47,9 +54,11 @@ import {
   readSession,
   revokeSession,
   resetPassword,
+  strongPasswordSchema,
   tokenHash,
   type SessionIdentity,
 } from "../backend/auth";
+import { evaluatePassword } from "../shared/password";
 
 const testUrl = process.env.EDM_TEST_DATABASE_URL;
 if (testUrl && testUrl === process.env.DATABASE_URL)
@@ -89,11 +98,12 @@ test("CSV handles commas and multiline quoted fields and converts numeric string
       .join(",");
   const parsed = parseImport("SIS", csv, "csv") as SISRecord[];
   assert.equal(parsed[0].major, row.major);
-  assert.equal(parsed[0].cumulativeGpa, 3.85);
+  assert.equal(parsed[0].cumulativeGpa, 1.25);
 });
 test("invalid import batches reject ranges, missing fields, dates and unknown columns", () => {
   for (const row of [
-    { ...initialSISRecords[0], cumulativeGpa: 5 },
+    { ...initialSISRecords[0], cumulativeGpa: 0.5 },
+    { ...initialSISRecords[0], cumulativeGpa: 5.5 },
     { ...initialSISRecords[0], dateOfBirth: "2004-02-30" },
     { studentId: "A" },
     { ...initialSISRecords[0], unexpected: "x" },
@@ -105,6 +115,28 @@ test("invalid import batches reject ranges, missing fields, dates and unknown co
     );
   assert.throws(() => parseImport("SIS", "not json", "json"), /Invalid JSON/);
 });
+test("Philippine 1.00-5.00 grading treats 3.00 or worse as fail (5.00) and Critical Alert", () => {
+  const exactThree = {
+    ...initialSISRecords[0],
+    studentId: "20260303",
+    cumulativeGpa: 3.0,
+    academicStanding: "Good Standing" as const,
+  };
+  const atRisk = {
+    ...initialSISRecords[0],
+    studentId: "20260275",
+    cumulativeGpa: 2.75,
+    academicStanding: "Good Standing" as const,
+  };
+  const { masterRecords, report } = runETLPipeline([exactThree, atRisk], [], []);
+  const failed = masterRecords.find((s) => s.studentId === "20260303")!;
+  const moderate = masterRecords.find((s) => s.studentId === "20260275")!;
+  assert.equal(failed.cumulativeGpa, 5.0);
+  assert.equal(failed.overallRiskCategory, "Critical Alert");
+  assert.ok(report.warnings.some((w) => w.includes("[Business Rule]")));
+  assert.equal(moderate.cumulativeGpa, 2.75);
+  assert.equal(moderate.overallRiskCategory, "Moderate Risk");
+});
 
 test("LMS templates accept seeded activity timestamps and reject invalid dates or times", () => {
   assert.equal(
@@ -115,6 +147,7 @@ test("LMS templates accept seeded activity timestamps and reject invalid dates o
     "2026-02-30 12:00",
     "2026-10-08 24:00",
     "2026-10-08 12:60",
+    "02/30/2026 12:00",
   ]) {
     assert.throws(
       () =>
@@ -127,6 +160,122 @@ test("LMS templates accept seeded activity timestamps and reject invalid dates o
     );
   }
 });
+test("ETL and validation standardize name casing, slash dates, emails, and codes", () => {
+  assert.equal(standardizePersonName("  JUAN   DELA  CRUZ "), "Juan Dela Cruz");
+  assert.equal(standardizePersonName("anne-marie o'connor"), "Anne-Marie O'Connor");
+  assert.equal(standardizePersonName("McDonald"), "McDonald");
+
+  const parsedSis = parseImport(
+    "SIS",
+    JSON.stringify([
+      {
+        ...initialSISRecords[0],
+        firstName: "  JUAN ",
+        lastName: "DELA CRUZ",
+        email: "  Juan.DelaCruz@CPC.EDU ",
+        department: " bsit ",
+        dateOfBirth: "04/12/2003",
+      },
+    ]),
+    "json",
+  ) as SISRecord[];
+  assert.equal(parsedSis[0].department, "BSIT");
+  assert.equal(parsedSis[0].email, "juan.delacruz@cpc.edu");
+  assert.equal(parsedSis[0].dateOfBirth, "2003-04-12");
+
+  const parsedLms = parseImport(
+    "LMS",
+    JSON.stringify([
+      {
+        ...initialLMSRecords[0],
+        courseCode: " it-301 ",
+        letterGrade: "a+",
+        lastActiveDate: "10/8/2026 18:30",
+      },
+    ]),
+    "json",
+  ) as typeof initialLMSRecords;
+  assert.equal(parsedLms[0].courseCode, "IT-301");
+  assert.equal(parsedLms[0].letterGrade, "A+");
+  assert.equal(parsedLms[0].lastActiveDate, "2026-10-08 18:30");
+
+  const etl = runETLPipeline(parsedSis, parsedLms, [initialLibraryRecords[0]]);
+  assert.equal(etl.masterRecords[0].fullName, "Juan Dela Cruz");
+  assert.equal(etl.report.anomaliesDetected, 0);
+  assert.ok(etl.report.warnings.some((w) => w.includes("[Transform]:")));
+});
+test("FERPA masking fails closed and lifecycle summary reflects graduation context", () => {
+  const { masterRecords } = runETLPipeline(
+    initialSISRecords,
+    initialLMSRecords,
+    initialLibraryRecords,
+  );
+  const adminMasked = applyFERPAMasking(masterRecords[0], "SYSTEM_ADMIN");
+  assert.equal(adminMasked.ssn, "•••-••-••••");
+  assert.equal(adminMasked.dateOfBirth, "Restricted");
+  assert.equal(adminMasked.lmsSummary.courses.length, 0);
+
+  const seniorHold = masterRecords.find((s) => s.studentId === "20220518")!;
+  const seniorSummary = studentLifecycleSummary(seniorHold);
+  assert.equal(seniorSummary.stage, "Graduation review");
+  assert.ok(seniorSummary.graduationContext.includes("Hold Placed"));
+
+  const juniorClear = masterRecords.find((s) => s.studentId === "20221010")!;
+  assert.equal(studentLifecycleSummary(juniorClear).stage, "Learning");
+});
+test("HR and Alumni CRM feeds validate, enrich Student 360, and mask payroll and opted-out graduates", () => {
+  const parsedHr = parseImport(
+    "HR",
+    JSON.stringify(initialHRRecords),
+    "json",
+  );
+  const parsedAlumni = parseImport(
+    "ALUMNI",
+    JSON.stringify(initialAlumniRecords),
+    "json",
+  );
+  assert.equal(parsedHr.length, 4);
+  assert.equal(parsedAlumni.length, 2);
+
+  const graduatedSis = {
+    ...initialSISRecords[0],
+    studentId: "20200722",
+    firstName: "Bianca",
+    lastName: "Dela Rosa",
+    enrollmentStatus: "Graduated" as const,
+    yearLevel: "Graduate" as const,
+  };
+  const { masterRecords, report } = runETLPipeline(
+    [initialSISRecords[0], graduatedSis],
+    initialLMSRecords,
+    initialLibraryRecords,
+    undefined,
+    initialHRRecords,
+    initialAlumniRecords,
+  );
+  assert.equal(report.recordsExtracted.hr, 4);
+  assert.equal(report.recordsExtracted.alumni, 2);
+
+  const marcus = masterRecords.find((s) => s.studentId === "20221010")!;
+  assert.equal(marcus.hrSummary?.title, "Associate Professor");
+  assert.equal(marcus.hrSummary?.payrollBand, "Grade 14 · PHP 68,000/mo");
+
+  const bianca = masterRecords.find((s) => s.studentId === "20200722")!;
+  assert.equal(bianca.alumniSummary?.contactConsent, "Opted Out");
+  assert.equal(
+    studentLifecycleSummary(bianca).stage,
+    "Alumni (Graduated)",
+  );
+
+  const deanMaskedMarcus = applyFERPAMasking(marcus, "DEAN");
+  assert.equal(deanMaskedMarcus.hrSummary?.payrollBand, "[HR Payroll Restricted]");
+
+  const deanMaskedBianca = applyFERPAMasking(bianca, "DEAN");
+  assert.equal(deanMaskedBianca.alumniSummary?.employer, "[GDPR Opted Out]");
+
+  const auditorMasked = applyFERPAMasking(marcus, "COMPLIANCE_AUDITOR");
+  assert.equal(auditorMasked.hrSummary, undefined);
+});
 databaseTest(
   "PostgreSQL seeds once, upserts by feed key and rolls back partial transactions",
   async () => {
@@ -134,11 +283,11 @@ databaseTest(
     await transaction(() =>
       upsert("SIS", [
         initialSISRecords[0],
-        { ...initialSISRecords[0], cumulativeGpa: 3.9 },
+        { ...initialSISRecords[0], cumulativeGpa: 1.5 },
       ]),
     );
     assert.equal((await source<SISRecord>("SIS")).length, 8);
-    assert.equal((await source<SISRecord>("SIS"))[0].cumulativeGpa, 3.9);
+    assert.equal((await source<SISRecord>("SIS"))[0].cumulativeGpa, 1.5);
     await assert.rejects(() =>
       transaction(async () => {
         await upsert("SIS", [
@@ -214,11 +363,11 @@ databaseTest(
       const mismatch = await register(
         request({ studentId: "UNKNOWN-STUDENT", email: "unknown@example.edu" }),
       );
-      assert.equal(mismatch.status, 200);
+      assert.equal(mismatch.status, 404);
       assert.equal((await readdir(directory)).length, 0);
       const sent = await register(request(details));
       assert.equal(sent.status, 200);
-      assert.deepEqual(await sent.json(), await mismatch.json());
+      assert.deepEqual(await sent.json(), { ok: true, delivery: "preview" });
       const token = await latestToken();
       assert.equal((await authenticate(student.studentId, password)).ok, false);
       const pending = await first<{ token_hash: string }>(
@@ -267,10 +416,10 @@ databaseTest(
         /already exists/,
       );
       await execute("DELETE FROM registration_limits");
-      assert.deepEqual(await requestStudentActivation(details), {
-        ok: true,
-        delivery: "preview",
-      });
+      await assert.rejects(
+        () => requestStudentActivation(details),
+        /already activated/,
+      );
       assert.equal((await readdir(directory)).length, 1);
       assert.equal((await auditTrail()).valid, true);
     } finally {
@@ -353,12 +502,13 @@ databaseTest(
         filename,
         "cannot-create",
       );
-      assert.deepEqual(
-        await requestStudentActivation({
-          studentId: another.studentId,
-          email: another.email,
-        }),
-        { ok: true, delivery: "preview" },
+      await assert.rejects(
+        () =>
+          requestStudentActivation({
+            studentId: another.studentId,
+            email: another.email,
+          }),
+        /unavailable/,
       );
       assert.equal(
         await first(
@@ -393,8 +543,8 @@ databaseTest(
         const unknown = await register(
           request("UNKNOWN-DELIVERY", "unknown-delivery@example.edu"),
         );
-        assert.equal(eligible.status, unknown.status);
-        assert.deepEqual(await eligible.json(), await unknown.json());
+        assert.equal(eligible.status, 503);
+        assert.equal(unknown.status, 404);
         assert.equal(
           await first(
             "SELECT 1 FROM student_registrations WHERE email=?",
@@ -524,7 +674,7 @@ databaseTest(
     );
     const student = await snapshot("STUDENT");
     assert.equal(student.masterRecords.length, 1);
-    assert.equal(student.masterRecords[0].studentId, "STU-2024-001");
+    assert.equal(student.masterRecords[0].studentId, "20221010");
     assert.equal(student.auditLogs.length, 0);
     assert.equal(student.etlReports.length, 0);
     const auditor = await snapshot("COMPLIANCE_AUDITOR");
@@ -549,25 +699,25 @@ databaseTest(
   "advisor follow-ups are idempotent and reset preserves audit and ETL history",
   async () => {
     await transaction(() =>
-      assignIntervention("ACADEMIC_ADVISOR", "STU-2024-003"),
+      assignIntervention("ACADEMIC_ADVISOR", "20220820"),
     );
     await transaction(() =>
-      assignIntervention("ACADEMIC_ADVISOR", "STU-2024-003"),
+      assignIntervention("ACADEMIC_ADVISOR", "20220820"),
     );
     await transaction(() =>
-      assignIntervention("ACADEMIC_ADVISOR", "STU-2024-001"),
+      assignIntervention("ACADEMIC_ADVISOR", "20221010"),
     );
     const advisor = await snapshot("ACADEMIC_ADVISOR");
     assert.equal(advisor.interventions.length, 2);
     assert.ok(
-      advisor.interventions.some((item) => item.studentId === "STU-2024-001"),
+      advisor.interventions.some((item) => item.studentId === "20221010"),
     );
     assert.deepEqual((await snapshot("STUDENT")).interventions, []);
     assert.deepEqual(
       (
         await snapshot("STUDENT", {
           mode: "account",
-          studentId: "STU-2024-001",
+          studentId: "20221010",
         })
       ).interventions,
       [],
@@ -585,14 +735,28 @@ databaseTest(
   },
 );
 
-test("password hashes are salted and verify without storing plaintext", async () => {
+test("password hashes use hardened scrypt2 and enforce strong password rules", async () => {
   const password = "Test-only-password-234!";
   const first = await hashPassword(password);
   const second = await hashPassword(password);
+  assert.ok(first.startsWith("scrypt2:"));
   assert.notEqual(first, second);
   assert.ok(!first.includes(password));
   assert.equal(await verifyPassword(password, first), true);
   assert.equal(await verifyPassword("incorrect", first), false);
+
+  assert.equal(strongPasswordSchema.safeParse("aaaaaaaaaaaa").success, false);
+  assert.equal(strongPasswordSchema.safeParse("123456789012").success, false);
+  assert.equal(strongPasswordSchema.safeParse("weakpassword").success, false);
+  assert.equal(strongPasswordSchema.safeParse("StrongPass12!").success, true);
+  assert.equal(
+    strongPasswordSchema.safeParse("four random words 99").success,
+    true,
+  );
+  assert.equal(
+    evaluatePassword("20221010!Strong", ["20221010"]).valid,
+    false,
+  );
 });
 databaseTest(
   "account roles and student identity come from the server, with revocable hashed sessions",
@@ -603,22 +767,22 @@ databaseTest(
       displayName: "Sophia Test",
       password,
       role: "STUDENT",
-      studentId: "STU-2024-002",
+      studentId: "20230615",
     });
-    const login = await authenticate(" stu-2024-002 ", password);
+    const login = await authenticate(" 20230615 ", password);
     assert.equal(login.ok, true);
     const issued = await issueSession("REGISTRAR", account.id);
     const identity = (await readSession(issued.token))!;
     assert.equal(identity.role, "STUDENT");
     assert.equal(identity.mode, "account");
-    assert.equal(identity.studentId, "STU-2024-002");
+    assert.equal(identity.studentId, "20230615");
     assert.equal(
       await first("SELECT 1 FROM sessions WHERE id=?", issued.token),
       undefined,
     );
     const projection = await snapshot(identity.role, identity);
     assert.equal(projection.masterRecords.length, 1);
-    assert.equal(projection.masterRecords[0].studentId, "STU-2024-002");
+    assert.equal(projection.masterRecords[0].studentId, "20230615");
     await revokeSession(issued.token);
     assert.equal(await readSession(issued.token), null);
     await assert.rejects(() =>
@@ -684,10 +848,12 @@ databaseTest(
     });
     for (let n = 0; n < 5; n++)
       assert.equal((await authenticate(email, "wrong")).ok, false);
-    assert.deepEqual(await authenticate(email, password), {
-      ok: false,
-      locked: true,
-    });
+    const lockedResult = await authenticate(email, password);
+    assert.equal(lockedResult.ok, false);
+    if (!lockedResult.ok) {
+      assert.equal(lockedResult.locked, true);
+      assert.equal(lockedResult.reason, "locked");
+    }
     const before = await issueSession(account.role, account.id);
     await resetPassword(email, "Replacement-password-234!");
     assert.equal(await readSession(before.token), null);
@@ -714,7 +880,7 @@ databaseTest(
     await audit(
       "ACADEMIC_ADVISOR",
       "READ_STUDENT_360",
-      "STU-2024-001",
+      "20221010",
       "First advisor read",
       "ALLOWED",
       first,
@@ -722,7 +888,7 @@ databaseTest(
     await audit(
       "ACADEMIC_ADVISOR",
       "READ_STUDENT_360",
-      "STU-2024-001",
+      "20221010",
       "Second advisor read",
       "ALLOWED",
       second,

@@ -9,17 +9,36 @@ export function applyFERPAMasking(
     return { ...student };
   }
 
-  // Academic Advisor: Allowed to see academic performance, but PII & financial data are protected under FERPA
+  // Academic Advisor & Dean: Allowed to see academic performance, but PII, financial aid & payroll are masked
   if (role === "ACADEMIC_ADVISOR" || role === "DEAN") {
     return {
       ...student,
       ssn: maskSSN(student.ssn),
       dateOfBirth: "••••-••-••",
       financialAidStatus: "[FERPA Masked: Financial Need Restricted]",
+      ...(student.hrSummary
+        ? {
+            hrSummary: {
+              ...student.hrSummary,
+              payrollBand: "[HR Payroll Restricted]",
+            },
+          }
+        : {}),
+      ...(student.alumniSummary
+        ? {
+            alumniSummary: {
+              ...student.alumniSummary,
+              employer:
+                student.alumniSummary.contactConsent === "Opted Out"
+                  ? "[GDPR Opted Out]"
+                  : student.alumniSummary.employer,
+            },
+          }
+        : {}),
     };
   }
 
-  // Compliance Auditor: Focuses on governance & metadata, masking PII
+  // Compliance Auditor: Focuses on governance & metadata, masking PII & HR details
   if (role === "COMPLIANCE_AUDITOR") {
     return {
       ...student,
@@ -29,15 +48,55 @@ export function applyFERPAMasking(
       fullName: `Student ${student.studentId.slice(-3)}`,
       dateOfBirth: "Restricted",
       advisorName: "Restricted",
+      hrSummary: undefined,
+      ...(student.alumniSummary
+        ? {
+            alumniSummary: {
+              ...student.alumniSummary,
+              employer: "[Restricted]",
+            },
+          }
+        : {}),
       lmsSummary: { ...student.lmsSummary, courses: [] },
     };
   }
 
   // Student: Student viewing their own record
+  if (role === "STUDENT") {
+    return {
+      ...student,
+      ssn: maskSSN(student.ssn),
+      financialAidStatus: "Restricted in student demonstration",
+      ...(student.hrSummary
+        ? {
+            hrSummary: {
+              ...student.hrSummary,
+              payrollBand: "[HR Payroll Restricted]",
+            },
+          }
+        : {}),
+    };
+  }
+
+  // Fail closed for any other role (e.g., SYSTEM_ADMIN should never receive student records)
   return {
     ...student,
-    ssn: maskSSN(student.ssn),
-    financialAidStatus: "Restricted in student demonstration",
+    ssn: "•••-••-••••",
+    email: maskEmail(student.email),
+    financialAidStatus: "[Restricted]",
+    fullName: `Student ${student.studentId.slice(-3)}`,
+    dateOfBirth: "Restricted",
+    advisorName: "Restricted",
+    hrSummary: undefined,
+    ...(student.alumniSummary
+      ? {
+          alumniSummary: {
+            ...student.alumniSummary,
+            employer: "[Restricted]",
+          },
+        }
+      : {}),
+    lmsSummary: { ...student.lmsSummary, courses: [] },
   };
 }
 

@@ -6,7 +6,7 @@ export function AccountAccess({
   current,
   children,
 }: {
-  current: "login" | "register" | "recovery";
+  current: "login" | "register" | "recovery" | "onboarding";
   children: ReactNode;
 }) {
   return (

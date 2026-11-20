@@ -7,7 +7,7 @@ import { audit, closeDatabase, first, transaction } from "../backend/store";
 loadEnvConfig(resolve(import.meta.dirname, "../backend"), true);
 
 async function main() {
-  const email = "admin@cpc.edu";
+  const email = "admin@gmail.com";
   const directory = resolve(
     process.env.EDM_ACCOUNT_DIRECTORY ||
       resolve(import.meta.dirname, "../accounts"),

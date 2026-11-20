@@ -12,6 +12,7 @@ import {
 import { slides, industryMatrix } from "@/frontend/lib/presentation";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { Badge } from "./ui";
+import { EducationFlowchart } from "./EducationFlowchart";
 export function PresentationMode({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [index, setIndex] = useState(0);
@@ -122,7 +123,12 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
             <span>Outputs</span>
           </div>
         )}
-        {index === 6 ? (
+        {index === 1 ? (
+          <EducationFlowchart
+            sourceCounts={sourceCounts}
+            masterCount={masterRecords.length}
+          />
+        ) : index === 6 ? (
           <div className="table-wrap">
             <table className="slide-matrix">
               <thead>
@@ -166,8 +172,9 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
         )}
         {index === 0 && (
           <p className="small" style={{ marginTop: 20 }}>
-            Current permitted snapshot: {sourceCounts.SIS} SIS rows ·{" "}
-            {sourceCounts.LMS} LMS rows · {sourceCounts.LIBRARY} Library rows ·{" "}
+            Current permitted snapshot: {sourceCounts.SIS} SIS ·{" "}
+            {sourceCounts.LMS} LMS · {sourceCounts.LIBRARY} Library ·{" "}
+            {sourceCounts.HR} HR · {sourceCounts.ALUMNI} Alumni ·{" "}
             {masterRecords.length} master students. Synthetic demonstration
             data.
           </p>

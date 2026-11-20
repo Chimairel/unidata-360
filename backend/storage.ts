@@ -59,6 +59,9 @@ async function connect<T>(
       ssl: local ? false : { rejectUnauthorized: true },
       max: 6,
       connectionTimeoutMillis: 12000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+      idleTimeoutMillis: 30000,
     });
     pool.on("error", () =>
       console.error("An idle PostgreSQL connection was closed."),
@@ -79,11 +82,11 @@ async function inTransaction<T>(
 ) {
   if (db.transaction) return fn();
   await db.exec(
-    write ? "BEGIN" : "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+    write
+      ? `BEGIN; ${lock}`
+      : "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
   );
   try {
-    // A shared write lock preserves the linear audit chain and serializes ETL/import.
-    if (write) await db.exec(lock);
     const result = await context.run({ ...db, transaction: true }, fn);
     await db.exec("COMMIT");
     return result;
@@ -101,6 +104,10 @@ async function schema(db: Connection) {
     CREATE TABLE IF NOT EXISTS etl_runs (seq ${sequence}, payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audit (seq ${sequence}, payload TEXT NOT NULL, previous_hash TEXT NOT NULL, hash TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, role TEXT NOT NULL, expires_at BIGINT NOT NULL, user_id TEXT);
+    CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
+    CREATE TABLE IF NOT EXISTS onboarding_sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at BIGINT NOT NULL);
+    CREATE INDEX IF NOT EXISTS onboarding_sessions_user_id_idx ON onboarding_sessions(user_id);
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL, student_id TEXT, active INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS login_attempts (email TEXT PRIMARY KEY, failures INTEGER NOT NULL, retry_at BIGINT NOT NULL);
     CREATE TABLE IF NOT EXISTS student_registrations (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, student_id TEXT NOT NULL, expires_at BIGINT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);

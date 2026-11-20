@@ -45,35 +45,35 @@ async function main() {
     studentId?: string;
   }[] = [
     {
-      email: "registrar@cpc.edu",
+      email: "registrar@gmail.com",
       displayName: "CPC Registrar",
       role: "REGISTRAR",
     },
     {
-      email: "dean@cpc.edu",
+      email: "dean@gmail.com",
       displayName: "BSIT Dean",
       role: "DEAN",
       department: "BSIT",
     },
     ...(["BEED", "BSED", "BSHM"] as const).map((department) => ({
-      email: `dean.${department.toLowerCase()}@cpc.edu`,
+      email: `dean.${department.toLowerCase()}@gmail.com`,
       displayName: `${department} Dean`,
       role: "DEAN" as const,
       department,
     })),
     {
-      email: "advisor@cpc.edu",
+      email: "advisor@gmail.com",
       displayName: "CPC Academic Advisor",
       role: "ACADEMIC_ADVISOR",
     },
     {
-      email: "student@cpc.edu",
+      email: "student@gmail.com",
       displayName: "Marcus Vance",
       role: "STUDENT",
-      studentId: "STU-2024-001",
+      studentId: "20221010",
     },
     {
-      email: "auditor@cpc.edu",
+      email: "auditor@gmail.com",
       displayName: "CPC Compliance Auditor",
       role: "COMPLIANCE_AUDITOR",
     },
@@ -82,11 +82,11 @@ async function main() {
   if (
     await first(
       "SELECT 1 FROM users WHERE email=? AND role='SYSTEM_ADMIN'",
-      "admin@cpc.edu",
+      "admin@gmail.com",
     )
   )
     accounts.push({
-      email: "admin@cpc.edu",
+      email: "admin@gmail.com",
       displayName: "CPC System Administrator",
       role: "SYSTEM_ADMIN",
     });

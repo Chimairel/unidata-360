@@ -20,9 +20,10 @@
   --workspace-title-size: clamp(1.875rem, 4vw, 3.25rem);
   --section-title-size: 1.125rem;
   --field-rule: #75757f;
-  --mercury-light: #dedee4;
-  --mercury-dark: #bcbcc6;
-  --mercury-opacity: 0.48;
+  --mercury-highlight: #ffffff;
+  --mercury-light: #dadbe2;
+  --mercury-dark: #6c6d7a;
+  --mercury-opacity: 0.46;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -102,11 +103,16 @@ a {
   outline-offset: 4px;
 }
 a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--accent);
+}
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
 }
 ::selection {
   background: #dadade;
@@ -968,12 +974,12 @@ td .badge {
   flex-shrink: 0;
 }
 .slide {
-  padding: 40px 56px;
+  padding: 28px 44px;
   flex: 1;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
 }
 .slide h2 {
   font-size: 36px;
@@ -2764,12 +2770,16 @@ body {
   overflow-y: auto;
 }
 .rail-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   font-size: 43px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.04em;
   text-align: center;
-  padding: 0 0 20px;
+  padding: 6px 0 20px;
   color: #fff;
 }
 .rail-brand span {
@@ -4169,9 +4179,10 @@ body {
 .theme-toggle {
   width: 44px;
   height: 44px;
-  border: 1px solid var(--line);
+  border: 0;
+  border-radius: 10px;
   color: var(--foreground);
-  background: var(--background);
+  background: transparent;
 }
 .account-header-nav .theme-toggle {
   margin-left: 8px;
@@ -4218,6 +4229,17 @@ body {
   );
   filter: blur(18px);
   animation: mercury-drift 24s infinite alternate cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+:root:not([data-theme="dark"]) .neural-blob {
+  background: radial-gradient(
+    circle at 30% 26%,
+    var(--mercury-highlight, #ffffff) 0%,
+    var(--mercury-light) 42%,
+    var(--mercury-dark) 100%
+  );
+  box-shadow:
+    inset -22px -26px 42px rgba(40, 42, 54, 0.34),
+    inset 16px 18px 32px rgba(255, 255, 255, 0.85);
 }
 .neural-blob:nth-child(2n) {
   animation-delay: -9s;
@@ -4674,4 +4696,8 @@ body {
   .neural-stage {
     display: none;
   }
+}
+:root[data-theme="dark"] .matrix-highlight td {
+  background: var(--surface-raised);
+  color: var(--foreground);
 }

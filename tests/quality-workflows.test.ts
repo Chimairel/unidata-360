@@ -342,7 +342,7 @@ databaseTest(
         manageQuality(s, {
           type: "relink",
           id: orphan.id,
-          studentId: "STU-2024-001",
+          studentId: "20221010",
         }),
       denied(409),
     );

@@ -65,7 +65,30 @@ export interface LibraryRecord {
   facilityAccessLevel: "Standard" | "Graduate Lab" | "Restricted";
 }
 
-// 4. UNIFIED 360 MASTER RECORD (Output of EDM Integration)
+// 4. DATA SOURCE: HR / Payroll (Faculty Advisors)
+export interface HRRecord {
+  facultyId: string;
+  fullName: string;
+  department: string;
+  title: string;
+  coursesTaught: string;
+  employmentStatus: "Full-Time" | "Part-Time";
+  payrollBand: string; // Masked for non-Registrars (HR/Payroll governance)
+}
+
+// 5. DATA SOURCE: Alumni CRM
+export interface AlumniRecord {
+  studentId: string;
+  fullName: string;
+  department: string;
+  graduationYear: number;
+  degreeConferred: string;
+  employmentStatus: "Employed" | "Graduate School" | "Seeking";
+  employer: string;
+  contactConsent: "Opted In" | "Opted Out"; // GDPR contact preference
+}
+
+// 6. UNIFIED 360 MASTER RECORD (Output of EDM Integration)
 export interface UnifiedStudentRecord {
   studentId: string;
   fullName: string;
@@ -102,8 +125,28 @@ export interface UnifiedStudentRecord {
     clearanceStatus: "Cleared" | "Pending Return" | "Hold Placed";
   };
 
+  // Enriched HR / Faculty Advisor Context
+  hrSummary?: {
+    facultyId: string;
+    facultyName: string;
+    department: string;
+    title: string;
+    coursesTaught: string;
+    employmentStatus: string;
+    payrollBand: string;
+  };
+
+  // Enriched Alumni CRM Handoff
+  alumniSummary?: {
+    graduationYear: number;
+    degreeConferred: string;
+    employmentStatus: string;
+    employer: string;
+    contactConsent: "Opted In" | "Opted Out";
+  };
+
   // EDM Data Quality & Health Score
-  dataHealthScore: number; // Percentage of the three SIS/LMS/Library feeds present.
+  dataHealthScore: number; // Percentage of the three core SIS/LMS/Library feeds present.
   overallRiskCategory: "Safe" | "Moderate Risk" | "Critical Alert";
   lastSyncedAt: string;
 }
@@ -121,13 +164,17 @@ export interface AuditLogEntry {
     | "MASKING_OVERRIDE_ATTEMPT"
     | "GDPR_CONSENT_CHECK"
     | "IMPORT_DATA"
+    | "GRADUATE_STUDENT"
     | "CREATE_INTERVENTION"
     | "RESET_DEMO"
     | "SIGN_IN"
     | "SIGN_OUT"
+    | "LOGIN_FAILED"
     | "STUDENT_REGISTERED"
     | "STUDENT_ACCOUNTS_PROVISIONED"
     | "STUDENT_EMAIL_UPDATED"
+    | "STUDENT_PASSWORD_RESET_DEFAULT"
+    | "STUDENT_STATUS_CHANGED"
     | "STUDENT_ACCESS_REQUESTED"
     | "STUDENT_ACCESS_APPROVED"
     | "STUDENT_ACCESS_REJECTED"
@@ -157,7 +204,7 @@ export interface AccessIdentity {
   department?: Department;
 }
 
-export type Feed = "SIS" | "LMS" | "LIBRARY";
+export type Feed = "SIS" | "LMS" | "LIBRARY" | "HR" | "ALUMNI";
 export interface Intervention {
   id: string;
   studentId: string;
@@ -251,6 +298,8 @@ export interface EDMSnapshot {
   };
   lmsRecords: LMSRecord[];
   libraryRecords: LibraryRecord[];
+  hrRecords: HRRecord[];
+  alumniRecords: AlumniRecord[];
   masterRecords: UnifiedStudentRecord[];
   etlReports: ETLRunReport[];
   auditLogs: AuditLogEntry[];
@@ -269,6 +318,8 @@ export interface ETLRunReport {
     sis: number;
     lms: number;
     library: number;
+    hr?: number;
+    alumni?: number;
   };
   recordsTransformed: number;
   recordsLoaded: number;

@@ -3,7 +3,9 @@ import { useState } from "react";
 import {
   ArrowUpRight,
   BookOpen,
+  Briefcase,
   Database,
+  GraduationCap,
   Library,
   ShieldCheck,
   ArrowRight,
@@ -34,14 +36,13 @@ export function CohortInsights({
     metric === "gpa"
       ? sorted
       : sorted.filter((s) => s.lmsSummary.enrolledCoursesCount > 0);
-  const max = metric === "gpa" ? 4 : 100;
   const points = plotted.map((s, i) => ({
     x: 32 + (plotted.length > 1 ? (i / (plotted.length - 1)) * 254 : 127),
     y:
-      170 -
-      ((metric === "gpa" ? s.cumulativeGpa : s.lmsSummary.averageAttendance) /
-        max) *
-        136,
+      metric === "gpa"
+        ? 34 +
+          ((Math.min(5, Math.max(1, s.cumulativeGpa)) - 1) / 4) * 136
+        : 170 - (s.lmsSummary.averageAttendance / 100) * 136,
     s,
     value:
       metric === "gpa"
@@ -49,7 +50,7 @@ export function CohortInsights({
         : s.lmsSummary.averageAttendance + "%",
   }));
   const attention = [...flagged]
-    .sort((a, b) => a.cumulativeGpa - b.cumulativeGpa)
+    .sort((a, b) => b.cumulativeGpa - a.cumulativeGpa)
     .slice(0, 2);
   return (
     <aside className="cohort-insights" aria-label="Cohort insights">
@@ -85,7 +86,7 @@ export function CohortInsights({
             aria-pressed={metric === "gpa"}
             onClick={() => setMetric("gpa")}
           >
-            Cumulative GPA
+            Cumulative GWA
           </button>
           <button
             aria-pressed={metric === "attendance"}
@@ -99,7 +100,7 @@ export function CohortInsights({
             className="cohort-line-chart"
             viewBox="0 0 310 205"
             role="img"
-            aria-label={`${metric === "gpa" ? "Cumulative GPA" : "LMS attendance"} by student: ${points.map((p) => p.s.fullName + " " + p.value).join("; ")}`}
+            aria-label={`${metric === "gpa" ? "Cumulative GWA" : "LMS attendance"} by student: ${points.map((p) => p.s.fullName + " " + p.value).join("; ")}`}
           >
             {[0, 1, 2, 3, 4].map((i) => (
               <g key={i}>
@@ -111,7 +112,7 @@ export function CohortInsights({
                   className="chart-gridline"
                 />
                 <text x="8" y={174 - i * 34}>
-                  {metric === "gpa" ? i : i * 25}
+                  {metric === "gpa" ? 5 - i : i * 25}
                 </text>
               </g>
             ))}
@@ -145,7 +146,9 @@ export function CohortInsights({
         )}
         <div className="chart-caption">
           <span>
-            {metric === "gpa" ? "GPA on a 4.00 scale" : "Attendance percentage"}{" "}
+            {metric === "gpa"
+              ? "GWA 1.00 (highest) – 5.00 (fail)"
+              : "Attendance percentage"}{" "}
             · by student
           </span>
           <strong>
@@ -173,6 +176,8 @@ export function CohortInsights({
             { name: "Student information", key: "SIS", icon: Database },
             { name: "Canvas LMS", key: "LMS", icon: BookOpen },
             { name: "Campus library", key: "LIBRARY", icon: Library },
+            { name: "HR & payroll", key: "HR", icon: Briefcase },
+            { name: "Alumni CRM", key: "ALUMNI", icon: GraduationCap },
           ].map(({ name, key, icon: Icon }) => (
             <div key={key}>
               <Icon size={15} />

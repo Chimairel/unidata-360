@@ -27,12 +27,14 @@ import {
   Modal,
   PageHeading,
 } from "@/frontend/components/ui";
-const feeds: Feed[] = ["SIS", "LMS", "LIBRARY"];
+const feeds: Feed[] = ["SIS", "LMS", "LIBRARY", "HR", "ALUMNI"];
 export function IntegrationPipelineTab() {
   const {
     sisRecords,
     lmsRecords,
     libraryRecords,
+    hrRecords,
+    alumniRecords,
     masterRecords,
     sourceCounts,
     etlReports,
@@ -62,7 +64,11 @@ export function IntegrationPipelineTab() {
         ? sisRecords[0]
         : feed === "LMS"
           ? lmsRecords[0]
-          : libraryRecords[0];
+          : feed === "LIBRARY"
+            ? libraryRecords[0]
+            : feed === "HR"
+              ? hrRecords[0]
+              : alumniRecords[0];
     if (!row) return;
     const content =
       format === "json"
@@ -117,7 +123,7 @@ export function IntegrationPipelineTab() {
         {[
           {
             title: "Sources",
-            detail: `${sourceCounts.SIS} SIS · ${sourceCounts.LMS} LMS · ${sourceCounts.LIBRARY} Library`,
+            detail: `${sourceCounts.SIS} SIS · ${sourceCounts.LMS} LMS · ${sourceCounts.LIBRARY} Library · ${sourceCounts.HR} HR · ${sourceCounts.ALUMNI} Alumni`,
             icon: Database,
           },
           {
@@ -195,8 +201,9 @@ export function IntegrationPipelineTab() {
               <Upload size={25} />
               <h3>Drop your {feed} file here</h3>
               <p>
-                Use the template’s column names. Existing keys are updated;
-                duplicate keys use the last row.
+                Use the template’s column names. Existing keys update; duplicate
+                keys use the last row; name casing, slash dates, and codes
+                standardize during ETL.
               </p>
               <button
                 className="button secondary"
@@ -338,7 +345,7 @@ export function IntegrationPipelineTab() {
                       <th>Student ID</th>
                       <th>Student</th>
                       <th>Program</th>
-                      <th>GPA</th>
+                      <th>GWA</th>
                       <th>Standing</th>
                       <th>SSN · sensitive</th>
                     </>
@@ -350,13 +357,31 @@ export function IntegrationPipelineTab() {
                       <th>Score</th>
                       <th>Missed deadlines</th>
                     </>
-                  ) : (
+                  ) : feed === "LIBRARY" ? (
                     <>
                       <th>Student ID</th>
                       <th>Active loans</th>
                       <th>Overdue</th>
                       <th>Fines</th>
                       <th>Clearance</th>
+                    </>
+                  ) : feed === "HR" ? (
+                    <>
+                      <th>Faculty ID</th>
+                      <th>Name</th>
+                      <th>Department</th>
+                      <th>Title</th>
+                      <th>Courses</th>
+                      <th>Payroll band · sensitive</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>Student ID</th>
+                      <th>Graduate</th>
+                      <th>Year</th>
+                      <th>Degree</th>
+                      <th>Employment</th>
+                      <th>GDPR consent</th>
                     </>
                   )}
                 </tr>
@@ -388,15 +413,45 @@ export function IntegrationPipelineTab() {
                           <td>{s.missedDeadlines}</td>
                         </tr>
                       ))
-                    : libraryRecords.map((s) => (
-                        <tr key={s.studentId}>
-                          <td className="mono">{s.studentId}</td>
-                          <td>{s.activeBorrows}</td>
-                          <td>{s.overdueCount}</td>
-                          <td>${s.outstandingFines.toFixed(2)}</td>
-                          <td>{s.clearanceStatus}</td>
-                        </tr>
-                      ))}
+                    : feed === "LIBRARY"
+                      ? libraryRecords.map((s) => (
+                          <tr key={s.studentId}>
+                            <td className="mono">{s.studentId}</td>
+                            <td>{s.activeBorrows}</td>
+                            <td>{s.overdueCount}</td>
+                            <td>${s.outstandingFines.toFixed(2)}</td>
+                            <td>{s.clearanceStatus}</td>
+                          </tr>
+                        ))
+                      : feed === "HR"
+                        ? hrRecords.map((h) => (
+                            <tr key={h.facultyId}>
+                              <td className="mono">{h.facultyId}</td>
+                              <td>{h.fullName}</td>
+                              <td>{h.department}</td>
+                              <td>
+                                {h.title}
+                                <span className="muted">
+                                  {h.employmentStatus}
+                                </span>
+                              </td>
+                              <td>{h.coursesTaught}</td>
+                              <td className="mono muted">{h.payrollBand}</td>
+                            </tr>
+                          ))
+                        : alumniRecords.map((a) => (
+                            <tr key={a.studentId}>
+                              <td className="mono">{a.studentId}</td>
+                              <td>
+                                {a.fullName}
+                                <span className="muted">{a.employer}</span>
+                              </td>
+                              <td>{a.graduationYear}</td>
+                              <td>{a.degreeConferred}</td>
+                              <td>{a.employmentStatus}</td>
+                              <td>{a.contactConsent}</td>
+                            </tr>
+                          ))}
               </tbody>
             </table>
           </div>
@@ -473,12 +528,20 @@ export function IntegrationPipelineTab() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
-                const gpa = Number(f.get("gpa"));
+                const rawGpa = Number(f.get("gpa"));
+                const gpa = rawGpa >= 3 ? 5.0 : rawGpa;
+                const now = new Date();
+                const day = String(((now.getSeconds() + sisRecords.length) % 28) + 1).padStart(2, "0");
+                const month = String(now.getMonth() + 1).padStart(2, "0");
+                const studentId = `${now.getFullYear()}${month}${day}`;
+                const slug = `${String(f.get("firstName"))}.${String(f.get("lastName"))}`
+                  .toLowerCase()
+                  .replace(/[^a-z0-9.]/g, "");
                 const row: SISRecord = {
-                  studentId: `STU-DEMO-${crypto.randomUUID().slice(0, 8)}`,
+                  studentId,
                   firstName: String(f.get("firstName")),
                   lastName: String(f.get("lastName")),
-                  email: `demo-${crypto.randomUUID().slice(0, 8)}@example.edu`,
+                  email: `${slug || "student"}.${studentId}@gmail.com`,
                   ssn: "999-00-0000",
                   dateOfBirth: "2004-01-01",
                   gender: "Not specified",
@@ -489,7 +552,13 @@ export function IntegrationPipelineTab() {
                   cumulativeGpa: gpa,
                   totalCredits: 15,
                   academicStanding:
-                    gpa < 2 ? "Academic Probation" : "Good Standing",
+                    gpa >= 3
+                      ? "Academic Probation"
+                      : gpa <= 1.75
+                        ? "Dean's Lister"
+                        : gpa >= 2.5
+                          ? "At-Risk"
+                          : "Good Standing",
                   financialAidStatus: "Self-Funded",
                   advisorName: "Dr. Evelyn Reed",
                   enrollmentStatus: "Active",
@@ -516,14 +585,14 @@ export function IntegrationPipelineTab() {
                   </select>
                 </label>
                 <label>
-                  Cumulative GPA
+                  Cumulative GWA (1.00–5.00)
                   <input
                     name="gpa"
                     type="number"
-                    min="0"
-                    max="4"
-                    step="0.01"
-                    defaultValue="3.20"
+                    min="1"
+                    max="5"
+                    step="0.05"
+                    defaultValue="1.75"
                     required
                   />
                 </label>

@@ -1,0 +1,18 @@
+<svg fill="#000000" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 256" width="880" height="256" role="img" aria-labelledby="title"><title>Estante horizontal logo</title>
+  <title id="title">Estante horizontal logo</title>
+  <g id="symbol" fill="#000000">
+    <rect x="38" y="34" width="36" height="140"/>
+    <rect x="92" y="52" width="36" height="122"/>
+    <path d="M146.5 46 L181.3 36.7 L218.1 174 H180.8 Z"/>
+    <rect x="24" y="194" width="208" height="30"/>
+  </g>
+  <g id="wordmark" fill="#000000">
+    <path fill-rule="evenodd" d="M282 78 H346 V96 H302 V119 H338 V137 H302 V160 H346 V178 H282 Z"/>
+    <path fill-rule="evenodd" d="M428 102 H408 A8 8 0 0 0 400 94 H392 A8 8 0 0 0 384 102 V110 A8 8 0 0 0 392 118 H404 A26 26 0 0 1 430 144 V154 A26 26 0 0 1 404 180 H390 A26 26 0 0 1 364 154 H384 A8 8 0 0 0 392 162 H402 A8 8 0 0 0 410 154 V144 A8 8 0 0 0 402 136 H390 A26 26 0 0 1 364 110 V102 A26 26 0 0 1 390 76 H402 A26 26 0 0 1 428 102 Z"/>
+    <path fill-rule="evenodd" d="M444 78 H510 V96 H487 V178 H467 V96 H444 Z"/>
+    <path fill-rule="evenodd" d="M542.8 78 H568.8 L595.6 178 H574.9 L569.5 158 H542.1 L536.7 178 H516.0 Z M555.8 106.7 L546.9 140 H564.7 Z"/>
+    <path fill-rule="evenodd" d="M612 78 H632 L668 140.4 V78 H688 V178 H668 L632 115.6 V178 H612 Z"/>
+    <path fill-rule="evenodd" d="M706 78 H772 V96 H749 V178 H729 V96 H706 Z"/>
+    <path fill-rule="evenodd" d="M786 78 H850 V96 H806 V119 H842 V137 H806 V160 H850 V178 H786 Z"/>
+  </g>
+</svg>

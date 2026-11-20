@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
+import "./AuthControls.css";
 
 type Theme = "light" | "dark";
 const themeKey = "unidata-theme";

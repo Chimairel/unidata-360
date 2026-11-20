@@ -32,7 +32,7 @@ export function AcademicAnalyticsTab({
     : 0;
   const atRisk = students
     .filter((s) => s.overallRiskCategory !== "Safe")
-    .sort((a, b) => a.cumulativeGpa - b.cumulativeGpa);
+    .sort((a, b) => b.cumulativeGpa - a.cumulativeGpa);
   const active = students.filter((s) => s.enrollmentStatus === "Active").length;
   const programs = [...new Set(students.map((s) => s.major))].map((major) => {
     const records = students.filter((s) => s.major === major);
@@ -44,23 +44,28 @@ export function AcademicAnalyticsTab({
   });
   const bins = [
     {
-      label: "3.50 – 4.00",
-      count: students.filter((s) => s.cumulativeGpa >= 3.5).length,
+      label: "1.00 – 1.75 (Dean's List)",
+      count: students.filter((s) => s.cumulativeGpa <= 1.75).length,
+      danger: false,
     },
     {
-      label: "3.00 – 3.49",
+      label: "1.76 – 2.49 (Good)",
       count: students.filter(
-        (s) => s.cumulativeGpa >= 3 && s.cumulativeGpa < 3.5,
+        (s) => s.cumulativeGpa > 1.75 && s.cumulativeGpa < 2.5,
       ).length,
+      danger: false,
     },
     {
-      label: "2.00 – 2.99",
-      count: students.filter((s) => s.cumulativeGpa >= 2 && s.cumulativeGpa < 3)
-        .length,
+      label: "2.50 – 2.99 (At-Risk)",
+      count: students.filter(
+        (s) => s.cumulativeGpa >= 2.5 && s.cumulativeGpa < 3,
+      ).length,
+      danger: false,
     },
     {
-      label: "Below 2.00",
-      count: students.filter((s) => s.cumulativeGpa < 2).length,
+      label: "3.00 – 5.00 (Fail)",
+      count: students.filter((s) => s.cumulativeGpa >= 3).length,
+      danger: true,
     },
   ];
   const canAssign = ["REGISTRAR", "DEAN", "ACADEMIC_ADVISOR"].includes(
@@ -104,10 +109,10 @@ export function AcademicAnalyticsTab({
           <dd>{total}</dd>
         </div>
         <div className="summary-item">
-          <dt>Average GPA</dt>
+          <dt>Average GWA</dt>
           <dd>
             {avg.toFixed(2)}
-            <span>/ 4.00</span>
+            <span>1.00 – 5.00</span>
           </dd>
         </div>
         <div className="summary-item">
@@ -133,14 +138,14 @@ export function AcademicAnalyticsTab({
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>GPA distribution</h2>
+              <h2>GWA distribution</h2>
             </div>
             <Badge>SIS master data</Badge>
           </div>
           <div className="panel-body">
             <div
               role="img"
-              aria-label={`GPA distribution: ${bins.map((b) => `${b.label}: ${b.count} students`).join("; ")}`}
+              aria-label={`GWA distribution: ${bins.map((b) => `${b.label}: ${b.count} students`).join("; ")}`}
             >
               {bins.map((b) => (
                 <div className="chart-row" key={b.label}>
@@ -150,8 +155,7 @@ export function AcademicAnalyticsTab({
                       className="bar-fill"
                       style={{
                         width: `${total ? (b.count / total) * 100 : 0}%`,
-                        background:
-                          b.label === "Below 2.00" ? "#e18b9b" : undefined,
+                        background: b.danger ? "#e18b9b" : undefined,
                       }}
                     />
                   </div>
@@ -159,7 +163,9 @@ export function AcademicAnalyticsTab({
                 </div>
               ))}
             </div>
-            <p className="distribution-caption">4.00 GPA scale</p>
+            <p className="distribution-caption">
+              1.00 (highest) – 5.00 (fail) · 3.00 or worse = fail (5.00)
+            </p>
           </div>
         </section>
         <section className="panel">
@@ -178,7 +184,7 @@ export function AcademicAnalyticsTab({
                   </small>
                 </div>
                 <strong>
-                  {p.gpa.toFixed(2)} <span className="muted">/ 4.00</span>
+                  {p.gpa.toFixed(2)} <span className="muted">GWA</span>
                 </strong>
               </div>
             ))}
@@ -207,7 +213,7 @@ export function AcademicAnalyticsTab({
               <thead>
                 <tr>
                   <th>Student</th>
-                  <th>GPA</th>
+                  <th>GWA</th>
                   <th>Attendance</th>
                   <th>Signals</th>
                   <th>Risk level</th>
@@ -236,8 +242,12 @@ export function AcademicAnalyticsTab({
                         <div
                           style={{ display: "flex", flexWrap: "wrap", gap: 5 }}
                         >
-                          {s.cumulativeGpa < 2.5 && (
-                            <Badge tone="warning">Low GPA</Badge>
+                          {s.cumulativeGpa >= 3 ? (
+                            <Badge tone="danger">Failing GWA</Badge>
+                          ) : (
+                            s.cumulativeGpa >= 2.5 && (
+                              <Badge tone="warning">At-Risk GWA</Badge>
+                            )
                           )}
                           {s.lmsSummary.enrolledCoursesCount > 0 &&
                             s.lmsSummary.averageAttendance < 80 && (
@@ -315,11 +325,12 @@ export function AcademicAnalyticsTab({
       <details className="panel workflow-disclosure">
         <summary>Warning criteria</summary>
         <p className="panel-body small">
-          Critical: GPA below 2.00, attendance below 65% when LMS data exists,
-          4+ missed deadlines, or probation. Moderate: GPA below 2.50,
-          attendance below 80%, 2+ missed deadlines, or a library hold. These
-          rules support human review. Current enrollment is a snapshot; a
-          retention rate requires longitudinal data.
+          Critical: GWA 3.00–5.00 (exact 3.00 or worse is a failing 5.00),
+          attendance below 65% when LMS data exists, 4+ missed deadlines, or
+          probation. Moderate: GWA 2.50–2.99, attendance below 80%, 2+ missed
+          deadlines, or a library hold. These rules support human review.
+          Current enrollment is a snapshot; a retention rate requires
+          longitudinal data.
         </p>
       </details>
     </div>

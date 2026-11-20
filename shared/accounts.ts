@@ -1,4 +1,4 @@
-import type { UserRole } from "./types";
+import type { AuditLogEntry, UserRole } from "./types";
 
 export const STAFF_ROLES = [
   "REGISTRAR",
@@ -20,3 +20,13 @@ export const ACCOUNT_ACTIONS = [
   "ACCOUNT_STATUS_CHANGED",
   "STAFF_PASSWORD_RESET",
 ] as const;
+
+export function isAdminAuditEntry(entry: AuditLogEntry) {
+  return (
+    (ACCOUNT_ACTIONS as readonly string[]).includes(entry.action) ||
+    (entry.userRole === "SYSTEM_ADMIN" &&
+      ["SIGN_IN", "SIGN_OUT", "MASKING_OVERRIDE_ATTEMPT"].includes(
+        entry.action,
+      ))
+  );
+}

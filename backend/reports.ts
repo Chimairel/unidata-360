@@ -96,7 +96,7 @@ export async function makeReport(
       "Financial aid": student.financialAidStatus,
       Advisor: student.advisorName,
       "Enrollment status": student.enrollmentStatus,
-      "Cumulative GPA": `${student.cumulativeGpa.toFixed(2)} / 4.00`,
+      "Cumulative GWA": `${student.cumulativeGpa.toFixed(2)} (1.00 highest – 5.00 fail)`,
       "Academic standing": student.academicStanding,
       Credits: student.totalCredits,
       "Risk classification": student.overallRiskCategory,
@@ -123,18 +123,18 @@ export async function makeReport(
       : 0;
     line("Cohort overview", true);
     line(
-      `Students: ${students.length} | Average GPA: ${average.toFixed(2)} | Active enrollment: ${students.filter((s) => s.enrollmentStatus === "Active").length}`,
+      `Students: ${students.length} | Average GWA: ${average.toFixed(2)} (1.00–5.00) | Active enrollment: ${students.filter((s) => s.enrollmentStatus === "Active").length}`,
     );
     line(
       `Critical alerts: ${students.filter((s) => s.overallRiskCategory === "Critical Alert").length} | Library holds: ${students.filter((s) => s.librarySummary.clearanceStatus === "Hold Placed").length}`,
     );
     line(
-      "Current enrollment is a snapshot, not a longitudinal retention rate. Risk is a rule-based classroom indicator, not a prediction or automated student decision.",
+      "Current enrollment is a snapshot, not a longitudinal retention rate. Grading scale: 1.00 (highest) to 5.00 (fail; 3.00 or worse = fail).",
     );
     line("Student risk overview", true);
     students.forEach((s) =>
       line(
-        `${s.fullName} (${s.studentId}) | ${s.major} | GPA ${s.cumulativeGpa.toFixed(2)} | ${s.overallRiskCategory}`,
+        `${s.fullName} (${s.studentId}) | ${s.major} | GWA ${s.cumulativeGpa.toFixed(2)} | ${s.overallRiskCategory}`,
       ),
     );
   }

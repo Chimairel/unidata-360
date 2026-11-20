@@ -3,7 +3,8 @@ import { useState } from "react";
 import { CohortInsights } from "@/frontend/components/CohortInsights";
 import { StudentDirectory } from "@/frontend/components/StudentDirectory";
 import { StudentAccounts } from "@/frontend/components/StudentAccounts";
-import { ShieldCheck, Users, GraduationCap, ArrowUpRight } from "lucide-react";
+import { ShieldCheck, Users, ArrowUpRight } from "lucide-react";
+import { BrandMark } from "@/frontend/components/BrandMark";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import {
   Badge,
@@ -12,12 +13,14 @@ import {
   ReportLink,
   RiskBadge,
 } from "@/frontend/components/ui";
+import { studentLifecycleSummary } from "@/frontend/lib/courseAlignment";
 
 export function Student360Tab() {
   const {
     masterRecords,
     currentRole,
     viewStudent,
+    graduateStudent,
     isSyncing,
     actorName,
     departmentScope,
@@ -71,7 +74,7 @@ export function Student360Tab() {
               </span>
             </div>
             <div className="welcome-emblem" aria-hidden="true">
-              <GraduationCap size={84} strokeWidth={1.2} />
+              <BrandMark size={58} />
               <span className="emblem-tag tag-sis">SIS</span>
               <span className="emblem-tag tag-lms">LMS</span>
               <span className="emblem-tag tag-library">Library</span>
@@ -83,7 +86,7 @@ export function Student360Tab() {
             </span>
             <div>
               <strong>{completeness}% source completeness</strong>
-              <span>SIS · LMS · Library</span>
+              <span>SIS · LMS · Library · HR · Alumni</span>
             </div>
             <Badge tone="info">
               {currentRole === "REGISTRAR"
@@ -140,6 +143,17 @@ export function Student360Tab() {
               </div>
               <div className="heading-actions">
                 <RiskBadge risk={selected.overallRiskCategory} />
+                {currentRole === "REGISTRAR" &&
+                  selected.enrollmentStatus !== "Graduated" && (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={isSyncing}
+                      onClick={() => void graduateStudent(selected.studentId)}
+                    >
+                      Graduate → Alumni
+                    </button>
+                  )}
                 <ReportLink kind="student" studentId={selected.studentId} />
                 <ReportLink
                   kind="json"
@@ -150,12 +164,12 @@ export function Student360Tab() {
             </div>
             <div className="detail-grid">
               <section>
-                <h3>Academic & personal record</h3>
+                <h3>Academic &amp; personal record</h3>
                 <dl className="detail-fields">
                   {Object.entries({
                     Email: selected.email,
                     "Year level": selected.yearLevel,
-                    "Cumulative GPA": `${selected.cumulativeGpa.toFixed(2)} / 4.00`,
+                    "Cumulative GWA": `${selected.cumulativeGpa.toFixed(2)}${selected.cumulativeGpa >= 3 ? " (Fail)" : " (1.00–5.00)"}`,
                     "Total credits": selected.totalCredits,
                     "Academic standing": selected.academicStanding,
                     Enrollment: selected.enrollmentStatus,
@@ -172,7 +186,7 @@ export function Student360Tab() {
                 </dl>
               </section>
               <section>
-                <h3>Learning & campus snapshot</h3>
+                <h3>Learning, campus &amp; HR snapshot</h3>
                 <dl className="detail-fields">
                   {Object.entries({
                     Courses: selected.lmsSummary.enrolledCoursesCount,
@@ -189,6 +203,22 @@ export function Student360Tab() {
                       selected.librarySummary.clearanceStatus,
                     "Books borrowed": selected.librarySummary.activeBorrows,
                     "Outstanding fines": `$${selected.librarySummary.outstandingFines.toFixed(2)}`,
+                    "Lifecycle stage": studentLifecycleSummary(selected).stage,
+                    "Graduation review":
+                      studentLifecycleSummary(selected).graduationContext,
+                    ...(selected.hrSummary
+                      ? {
+                          "Advisor title (HR)": `${selected.hrSummary.title} · ${selected.hrSummary.coursesTaught}`,
+                          "HR payroll band": selected.hrSummary.payrollBand,
+                        }
+                      : {}),
+                    ...(selected.alumniSummary
+                      ? {
+                          "Alumni class": `${selected.alumniSummary.graduationYear} · ${selected.alumniSummary.employmentStatus}`,
+                          "Alumni employer": selected.alumniSummary.employer,
+                          "GDPR consent": selected.alumniSummary.contactConsent,
+                        }
+                      : {}),
                     "Data completeness": `${selected.dataHealthScore}%`,
                   }).map(([k, v]) => (
                     <div key={k}>

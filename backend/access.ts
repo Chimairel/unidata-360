@@ -19,7 +19,7 @@ export function canAccessStudent(
   if (role === "STUDENT")
     return (
       student.studentId ===
-      (identity?.mode === "account" ? identity.studentId : "STU-2024-001")
+      (identity?.mode === "account" ? identity.studentId : "20221010")
     );
   if (role === "DEAN") {
     const scope = departmentScope(role, identity);

@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import {
-  GraduationCap,
   Database,
   Users,
   ChartNoAxesCombined,
@@ -20,6 +19,7 @@ import { useEDM } from "@/frontend/lib/context/EDMContext";
 import type { UserRole } from "@/shared/types";
 import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
 import { ThemeToggle } from "./ThemeToggle";
+import { BrandMark } from "./BrandMark";
 export type { TabId } from "@/frontend/lib/workspaceAccess";
 const tabs = [
   { id: "accounts", label: "Staff accounts", short: "Accounts", icon: UserCog },
@@ -101,7 +101,7 @@ export function Navbar({
   const brand = (
     <Link className="brand" href="/" aria-label="Estante home">
       <span className="brand-mark">
-        <GraduationCap size={24} />
+        <BrandMark size={22} compact />
       </span>
       <span>
         <strong>Estante</strong>
@@ -113,7 +113,7 @@ export function Navbar({
     <>
       <aside className="workspace-sidebar" aria-label="University workspace">
         <Link className="rail-brand" href="/" aria-label="Estante home">
-          E<span>.</span>
+          <BrandMark size={26} />
         </Link>
         <nav className="sidebar-nav" aria-label="Workspace navigation">
           {visibleTabs.map(({ id, label, short, icon: Icon }) => (

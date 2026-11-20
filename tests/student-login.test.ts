@@ -25,17 +25,17 @@ if (testUrl && testUrl === process.env.DATABASE_URL)
 
 test("login accepts school IDs or staff email, requires a password and rejects role injection", () => {
   for (const identifier of [
-    "STU-2024-001",
+    "20221010",
     "2024-12345",
     "123456",
-    "dean@cpc.edu",
+    "dean@gmail.com",
   ])
     assert.equal(
       loginSchema.safeParse({ identifier, password: "test-password" }).success,
       true,
     );
   for (const input of [
-    { identifier: "STU-2024-001" },
+    { identifier: "20221010" },
     { identifier: "", password: "x" },
     { identifier: "x y", password: "x" },
     { identifier: "A", password: "x", role: "REGISTRAR" },
@@ -87,7 +87,7 @@ test(
     const password = "Original-student-password-123!",
       next = "Replacement-student-password-456!";
     const email = "recovery.student@example.test",
-      studentId = "STU-2024-001";
+      studentId = "20221010";
     try {
       const account = await createAccount({
         email,
@@ -104,17 +104,23 @@ test(
       assert.equal((await authenticate(studentId, "wrong")).ok, false);
       for (let n = 0; n < 3; n++)
         await authenticate(studentId.toLowerCase(), "wrong");
-      assert.deepEqual(await authenticate(studentId, password), {
-        ok: false,
-        locked: true,
-      });
+      const lockedResult = await authenticate(studentId, password);
+      assert.equal(lockedResult.ok, false);
+      if (!lockedResult.ok) {
+        assert.equal(lockedResult.locked, true);
+        assert.equal(lockedResult.reason, "locked");
+      }
       const existing = await issueSession("STUDENT", account.id);
-      const unknown = await requestStudentPasswordReset({
-        studentId: "UNKNOWN",
-        email: "unknown@example.test",
-      });
+      await assert.rejects(
+        () =>
+          requestStudentPasswordReset({
+            studentId: "UNKNOWN",
+            email: "unknown@example.test",
+          }),
+        /No registered student account/,
+      );
       const sent = await requestStudentPasswordReset({ studentId, email });
-      assert.deepEqual(sent, unknown);
+      assert.deepEqual(sent, { ok: true, delivery: "preview" });
       await assert.rejects(
         () =>
           requestStudentPasswordReset({

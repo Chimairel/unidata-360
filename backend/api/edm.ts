@@ -10,6 +10,7 @@ import {
   assignIntervention,
   audit,
   execute,
+  graduateStudent,
   masters,
   resetDemo,
   snapshot,
@@ -40,10 +41,11 @@ const command = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reset") }),
   z.object({
     type: z.literal("import"),
-    feed: z.enum(["SIS", "LMS", "LIBRARY"]),
+    feed: z.enum(["SIS", "LMS", "LIBRARY", "HR", "ALUMNI"]),
     format: z.enum(["csv", "json"]),
     content: z.string().max(2_000_000),
   }),
+  z.object({ type: z.literal("graduate"), studentId: z.string().max(60) }),
   z.object({ type: z.literal("intervention"), studentId: z.string().max(60) }),
   z.object({ type: z.literal("view"), studentId: z.string().max(60) }),
 ]);
@@ -96,7 +98,8 @@ export async function POST(request: Request) {
     let message = "Saved";
     if (
       role === "SYSTEM_ADMIN" ||
-      (["sync", "reset", "import"].includes(cmd.type) && !canImport(role)) ||
+      (["sync", "reset", "import", "graduate"].includes(cmd.type) &&
+        !canImport(role)) ||
       (cmd.type === "intervention" && !canFollowUp(role))
     ) {
       await audit(
@@ -173,30 +176,34 @@ export async function POST(request: Request) {
         if (cmd.feed === "SIS" && s.mode === "account") {
           const { created, conflicts } = await provisionStudentAccounts(
             s,
-            new Set(rows.map((row) => row.studentId.toLowerCase())),
+            new Set(
+              (rows as Array<{ studentId: string }>).map((row) =>
+                row.studentId.toLowerCase(),
+              ),
+            ),
           );
           message += ` ${studentProvisionSummary(created, conflicts)}`;
         }
         await audit(role, "IMPORT_DATA", cmd.feed, message, "ALLOWED", s);
       });
+    } else if (cmd.type === "graduate") {
+      await transaction(() => graduateStudent(role, cmd.studentId, s));
+      message = "Student graduated and handed off to Alumni CRM.";
     } else if (cmd.type === "intervention") {
       await transaction(() => assignIntervention(role, cmd.studentId, s));
       message = "Advisor follow-up saved.";
     } else if (cmd.type === "view") {
-      if (
-        (role === "STUDENT" &&
-          cmd.studentId !==
-            (s.mode === "account" ? s.studentId : "STU-2024-001")) ||
-        !(await masters(cmd.studentId)).length
-      )
-        return Response.json({ error: "Record unavailable." }, { status: 404 });
-      await audit(
+      const auditEntry = await audit(
         role,
         "READ_STUDENT_360",
         cmd.studentId,
         "Opened a student dossier with server-applied field permissions.",
         "ALLOWED",
         s,
+      );
+      return Response.json(
+        { ok: true, auditEntry, message },
+        { headers: { "Cache-Control": "no-store" } },
       );
     }
     return Response.json(

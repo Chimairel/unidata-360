@@ -45,9 +45,9 @@ export function StudentDirectory({
     )
     .sort((a, b) =>
       sort === "gpa-desc"
-        ? b.cumulativeGpa - a.cumulativeGpa
+        ? a.cumulativeGpa - b.cumulativeGpa
         : sort === "gpa-asc"
-          ? a.cumulativeGpa - b.cumulativeGpa
+          ? b.cumulativeGpa - a.cumulativeGpa
           : sort === "risk"
             ? { "Critical Alert": 0, "Moderate Risk": 1, Safe: 2 }[
                 a.overallRiskCategory
@@ -156,8 +156,8 @@ export function StudentDirectory({
           >
             <option value="name">Name A–Z</option>
             <option value="risk">Highest risk first</option>
-            <option value="gpa-desc">Highest GPA first</option>
-            <option value="gpa-asc">Lowest GPA first</option>
+            <option value="gpa-desc">Highest GWA first (1.00)</option>
+            <option value="gpa-asc">Lowest GWA first (5.00)</option>
           </select>
         </label>
       </div>
@@ -246,8 +246,12 @@ export function StudentDirectory({
                       )}
                     </span>
                     <span className="list-record-gpa">
-                      <strong>{s.cumulativeGpa.toFixed(2)}</strong>
-                      <small>GPA</small>
+                      <strong
+                        className={s.cumulativeGpa >= 3 ? "text-danger" : ""}
+                      >
+                        {s.cumulativeGpa.toFixed(2)}
+                      </strong>
+                      <small>GWA</small>
                     </span>
                     <span className="list-record-risk">
                       <RiskBadge risk={s.overallRiskCategory} />
@@ -288,7 +292,7 @@ export function StudentDirectory({
                             )
                           }
                         >
-                          GPA <ArrowUpDown size={12} />
+                          GWA <ArrowUpDown size={12} />
                         </button>
                       </th>
                       <th scope="col">LMS attendance</th>
@@ -324,11 +328,13 @@ export function StudentDirectory({
                         </td>
                         <td>
                           <strong
-                            className={s.cumulativeGpa < 2 ? "text-danger" : ""}
+                            className={s.cumulativeGpa >= 3 ? "text-danger" : ""}
                           >
                             {s.cumulativeGpa.toFixed(2)}
                           </strong>
-                          <span className="gpa-scale"> / 4.00</span>
+                          <span className="gpa-scale">
+                            {s.cumulativeGpa >= 3 ? " · Fail" : " GWA"}
+                          </span>
                         </td>
                         <td>
                           <span className="attendance-value">
@@ -395,8 +401,12 @@ export function StudentDirectory({
                   </div>
                   <dl className="student-metrics">
                     <div>
-                      <dt>Cumulative GPA</dt>
-                      <dd>{s.cumulativeGpa.toFixed(2)}</dd>
+                      <dt>Cumulative GWA</dt>
+                      <dd
+                        className={s.cumulativeGpa >= 3 ? "text-danger" : ""}
+                      >
+                        {s.cumulativeGpa.toFixed(2)}
+                      </dd>
                     </div>
                     <div>
                       <dt>LMS attendance</dt>

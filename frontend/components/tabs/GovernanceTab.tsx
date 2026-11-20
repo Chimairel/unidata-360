@@ -35,7 +35,7 @@ const permissions = [
     "Department follow-up",
   ],
   [
-    "Academic Advisor",
+    "Academic Advisor / Faculty",
     "All academic records",
     "Last four only",
     "Restricted",
@@ -69,6 +69,7 @@ const labels: Record<string, string> = {
   RESET_DEMO: "Demo restored",
   SIGN_IN: "Account signed in",
   SIGN_OUT: "Account signed out",
+  LOGIN_FAILED: "Failed sign-in attempt",
   STUDENT_REGISTERED: "Student account activated",
   STUDENT_ACCOUNTS_PROVISIONED: "Student accounts provisioned",
   STUDENT_EMAIL_UPDATED: "Student email updated",
@@ -188,7 +189,7 @@ export function GovernanceTab() {
                     <dd>{sample.financialAidStatus}</dd>
                   </div>
                   <div>
-                    <dt>Cumulative GPA</dt>
+                    <dt>Cumulative GWA</dt>
                     <dd>{sample.cumulativeGpa.toFixed(2)}</dd>
                   </div>
                 </dl>
@@ -212,9 +213,16 @@ export function GovernanceTab() {
               <li>
                 <CheckCircle2 size={15} />
                 <span>
-                  {accessMode === "account"
-                    ? "Account roles restrict records, changes and exports."
-                    : "Demo persona permissions restrict changes and exports."}
+                  FERPA controls: server role checks, SSN/DOB/financial-aid
+                  masking, department scope, and student self-access.
+                </span>
+              </li>
+              <li>
+                <CheckCircle2 size={15} />
+                <span>
+                  GDPR principles: data minimization via server projections,
+                  pseudonymized auditor summaries, and purpose-limited staff
+                  notes.
                 </span>
               </li>
               <li>
@@ -225,7 +233,10 @@ export function GovernanceTab() {
               </li>
               <li>
                 <CheckCircle2 size={15} />
-                <span>Invalid imports are rejected in full.</span>
+                <span>
+                  Invalid imports are rejected in full; valid formats are
+                  standardized during ETL.
+                </span>
               </li>
               <li>
                 <CheckCircle2 size={15} />

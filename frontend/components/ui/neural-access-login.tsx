@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import "../AuthControls.css";
 
 // Adapted from the supplied 21st.dev MercuryLogin demo. Fixed positions keep
 // server and client markup identical; authentication remains in SignIn.

@@ -1,5 +1,6 @@
 "use client";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
+import { studentLifecycleSummary } from "@/frontend/lib/courseAlignment";
 import { EmptyState, PageHeading, ReportLink, formatTime, Badge } from "./ui";
 
 export function StudentWorkspace() {
@@ -59,9 +60,22 @@ export function StudentWorkspace() {
               "Year level": student.yearLevel,
               "University email": student.email,
               "Academic advisor": student.advisorName,
+              ...(student.hrSummary
+                ? {
+                    "Advisor role (HR)": `${student.hrSummary.title} · ${student.hrSummary.coursesTaught}`,
+                  }
+                : {}),
               "Academic standing": student.academicStanding,
-              "Cumulative GPA": `${student.cumulativeGpa.toFixed(2)} / 4.00`,
+              "Cumulative GWA": `${student.cumulativeGpa.toFixed(2)}${student.cumulativeGpa >= 3 ? " (Fail)" : " (1.00–5.00)"}`,
               "Completed credits": student.totalCredits,
+              "Lifecycle stage": studentLifecycleSummary(student).stage,
+              "Graduation review":
+                studentLifecycleSummary(student).graduationContext,
+              ...(student.alumniSummary
+                ? {
+                    "Alumni CRM": `Class of ${student.alumniSummary.graduationYear} · ${student.alumniSummary.employmentStatus} · GDPR ${student.alumniSummary.contactConsent}`,
+                  }
+                : {}),
             }).map(([label, value]) => (
               <div key={label}>
                 <dt>{label}</dt>

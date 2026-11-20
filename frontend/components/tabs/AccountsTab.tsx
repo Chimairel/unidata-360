@@ -117,7 +117,7 @@ function StaffEditor({
                 required
                 maxLength={200}
                 autoComplete="off"
-                placeholder="name@cpc.edu"
+                placeholder="name@gmail.com"
               />
             </label>
           )}
@@ -419,7 +419,10 @@ export function AccountsTab() {
         <div className="panel-header">
           <div>
             <h2>Staff directory</h2>
-            <p>Admin accounts are protected.</p>
+            <p>
+              Admin accounts are protected. Student enrollment &amp; portal
+              accounts are managed by the Registrar from SIS.
+            </p>
           </div>
           <button
             className="button secondary"

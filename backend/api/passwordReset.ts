@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { z } from "zod";
+import { readSession } from "@/backend/auth";
 import { checkOrigin } from "@/backend/session";
 import { EmailUnavailable } from "@/backend/email";
 import { RegistrationError } from "@/backend/registration";
@@ -8,9 +10,29 @@ import {
 } from "@/backend/passwordRecovery";
 
 const headers = { "Cache-Control": "no-store" };
+async function currentAccountSession() {
+  try {
+    const jar = await cookies();
+    const current = await readSession(jar.get("unidata_session")?.value);
+    return current?.mode === "account" ? current : null;
+  } catch {
+    return null;
+  }
+}
 async function handle(request: Request, verify: boolean) {
   try {
     checkOrigin(request);
+    if (!verify) {
+      const signedIn = await currentAccountSession();
+      if (signedIn) {
+        return Response.json(
+          {
+            error: `You are already signed in as ${signedIn.displayName || signedIn.role}. Sign out first before requesting a password reset.`,
+          },
+          { status: 409, headers },
+        );
+      }
+    }
     const body = await request.text();
     if (body.length > 2048)
       return Response.json(
@@ -33,14 +55,35 @@ async function handle(request: Request, verify: boolean) {
           headers,
         },
       );
+    if (error instanceof z.ZodError) {
+      const issue = error.issues[0];
+      return Response.json(
+        {
+          error:
+            issue?.path[0] === "password" && issue.message
+              ? issue.message
+              : "Check your school ID and email. New passwords must be 12–128 characters with at least 3 character types.",
+        },
+        { status: 400, headers },
+      );
+    }
+    if (
+      error instanceof SyntaxError ||
+      (error instanceof Error &&
+        error.message.includes("Cross-origin write requests"))
+    ) {
+      return Response.json(
+        { error: "Password reset could not be completed. Try again." },
+        { status: 400, headers },
+      );
+    }
+    console.error("Password reset request error:", error);
     return Response.json(
       {
         error:
-          error instanceof z.ZodError
-            ? "Check your school ID and email. New passwords must be 12–128 characters."
-            : "Password reset could not be completed. Try again.",
+          "Password reset service could not reach the database. Try again shortly.",
       },
-      { status: 400, headers },
+      { status: 503, headers },
     );
   }
 }

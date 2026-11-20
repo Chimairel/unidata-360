@@ -8,10 +8,9 @@ import {
 import {
   AccountManagementError,
   isAccountAdministrator,
-  listStaffAccounts,
   manageStaffAccount,
+  staffAccountsWorkspace,
 } from "@/backend/accounts";
-import { snapshot } from "@/backend/store";
 const headers = { "Cache-Control": "no-store" };
 function failure(error: unknown) {
   unstable_rethrow(error);
@@ -38,11 +37,7 @@ function failure(error: unknown) {
 export async function GET() {
   try {
     const s = await session();
-    const accounts = await listStaffAccounts(s);
-    return Response.json(
-      { accounts, activity: (await snapshot(s.role, s)).auditLogs },
-      { headers },
-    );
+    return Response.json(await staffAccountsWorkspace(s), { headers });
   } catch (error) {
     return failure(error);
   }
@@ -63,8 +58,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         message,
-        accounts: await listStaffAccounts(s),
-        activity: (await snapshot(s.role, s)).auditLogs,
+        ...(await staffAccountsWorkspace(s)),
       },
       { headers },
     );

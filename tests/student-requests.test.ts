@@ -161,7 +161,10 @@ dbTest(
       );
       assert.equal(await readSession(staleSession), null);
       const details = { studentId: student.studentId, email: student.email };
-      await requestStudentPasswordReset(details);
+      await assert.rejects(
+        () => requestStudentPasswordReset(details),
+        /not been activated yet/,
+      );
       assert.equal((await readdir(directory)).length, 0);
       await requestStudentActivation(details);
       const oldToken = await tokenFor(student.email, "/register#token=");

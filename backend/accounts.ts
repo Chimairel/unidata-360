@@ -1,9 +1,22 @@
 import { z } from "zod";
-import { STAFF_ROLES } from "@/shared/accounts";
+import { isAdminAuditEntry, STAFF_ROLES } from "@/shared/accounts";
 import { DEPARTMENTS, isDepartment } from "@/shared/school";
 import type { StaffAccount } from "@/shared/types";
-import { createAccount, resetPassword, type SessionIdentity } from "./auth";
-import { audit, execute, first, rows, transaction } from "./store";
+import {
+  createAccount,
+  resetPassword,
+  strongPasswordSchema,
+  type SessionIdentity,
+} from "./auth";
+import {
+  audit,
+  execute,
+  first,
+  rows,
+  transaction,
+  verifyAuditRows,
+  type AuditChainRow,
+} from "./store";
 
 const accessFields = {
   displayName: z.string().trim().min(1).max(100),
@@ -16,7 +29,7 @@ const departmentError = {
   message: "Assign a department to a Dean only.",
   path: ["department"],
 };
-const password = z.string().min(12).max(128);
+const password = strongPasswordSchema;
 export const accountCommand = z.discriminatedUnion("type", [
   z
     .object({
@@ -101,12 +114,34 @@ export async function listStaffAccounts(identity: SessionIdentity) {
     )
   ).map(project);
 }
+export async function staffAccountsWorkspace(identity: SessionIdentity) {
+  await requireAdministrator(identity);
+  const row = await first<{
+    accounts: AccountRow[];
+    audit: AuditChainRow[];
+  }>(
+    `SELECT
+       COALESCE((SELECT json_agg(u ORDER BY lower(display_name), id) FROM (
+         SELECT id, email, display_name, role, department, active
+         FROM users WHERE role<>'STUDENT'
+         ORDER BY lower(display_name), id
+       ) u), '[]'::json) AS accounts,
+       COALESCE((SELECT json_agg(json_build_object('payload', payload, 'previous_hash', previous_hash, 'hash', hash) ORDER BY seq) FROM audit), '[]'::json) AS audit`,
+  );
+  const accounts = (row?.accounts || []).map(project);
+  const trail = verifyAuditRows(row?.audit || []);
+  return {
+    accounts,
+    activity: trail.entries.filter(isAdminAuditEntry),
+  };
+}
 export async function manageStaffAccount(
   identity: SessionIdentity,
   input: unknown,
 ) {
   // Authorization precedes validation so other roles cannot probe staff details.
-  await requireAdministrator(identity);
+  if (!isAccountAdministrator(identity))
+    throw new AccountManagementError("System Admin access is required.");
   const cmd = accountCommand.parse(input);
   return transaction(async () => {
     await requireAdministrator(identity);
