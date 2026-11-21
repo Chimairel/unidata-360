@@ -42,6 +42,7 @@ function onThemeShortcut(event: KeyboardEvent) {
     event.ctrlKey ||
     event.metaKey ||
     event.altKey ||
+    typeof event.key !== "string" ||
     event.key.toLowerCase() !== "d" ||
     isEditableTarget(event.target)
   ) {
