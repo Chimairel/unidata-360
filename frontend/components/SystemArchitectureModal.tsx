@@ -2,11 +2,12 @@
 import { industryMatrix } from "@/frontend/lib/presentation";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { Modal } from "./ui";
-import { EducationFlowchart } from "./EducationFlowchart";
+import { RetailFlowchart } from "./RetailFlowchart";
 import {
-  educationSourceMap,
-  educationLifecycle,
+  retailSourceMap,
+  retailChallenges,
 } from "@/frontend/lib/courseAlignment";
+
 export function SystemArchitectureModal({
   isOpen,
   onClose,
@@ -14,21 +15,22 @@ export function SystemArchitectureModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { sourceCounts, masterRecords } = useEDM();
+  const { sourceCounts, customers } = useEDM();
   if (!isOpen) return null;
   return (
-    <Modal title="EDM course alignment" wide onClose={onClose}>
+    <Modal title="Retail & E-Commerce EDM Alignment" wide onClose={onClose}>
       <div className="modal-body">
-        <h3>Education / Universities — Integration flowchart</h3>
+        <h3>Retail &amp; E-Commerce — Integration flowchart</h3>
         <p className="small" style={{ marginBottom: 16 }}>
-          Live feeds (SIS, LMS, Library) flow through Estante’s ETL, Data
-          Quality, and FERPA/GDPR Governance hub into scoped outputs. HR/Payroll
-          and Alumni CRM are mapped as future extensions.
+          All 5 sources (POS, Inventory, CRM, Online Storefronts, 3PL Logistics)
+          flow live through Karto’s Real-Time API, CDC, Virtualization, and
+          PCI DSS / GDPR Governance hub.
         </p>
-        <EducationFlowchart
+        <RetailFlowchart
           sourceCounts={sourceCounts}
-          masterCount={masterRecords.length}
+          customerCount={customers.length}
         />
+
         <h3 style={{ marginTop: 28 }}>Comparative industry matrix</h3>
         <div className="table-wrap" style={{ marginTop: 12 }}>
           <table className="slide-matrix">
@@ -47,7 +49,7 @@ export function SystemArchitectureModal({
             </thead>
             <tbody>
               {industryMatrix.map((row, i) => (
-                <tr key={row[0]} className={i === 4 ? "matrix-highlight" : ""}>
+                <tr key={row[0]} className={i === 2 ? "matrix-highlight" : ""}>
                   {row.map((cell, j) => (
                     <td key={j}>{j === 0 ? <strong>{cell}</strong> : cell}</td>
                   ))}
@@ -56,32 +58,22 @@ export function SystemArchitectureModal({
             </tbody>
           </table>
         </div>
-        <p className="small" style={{ marginTop: 20 }}>
-          Matrix from the course slides. HR, Alumni CRM, Data Fabric and live
-          vendor APIs remain proposed extensions.
-        </p>
+
         <h3 style={{ marginTop: 28 }}>
-          University source and responsibility map
+          5-source retail map &amp; ownership
         </h3>
-        <p className="small" style={{ margin: "8px 0 16px" }}>
-          Working and proposed sources.
-        </p>
-        <div className="table-wrap">
+        <div className="table-wrap" style={{ marginTop: 12 }}>
           <table>
             <thead>
               <tr>
-                {[
-                  "Source / owner",
-                  "Data and integration",
-                  "Governance and output",
-                  "Status",
-                ].map((h) => (
-                  <th key={h}>{h}</th>
-                ))}
+                <th>Source / owner</th>
+                <th>Data &amp; integration</th>
+                <th>Governance &amp; output</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {educationSourceMap.map((s) => (
+              {retailSourceMap.map((s) => (
                 <tr key={s.source}>
                   <td>
                     <strong>{s.source}</strong>
@@ -101,41 +93,32 @@ export function SystemArchitectureModal({
             </tbody>
           </table>
         </div>
-        <h3 style={{ marginTop: 28 }}>Enrollment through alumni</h3>
+
+        <h3 style={{ marginTop: 28 }}>
+          Integration methods, governance &amp; challenges
+        </h3>
         <div className="table-wrap" style={{ marginTop: 12 }}>
           <table>
             <thead>
               <tr>
-                <th>Lifecycle stage</th>
-                <th>Evidence and boundary</th>
-                <th>Coverage</th>
+                <th>Slide requirement</th>
+                <th>Live implementation in Karto</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {educationLifecycle.map((s) => (
-                <tr key={s.stage}>
+              {retailChallenges.map((c) => (
+                <tr key={c.pillar}>
                   <td>
-                    <strong>{s.stage}</strong>
+                    <strong>{c.pillar}</strong>
                   </td>
-                  <td>{s.evidence}</td>
-                  <td>{s.status}</td>
+                  <td>{c.evidence}</td>
+                  <td>{c.status}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <h3 style={{ marginTop: 28 }}>
-          Integration choice and governance boundary
-        </h3>
-        <p className="small" style={{ marginTop: 8 }}>
-          Batch ETL validates uploads before publishing the master. ELT, CDC,
-          virtualization and Data Fabric are lecture alternatives. Live vendor
-          synchronization is not implemented.
-        </p>
-        <p className="small" style={{ marginTop: 12 }}>
-          Role checks, masking, scoped exports and audit history demonstrate
-          FERPA/GDPR governance concepts, not certified compliance.
-        </p>
       </div>
     </Modal>
   );

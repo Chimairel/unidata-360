@@ -1,10 +1,17 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import type { EDMSnapshot, Feed, UserRole, Intervention } from "@/shared/types";
+import type {
+  CRMRecord,
+  CheckoutReceipt,
+  Feed,
+  LogisticsRecord,
+  RetailSnapshot,
+  UserRole,
+} from "@/shared/types";
+import type { Branch, Carrier, ProductCategory } from "@/shared/retail";
 import { useRouter } from "next/navigation";
 
-interface EDMContextType extends EDMSnapshot {
-  maskedMasterRecords: EDMSnapshot["masterRecords"];
+interface EDMContextType extends RetailSnapshot {
   isLoading: boolean;
   isSyncing: boolean;
   error: string | null;
@@ -12,34 +19,96 @@ interface EDMContextType extends EDMSnapshot {
   requiresSignIn: boolean;
   signOut: () => Promise<void>;
   setCurrentRole: (role: UserRole) => Promise<boolean>;
-  executeETL: () => Promise<boolean>;
+  executeSync: () => Promise<boolean>;
   resetAllData: () => Promise<boolean>;
   importFile: (feed: Feed, file: File) => Promise<boolean>;
-  importRecords: (feed: Feed, content: string) => Promise<boolean>;
-  viewStudent: (studentId: string) => Promise<boolean>;
-  graduateStudent: (studentId: string) => Promise<boolean>;
-  assignAdvisor: (studentId: string) => Promise<boolean>;
-  updateCaseSummaries: (cases: Intervention[], ownerId: string) => void;
+  recordPOSSale: (input: {
+    branch: Branch;
+    sku: string;
+    customerId: string;
+    quantity: number;
+    paymentMethod: "Card" | "Cash" | "GCash";
+  }) => Promise<boolean>;
+  recordOnlineOrder: (input: {
+    sku: string;
+    customerId: string;
+    quantity: number;
+    carrier: Carrier;
+    paymentMethod: "Card" | "GCash" | "Maya";
+  }) => Promise<boolean>;
+  processCheckout: (input: {
+    channel: "POS" | "ONLINE";
+    branch?: Branch;
+    customerId: string;
+    paymentMethod: "Card" | "Cash" | "GCash" | "Maya";
+    cardNumber?: string;
+    carrier?: Carrier;
+    items: Array<{ sku: string; quantity: number }>;
+  }) => Promise<CheckoutReceipt | null>;
+  createCustomer: (input: {
+    fullName: string;
+    email: string;
+    phone: string;
+    preferredBranch: Branch;
+    favoriteCategory: ProductCategory;
+    loyaltyTier: CRMRecord["loyaltyTier"];
+    gdprConsent: CRMRecord["gdprConsent"];
+  }) => Promise<boolean>;
+  dispatchOrder: (orderId: string, carrier: Carrier) => Promise<boolean>;
+  updateShipment: (
+    shipmentId: string,
+    status: LogisticsRecord["status"],
+    delayReason?: string,
+  ) => Promise<boolean>;
+  transferStock: (input: {
+    sku: string;
+    fromChannel: "Manila" | "Cebu" | "Online";
+    toChannel: "Manila" | "Cebu" | "Online";
+    quantity: number;
+  }) => Promise<boolean>;
+  simulateSeasonalSpike: () => Promise<boolean>;
+  restockSKU: (sku: string, amount?: number) => Promise<boolean>;
+  importCatalogProduct: (productId: number) => Promise<boolean>;
+  toggleGDPRConsent: (customerId: string) => Promise<boolean>;
+  viewCustomer: (customerId: string) => Promise<boolean>;
   refresh: () => Promise<void>;
   dismissMessage: () => void;
 }
+
 const Context = createContext<EDMContextType | undefined>(undefined);
-const empty: EDMSnapshot = {
-  currentRole: "REGISTRAR",
+
+const empty: RetailSnapshot = {
+  currentRole: "OPS_MANAGER",
   actorName: "Loading session",
-  sisRecords: [],
-  lmsRecords: [],
-  libraryRecords: [],
-  hrRecords: [],
-  alumniRecords: [],
-  masterRecords: [],
+  posRecords: [],
+  inventoryRecords: [],
+  crmRecords: [],
+  onlineRecords: [],
+  logisticsRecords: [],
+  stockItems: [],
+  customers: [],
+  cdcEvents: [],
+  consistencyAlerts: [],
   etlReports: [],
   auditLogs: [],
-  interventions: [],
-  sourceCounts: { SIS: 0, LMS: 0, LIBRARY: 0, HR: 0, ALUMNI: 0 },
+  sourceCounts: { POS: 0, INVENTORY: 0, CRM: 0, ONLINE: 0, LOGISTICS: 0 },
+  salesSummary: {
+    totalRevenue: 0,
+    posManilaRevenue: 0,
+    posCebuRevenue: 0,
+    onlineRevenue: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    onTimeDeliveryRate: 100,
+    delayedShipments: 0,
+    revenueByCategory: [],
+    carrierPerformance: [],
+  },
   auditIntegrity: true,
+  lastSyncedAt: new Date().toISOString(),
 };
-async function fetchSnapshot(): Promise<EDMSnapshot> {
+
+async function fetchSnapshot(): Promise<RetailSnapshot> {
   const response = await fetch("/api/edm", { cache: "no-store" });
   const result = await response.json();
   if (!response.ok) {
@@ -49,6 +118,7 @@ async function fetchSnapshot(): Promise<EDMSnapshot> {
   }
   return result;
 }
+
 export function EDMProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [data, setData] = useState(empty);
@@ -57,6 +127,7 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [requiresSignIn, setRequiresSignIn] = useState(false);
+
   const refresh = async () => {
     setLoading(true);
     setError(null);
@@ -74,6 +145,7 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     let active = true;
     void fetchSnapshot()
@@ -99,7 +171,11 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, []);
-  const command = async (body: object, hide = false) => {
+
+  const postCommand = async (
+    body: { type: string; [key: string]: unknown },
+    hide = false,
+  ): Promise<{ ok: boolean; receipt?: CheckoutReceipt }> => {
     setError(null);
     setNotice(null);
     setSyncing(true);
@@ -126,16 +202,20 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
           auditLogs: [result.auditEntry, ...current.auditLogs],
         }));
       }
-      if (!("studentId" in body)) setNotice(result.message);
-      return true;
+      if (body.type !== "view" && result.message) setNotice(result.message);
+      return { ok: true, receipt: result.receipt as CheckoutReceipt | undefined };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Action failed. Try again.");
-      return false;
+      return { ok: false };
     } finally {
       setSyncing(false);
       if (hide) setLoading(false);
     }
   };
+
+  const command = async (body: { type: string; [key: string]: unknown }, hide = false) =>
+    (await postCommand(body, hide)).ok;
+
   const importFile = async (feed: Feed, file: File) => {
     if (file.size > 2_000_000) {
       setError("File too large. Upload a CSV or JSON file under 2 MB.");
@@ -162,11 +242,11 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   };
+
   return (
     <Context.Provider
       value={{
         ...data,
-        maskedMasterRecords: data.masterRecords,
         isLoading,
         isSyncing,
         error,
@@ -194,28 +274,38 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
           setError(null);
           setNotice(null);
         },
-        importRecords: (feed, content) =>
-          command({ type: "import", feed, format: "json", content }),
-        setCurrentRole: (role) => command({ type: "role", role }, true),
-        executeETL: () => command({ type: "sync" }),
+        setCurrentRole: (role) => command({ type: "role", role }),
+        executeSync: () => command({ type: "sync" }),
         resetAllData: () => command({ type: "reset" }),
-        viewStudent: (studentId) => command({ type: "view", studentId }),
-        graduateStudent: (studentId) =>
-          command({ type: "graduate", studentId }),
-        assignAdvisor: (studentId) =>
-          command({ type: "intervention", studentId }),
-        updateCaseSummaries: (interventions, ownerId) =>
-          setData((current) =>
-            current.actorId === ownerId
-              ? { ...current, interventions }
-              : current,
-          ),
+        recordPOSSale: (input) => command({ type: "pos_sale", ...input }),
+        recordOnlineOrder: (input) =>
+          command({ type: "online_order", ...input }),
+        processCheckout: async (input) => {
+          const res = await postCommand({ type: "checkout", ...input });
+          return res.ok && res.receipt ? res.receipt : null;
+        },
+        createCustomer: (input) =>
+          command({ type: "create_customer", ...input }),
+        dispatchOrder: (orderId, carrier) =>
+          command({ type: "dispatch_order", orderId, carrier }),
+        updateShipment: (shipmentId, status, delayReason) =>
+          command({ type: "update_shipment", shipmentId, status, delayReason }),
+        transferStock: (input) => command({ type: "transfer_stock", ...input }),
+        simulateSeasonalSpike: () => command({ type: "seasonal_spike" }),
+        restockSKU: (sku, amount = 20) =>
+          command({ type: "restock", sku, amount }),
+        importCatalogProduct: (productId) =>
+          command({ type: "import_catalog_product", productId }),
+        toggleGDPRConsent: (customerId) =>
+          command({ type: "toggle_gdpr", customerId }),
+        viewCustomer: (customerId) => command({ type: "view", customerId }),
       }}
     >
       {children}
     </Context.Provider>
   );
 }
+
 export function useEDM() {
   const context = useContext(Context);
   if (!context) throw new Error("EDMProvider is required");

@@ -1,0 +1,13 @@
+<svg fill="#171719" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 702 256" width="702" height="256" role="img" aria-labelledby="title"><title>Karto horizontal logo</title>
+  <title id="title">Karto horizontal lockup</title>
+  <g id="symbol" transform="translate(8 20) scale(0.84)" fill="#171719">
+    <path d="M36 68 L76 28 H118 V88 L178 28 H220 V74 L166 128 L220 182 V228 H178 L118 168 V228 H76 L36 188 Z"/>
+  </g>
+  <g id="wordmark" transform="translate(204 50)" fill="#171719">
+    <path d="M28 28 H48 V70 L90 28 H114 L64 78 L114 128 H90 L48 86 V128 H28 Z"/>
+    <path fill-rule="evenodd" d="M146.8 28 H172.8 L199.6 128 H178.9 L173.5 108 H146.1 L140.7 128 H120 Z M159.8 56.7 L150.9 90 H168.7 Z"/>
+    <path fill-rule="evenodd" d="M216 28 H254 A28 28 0 0 1 262.7 82.6 L288.9 128 H265.2 L240 84 H236 V128 H216 Z M236 46 V66 H254 A10 10 0 0 0 254 46 Z"/>
+    <path d="M298 28 H364 V46 H341 V128 H321 V46 H298 Z"/>
+    <path fill-rule="evenodd" d="M416 26 A44 52 0 1 1 415.9 26 Z M416 44 A24 34 0 1 0 416.1 44 Z"/>
+  </g>
+</svg>

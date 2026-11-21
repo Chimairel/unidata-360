@@ -1,328 +1,337 @@
-import type { Department } from "./school";
+import type {
+  Branch,
+  Carrier,
+  ProductCategory,
+  RetailRole,
+} from "./retail";
 
-export type UserRole =
-  | "SYSTEM_ADMIN"
-  | "REGISTRAR"
-  | "DEAN"
-  | "ACADEMIC_ADVISOR"
-  | "STUDENT"
-  | "COMPLIANCE_AUDITOR";
+export type UserRole = RetailRole;
 
-export interface StaffAccount {
-  id: string;
-  email: string;
-  displayName: string;
-  role: Exclude<UserRole, "STUDENT">;
-  department?: Department;
-  active: boolean;
+export type Feed = "POS" | "INVENTORY" | "CRM" | "ONLINE" | "LOGISTICS";
+
+// 1. DATA SOURCE: Point of Sale (Manila & Cebu branches)
+export interface POSRecord {
+  txId: string;
+  branch: Branch;
+  customerId: string; // e.g. CUST-001 or WALKIN-01
+  sku: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  paymentMethod: "Card" | "Cash" | "GCash";
+  cardNumber: string; // Tokenized / masked by server before leaving API
+  timestamp: string;
 }
 
-// 1. DATA SOURCE: Student Information System (SIS)
-export interface SISRecord {
-  studentId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  ssn: string; // Sensitive PII
-  dateOfBirth: string;
-  gender: string;
-  major: string;
-  department: string;
-  yearLevel: "Freshman" | "Sophomore" | "Junior" | "Senior" | "Graduate";
-  cumulativeGpa: number;
-  totalCredits: number;
-  academicStanding:
-    "Dean's Lister" | "Good Standing" | "Academic Probation" | "At-Risk";
-  financialAidStatus:
-    "Full Scholarship" | "Need-Based Grant" | "Student Loan" | "Self-Funded";
-  advisorName: string;
-  enrollmentStatus: "Active" | "Leave of Absence" | "Graduated" | "Suspended";
+// 2. DATA SOURCE: Inventory Management (Branch + Warehouse stock)
+export interface InventoryRecord {
+  sku: string;
+  productName: string;
+  category: ProductCategory;
+  unitPrice: number;
+  manilaStock: number;
+  cebuStock: number;
+  warehouseStock: number;
+  reorderPoint: number;
+  lastUpdated: string;
+  externalId?: number;
+  externalSku?: string;
+  brand?: string;
+  rating?: number;
+  discountPercentage?: number;
+  description?: string;
+  thumbnail?: string;
+  images?: string[];
 }
 
-// 2. DATA SOURCE: Learning Management System (LMS - Canvas / Blackboard)
-export interface LMSRecord {
-  studentId: string;
-  courseCode: string;
-  courseName: string;
-  attendancePercentage: number;
-  assignmentsCompleted: number;
-  totalAssignments: number;
-  currentScorePercentage: number;
-  letterGrade: string;
-  lastActiveDate: string;
-  missedDeadlines: number;
-  riskIndicator: "Low" | "Moderate" | "High";
-}
-
-// 3. DATA SOURCE: Library & Campus Resources
-export interface LibraryRecord {
-  studentId: string;
-  activeBorrows: number;
-  overdueCount: number;
-  outstandingFines: number; // in USD
-  borrowingHistoryCount: number;
-  clearanceStatus: "Cleared" | "Pending Return" | "Hold Placed";
-  facilityAccessLevel: "Standard" | "Graduate Lab" | "Restricted";
-}
-
-// 4. DATA SOURCE: HR / Payroll (Faculty Advisors)
-export interface HRRecord {
-  facultyId: string;
+// 3. DATA SOURCE: Customer Relationship Management (CRM)
+export interface CRMRecord {
+  customerId: string;
   fullName: string;
-  department: string;
+  email: string;
+  phone: string;
+  loyaltyTier: "VIP" | "Gold" | "Silver" | "Bronze";
+  pointsBalance: number;
+  preferredBranch: Branch;
+  gdprConsent: "Opted In" | "Opted Out";
+  favoriteCategory: ProductCategory;
+  joinedAt: string;
+}
+
+// 4. DATA SOURCE: Online Storefront (Web & Mobile App)
+export interface OnlineOrderRecord {
+  orderId: string;
+  customerId: string;
+  sku: string;
+  productName: string;
+  quantity: number;
+  totalAmount: number;
+  paymentMethod: "Card" | "GCash" | "Maya";
+  cardNumber: string; // Tokenized / masked by server before leaving API
+  promoCode: string;
+  orderStatus: "Processing" | "Shipped" | "Delivered";
+  orderedAt: string;
+}
+
+// 5. DATA SOURCE: Third-Party Logistics (3PL Providers)
+export interface LogisticsRecord {
+  shipmentId: string;
+  orderId: string;
+  customerId: string;
+  carrier: Carrier;
+  trackingNumber: string;
+  status:
+    | "Label Created"
+    | "In Transit"
+    | "Out for Delivery"
+    | "Delivered"
+    | "Delayed";
+  estimatedDelivery: string;
+  delayReason?: string;
+  updatedAt: string;
+}
+
+// OUTPUT 1: Real-Time Stock Sync Master View
+export interface UnifiedStockItem {
+  sku: string;
+  productName: string;
+  category: ProductCategory;
+  unitPrice: number;
+  manilaStock: number;
+  cebuStock: number;
+  warehouseStock: number;
+  totalStock: number;
+  reorderPoint: number;
+  unitsSoldPOS: number;
+  unitsSoldOnline: number;
+  revenueTotal: number;
+  stockStatus: "Synced" | "Low Stock" | "Oversell Risk";
+  lastUpdated: string;
+  externalId?: number;
+  externalSku?: string;
+  brand?: string;
+  rating?: number;
+  discountPercentage?: number;
+  description?: string;
+  thumbnail?: string;
+  images?: string[];
+}
+
+export interface CatalogProduct {
+  id: number;
+  sku: string;
   title: string;
-  coursesTaught: string;
-  employmentStatus: "Full-Time" | "Part-Time";
-  payrollBand: string; // Masked for non-Registrars (HR/Payroll governance)
+  brand: string;
+  rawCategory: string;
+  category: ProductCategory;
+  priceUsd: number;
+  unitPricePhp: number;
+  discountPercentage: number;
+  rating: number;
+  stock: number;
+  description: string;
+  thumbnail: string;
+  images: string[];
 }
 
-// 5. DATA SOURCE: Alumni CRM
-export interface AlumniRecord {
-  studentId: string;
-  fullName: string;
-  department: string;
-  graduationYear: number;
-  degreeConferred: string;
-  employmentStatus: "Employed" | "Graduate School" | "Seeking";
-  employer: string;
-  contactConsent: "Opted In" | "Opted Out"; // GDPR contact preference
+// OUTPUT 2: Personalized Customer Offer (GDPR-aware)
+export interface PersonalizedOffer {
+  offerCode: string;
+  title: string;
+  discountLabel: string;
+  targetCategory: ProductCategory;
+  status: "Active" | "Suppressed (GDPR Opt-Out)";
+  reason: string;
 }
 
-// 6. UNIFIED 360 MASTER RECORD (Output of EDM Integration)
-export interface UnifiedStudentRecord {
-  studentId: string;
+// OUTPUT 3: Virtualized Customer 360 Master Record
+export interface UnifiedCustomerRecord {
+  customerId: string;
   fullName: string;
-  maskedName?: string;
   email: string;
-  maskedEmail?: string;
-  ssn: string; // masked depending on role
-  dateOfBirth: string;
-  major: string;
-  department: string;
-  yearLevel: string;
-  cumulativeGpa: number;
-  totalCredits: number;
-  academicStanding: string;
-  financialAidStatus: string;
-  advisorName: string;
-  enrollmentStatus: string;
-
-  // Enriched LMS Insights
-  lmsSummary: {
-    enrolledCoursesCount: number;
-    averageAttendance: number;
-    averageLmsGrade: number;
-    totalMissedDeadlines: number;
-    courses: LMSRecord[];
-    highestRiskCourse?: string;
-  };
-
-  // Enriched Library & Clearance Insights
-  librarySummary: {
-    activeBorrows: number;
-    overdueCount: number;
-    outstandingFines: number;
-    clearanceStatus: "Cleared" | "Pending Return" | "Hold Placed";
-  };
-
-  // Enriched HR / Faculty Advisor Context
-  hrSummary?: {
-    facultyId: string;
-    facultyName: string;
-    department: string;
-    title: string;
-    coursesTaught: string;
-    employmentStatus: string;
-    payrollBand: string;
-  };
-
-  // Enriched Alumni CRM Handoff
-  alumniSummary?: {
-    graduationYear: number;
-    degreeConferred: string;
-    employmentStatus: string;
-    employer: string;
-    contactConsent: "Opted In" | "Opted Out";
-  };
-
-  // EDM Data Quality & Health Score
-  dataHealthScore: number; // Percentage of the three core SIS/LMS/Library feeds present.
-  overallRiskCategory: "Safe" | "Moderate Risk" | "Critical Alert";
-  lastSyncedAt: string;
+  phone: string;
+  loyaltyTier: "VIP" | "Gold" | "Silver" | "Bronze";
+  pointsBalance: number;
+  preferredBranch: Branch;
+  gdprConsent: "Opted In" | "Opted Out";
+  favoriteCategory: ProductCategory;
+  posSpend: number;
+  onlineSpend: number;
+  totalSpend: number;
+  posOrderCount: number;
+  onlineOrderCount: number;
+  lastPurchaseAt: string;
+  maskedCardOnFile: string;
+  personalizedOffer: PersonalizedOffer;
+  posTransactions: POSRecord[];
+  onlineOrders: OnlineOrderRecord[];
+  shipments: LogisticsRecord[];
 }
 
-// GOVERNANCE & AUDIT LOGGING (FERPA / GDPR)
+// INTEGRATION METHOD: Change Data Capture (CDC) Event
+export interface CDCEvent {
+  id: string;
+  timestamp: string;
+  feed: Feed;
+  operation:
+    | "INSERT"
+    | "UPDATE"
+    | "SPIKE"
+    | "CONSENT_CHANGE"
+    | "RESTOCK"
+    | "BATCH_IMPORT"
+    | "CATALOG_SYNC"
+    | "SHIPMENT_UPDATE"
+    | "STOCK_TRANSFER";
+  integrationMethod: "Real-Time API" | "CDC" | "Virtualization";
+  recordKey: string;
+  summary: string;
+  latencyMs: number;
+}
+
+// CHALLENGE MONITORING: Cross-Channel Data Consistency Alerts
+export interface ConsistencyAlert {
+  id: string;
+  type:
+    | "CHANNEL_OVERSELL"
+    | "LOW_STOCK"
+    | "DELAYED_3PL"
+    | "MISSING_TRACKING"
+    | "UNLINKED_POS_CUSTOMER";
+  severity: "Critical" | "Warning";
+  feed: Feed;
+  referenceKey: string;
+  message: string;
+  detectedAt: string;
+}
+
+export interface ETLRunReport {
+  id: string;
+  startTime: string;
+  endTime: string;
+  status: "SUCCESS" | "PARTIAL_SUCCESS";
+  recordsExtracted: Record<Feed, number>;
+  recordsLoaded: number;
+  anomaliesDetected: number;
+  warnings: string[];
+}
+
 export interface AuditLogEntry {
   id: string;
   timestamp: string;
-  userRole: UserRole | "DEAN_REGISTRAR"; // Historical audit entries remain unchanged.
+  userRole: UserRole;
   actorName: string;
+  actorId?: string;
   action:
-    | "READ_STUDENT_360"
-    | "ETL_SYNC_RUN"
-    | "EXPORT_DATA"
-    | "MASKING_OVERRIDE_ATTEMPT"
-    | "GDPR_CONSENT_CHECK"
-    | "IMPORT_DATA"
-    | "GRADUATE_STUDENT"
-    | "CREATE_INTERVENTION"
-    | "RESET_DEMO"
+    | "READ_CUSTOMER_360"
+    | "INTEGRATION_SYNC"
+    | "IMPORT_FEED"
+    | "CATALOG_IMPORT"
+    | "POS_SALE"
+    | "ONLINE_ORDER"
+    | "CHECKOUT"
+    | "CUSTOMER_CREATED"
+    | "SHIPMENT_UPDATED"
+    | "STOCK_TRANSFER"
+    | "SEASONAL_SPIKE"
+    | "INVENTORY_RESTOCK"
+    | "GDPR_CONSENT_UPDATED"
+    | "EXPORT_REPORT"
     | "SIGN_IN"
     | "SIGN_OUT"
     | "LOGIN_FAILED"
-    | "STUDENT_REGISTERED"
-    | "STUDENT_ACCOUNTS_PROVISIONED"
-    | "STUDENT_EMAIL_UPDATED"
-    | "STUDENT_PASSWORD_RESET_DEFAULT"
-    | "STUDENT_STATUS_CHANGED"
-    | "STUDENT_ACCESS_REQUESTED"
-    | "STUDENT_ACCESS_APPROVED"
-    | "STUDENT_ACCESS_REJECTED"
-    | "PASSWORD_RESET"
-    | "ACCOUNT_CREATED"
-    | "ACCOUNT_UPDATED"
-    | "ACCOUNT_STATUS_CHANGED"
-    | "STAFF_PASSWORD_RESET"
-    | "CASE_CREATED"
-    | "CASE_UPDATED"
-    | "CASE_ASSIGNED"
-    | "QUALITY_ISSUE_UPDATED"
-    | "QUALITY_ISSUE_RESOLVED"
-    | "QUALITY_SOURCE_CORRECTED";
+    | "ACCESS_DENIED"
+    | "ROLE_SWITCH"
+    | "RESET_DEMO";
   targetResource: string;
-  status: "ALLOWED" | "RESTRICTED_MASKED" | "LOGGED";
+  status: "ALLOWED" | "RESTRICTED_MASKED";
   details: string;
   hash?: string;
-  actorId?: string;
 }
 
 export interface AccessIdentity {
   mode: "demo" | "account";
   userId?: string;
   displayName?: string;
-  studentId?: string;
-  department?: Department;
+  branch?: Branch;
 }
 
-export type Feed = "SIS" | "LMS" | "LIBRARY" | "HR" | "ALUMNI";
-export interface Intervention {
-  id: string;
-  studentId: string;
-  advisorName: string;
-  createdAt: string;
-  status: "Open" | "In progress" | "Resolved";
-  assigneeId?: string;
-  createdById?: string;
-  reason?: string;
-  priority?: "Normal" | "High";
-  dueDate?: string;
-  updatedAt?: string;
-  outcome?: string;
+export interface SalesSummary {
+  totalRevenue: number;
+  posManilaRevenue: number;
+  posCebuRevenue: number;
+  onlineRevenue: number;
+  totalOrders: number;
+  averageOrderValue: number;
+  onTimeDeliveryRate: number;
+  delayedShipments: number;
+  revenueByCategory: Array<{
+    category: ProductCategory;
+    revenue: number;
+    units: number;
+  }>;
+  carrierPerformance: Array<{
+    carrier: Carrier;
+    total: number;
+    deliveredOrOnTrack: number;
+    delayed: number;
+  }>;
 }
-export interface WorkflowEvent {
-  id: string;
-  at: string;
-  actor: string;
-  text: string;
+
+export interface CheckoutReceipt {
+  channel: "POS" | "ONLINE";
+  branch?: Branch;
+  carrier?: Carrier;
+  customerId: string;
+  customerName: string;
+  itemCount: number;
+  subtotal: number;
+  discountAmount: number;
+  promoCode: string;
+  totalAmount: number;
+  pointsEarned: number;
+  maskedCard: string;
+  referenceIds: string[];
+  trackingNumber?: string;
+  timestamp: string;
 }
-export interface AdvisingCase extends Intervention {
-  reason: string;
-  priority: "Normal" | "High";
-  updatedAt: string;
-  notes: WorkflowEvent[];
-  history: WorkflowEvent[];
-}
-export interface CaseAssignee {
-  id: string;
-  displayName: string;
-  role: "REGISTRAR" | "DEAN" | "ACADEMIC_ADVISOR";
-  department?: string;
-}
-export interface CaseWorkspace {
-  cases: AdvisingCase[];
-  students: { studentId: string; fullName: string; department: string }[];
-  assignees: CaseAssignee[];
-  currentUserId: string;
-}
-export interface QualityIssue {
-  id: string;
-  rule: "MISSING_LMS" | "MISSING_LIBRARY" | "ORPHAN_LMS" | "ORPHAN_LIBRARY";
-  feed: Feed;
-  sourceKey: string;
-  studentId: string;
-  description: string;
-  severity: "Warning" | "Error";
-  status: "Open" | "In progress" | "Resolved";
-  ownerId?: string;
-  ownerName?: string;
-  firstSeenAt: string;
-  lastSeenAt: string;
-  resolvedAt?: string;
-  history: WorkflowEvent[];
-}
-export interface SourceMetadata {
-  feed: Feed;
-  key: string;
-  receivedAt: string | null;
-  receivedBy: string;
-  revision: number;
-}
-export interface QualityWorkspace {
-  issues: QualityIssue[];
-  checkedAt: string | null;
-  sources: {
-    feed: Feed;
-    name: string;
-    owner: string;
-    key: string;
-    rows: number;
-    lastReceivedAt: string | null;
-    unknownProvenance: number;
-  }[];
-  metadata: SourceMetadata[];
-  runs: ETLRunReport[];
-  stewards: { id: string; displayName: string }[];
-  students: { studentId: string; fullName: string }[];
-}
-export interface EDMSnapshot {
+
+export interface RetailSnapshot {
   accessMode?: "demo" | "account";
   currentRole: UserRole;
   actorName: string;
-  departmentScope?: Department;
   actorId?: string;
-  sisRecords: SISRecord[];
-  studentProfile?: {
-    studentId: string;
-    fullName: string;
-    department?: Department;
-  };
-  lmsRecords: LMSRecord[];
-  libraryRecords: LibraryRecord[];
-  hrRecords: HRRecord[];
-  alumniRecords: AlumniRecord[];
-  masterRecords: UnifiedStudentRecord[];
+  branchScope?: Branch;
+  posRecords: POSRecord[];
+  inventoryRecords: InventoryRecord[];
+  crmRecords: CRMRecord[];
+  onlineRecords: OnlineOrderRecord[];
+  logisticsRecords: LogisticsRecord[];
+  stockItems: UnifiedStockItem[];
+  customers: UnifiedCustomerRecord[];
+  cdcEvents: CDCEvent[];
+  consistencyAlerts: ConsistencyAlert[];
   etlReports: ETLRunReport[];
   auditLogs: AuditLogEntry[];
-  interventions: Intervention[];
   sourceCounts: Record<Feed, number>;
+  salesSummary: SalesSummary;
   auditIntegrity: boolean;
+  lastSyncedAt: string;
 }
 
-// ETL Pipeline Execution Metrics
-export interface ETLRunReport {
-  id: string;
-  startTime: string;
-  endTime: string;
-  status: "SUCCESS" | "PARTIAL_SUCCESS" | "FAILED";
-  recordsExtracted: {
-    sis: number;
-    lms: number;
-    library: number;
-    hr?: number;
-    alumni?: number;
-  };
-  recordsTransformed: number;
-  recordsLoaded: number;
-  anomaliesDetected: number;
-  warnings: string[];
+export interface ShopperSummary {
+  customerId: string;
+  fullName: string;
+  loyaltyTier: "VIP" | "Gold" | "Silver" | "Bronze";
+  pointsBalance: number;
+  favoriteCategory: ProductCategory;
+  gdprConsent: "Opted In" | "Opted Out";
+  personalizedOffer: PersonalizedOffer;
+}
+
+export interface ShopSnapshot {
+  products: UnifiedStockItem[];
+  shoppers: ShopperSummary[];
+  lastSyncedAt: string;
 }

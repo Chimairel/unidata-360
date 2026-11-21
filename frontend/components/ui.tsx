@@ -1,6 +1,77 @@
 "use client";
-import { useEffect, useRef, type ReactNode } from "react";
-import { X, Download } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { X, Download, Package } from "lucide-react";
+
+function ProductImageInner({
+  src,
+  alt,
+  size,
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  size: number;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <span
+        className={`product-image-fallback ${className}`.trim()}
+        aria-label={alt}
+      >
+        <Package size={Math.max(16, Math.round(size * 0.34))} />
+      </span>
+    );
+  }
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={size}
+      height={size}
+      loading="eager"
+      unoptimized
+      className={className}
+      style={{ objectFit: "contain", width: "100%", height: "100%" }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+export function ProductImage({
+  src,
+  alt,
+  size = 140,
+  className = "",
+}: {
+  src?: string;
+  alt: string;
+  size?: number;
+  className?: string;
+}) {
+  if (!src) {
+    return (
+      <span
+        className={`product-image-fallback ${className}`.trim()}
+        aria-label={alt}
+      >
+        <Package size={Math.max(16, Math.round(size * 0.34))} />
+      </span>
+    );
+  }
+  return (
+    <ProductImageInner
+      key={src}
+      src={src}
+      alt={alt}
+      size={size}
+      className={className}
+    />
+  );
+}
+
 export function PageHeading({
   title,
   description,
@@ -20,6 +91,7 @@ export function PageHeading({
     </div>
   );
 }
+
 export function Badge({
   children,
   tone = "neutral",
@@ -29,21 +101,27 @@ export function Badge({
 }) {
   return <span className={`badge ${tone}`}>{children}</span>;
 }
-export function RiskBadge({ risk }: { risk: string }) {
+
+export function StockStatusBadge({
+  status,
+}: {
+  status: "Synced" | "Low Stock" | "Oversell Risk";
+}) {
   return (
     <Badge
       tone={
-        risk === "Critical Alert"
+        status === "Oversell Risk"
           ? "danger"
-          : risk === "Moderate Risk"
+          : status === "Low Stock"
             ? "warning"
             : "success"
       }
     >
-      {risk}
+      {status}
     </Badge>
   );
 }
+
 export function Modal({
   title,
   children,
@@ -87,21 +165,22 @@ export function Modal({
     </dialog>
   );
 }
+
 export function ReportLink({
   kind,
-  studentId,
-  department,
+  customerId,
+  channel,
   label = "Download PDF",
 }: {
-  kind: "student" | "analytics" | "audit" | "json";
-  studentId?: string;
-  department?: string;
+  kind: "customer" | "sales" | "audit" | "json";
+  customerId?: string;
+  channel?: string;
   label?: string;
 }) {
   return (
     <a
       className="button secondary"
-      href={`/api/reports?kind=${kind}${studentId ? `&studentId=${encodeURIComponent(studentId)}` : ""}${department ? `&department=${encodeURIComponent(department)}` : ""}`}
+      href={`/api/reports?kind=${kind}${customerId ? `&customerId=${encodeURIComponent(customerId)}` : ""}${channel ? `&channel=${encodeURIComponent(channel)}` : ""}`}
       download
     >
       <Download size={16} />
@@ -109,6 +188,7 @@ export function ReportLink({
     </a>
   );
 }
+
 export function EmptyState({
   title,
   children,
@@ -123,6 +203,7 @@ export function EmptyState({
     </div>
   );
 }
+
 export function formatTime(timestamp: string) {
   return new Date(timestamp).toLocaleString("en-SG", {
     timeZone: "Asia/Singapore",

@@ -1,330 +1,391 @@
-import {
-  SISRecord,
-  LMSRecord,
-  LibraryRecord,
-  HRRecord,
-  AlumniRecord,
-  UnifiedStudentRecord,
+import { randomUUID } from "node:crypto";
+import { CARRIERS, CATEGORIES, type ProductCategory } from "@/shared/retail";
+import type {
+  CRMRecord,
+  ConsistencyAlert,
   ETLRunReport,
+  InventoryRecord,
+  LogisticsRecord,
+  OnlineOrderRecord,
+  POSRecord,
+  PersonalizedOffer,
+  SalesSummary,
+  UnifiedCustomerRecord,
+  UnifiedStockItem,
 } from "@/shared/types";
 
-export function standardizePersonName(value: string): string {
-  const collapsed = value.trim().replace(/\s+/g, " ");
-  if (!collapsed) return collapsed;
-  const isAllUpper =
-    collapsed === collapsed.toUpperCase() &&
-    collapsed !== collapsed.toLowerCase();
-  const isAllLower =
-    collapsed === collapsed.toLowerCase() &&
-    collapsed !== collapsed.toUpperCase();
-  if (!isAllUpper && !isAllLower) return collapsed;
-  return collapsed
-    .toLowerCase()
-    .replace(
-      /(^|[\s\-'])([a-z])/g,
-      (_, sep: string, char: string) => sep + char.toUpperCase(),
+function cleanName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w+/g, (word) =>
+      word === word.toUpperCase() && word.length <= 4
+        ? word
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
     );
 }
 
-export function runETLPipeline(
-  sisData: SISRecord[],
-  lmsData: LMSRecord[],
-  libraryData: LibraryRecord[],
-  options?: { timestamp?: string; id?: string },
-  hrData: HRRecord[] = [],
-  alumniData: AlumniRecord[] = [],
-): { masterRecords: UnifiedStudentRecord[]; report: ETLRunReport } {
-  const startTime = options?.timestamp || new Date().toISOString();
-  const warnings: string[] = [];
-  let anomaliesDetected = 0;
-  let standardizedCount = 0;
-  let failingNormalizedCount = 0;
-
-  // Last record wins for repeated keys; upstream validation rejects invalid fields.
-  const uniqueSIS = [
-    ...new Map(
-      sisData.map((s) => {
-        const studentId = s.studentId.trim();
-        const firstName = standardizePersonName(s.firstName);
-        const lastName = standardizePersonName(s.lastName);
-        const email = s.email.trim().toLowerCase();
-        const department = s.department.trim().toUpperCase();
-        // Philippine 1.00–5.00 grading rule: 1.00 highest, 3.00 or worse is a fail (instant 5.00).
-        let cumulativeGpa = s.cumulativeGpa;
-        if (cumulativeGpa >= 3.0 && cumulativeGpa < 5.0) {
-          cumulativeGpa = 5.0;
-          failingNormalizedCount++;
-        }
-        if (
-          studentId !== s.studentId ||
-          firstName !== s.firstName ||
-          lastName !== s.lastName ||
-          email !== s.email ||
-          department !== s.department
-        ) {
-          standardizedCount++;
-        }
-        return [
-          studentId,
-          {
-            ...s,
-            studentId,
-            firstName,
-            lastName,
-            email,
-            department,
-            cumulativeGpa,
-          },
-        ] as const;
-      }),
-    ).values(),
-  ];
-  const uniqueLMS = [
-    ...new Map(
-      lmsData.map((s) => {
-        const studentId = s.studentId.trim();
-        const courseCode = s.courseCode.trim().toUpperCase();
-        const letterGrade = s.letterGrade.trim().toUpperCase();
-        if (
-          studentId !== s.studentId ||
-          courseCode !== s.courseCode ||
-          letterGrade !== s.letterGrade
-        ) {
-          standardizedCount++;
-        }
-        return [
-          `${studentId}:${courseCode}`,
-          { ...s, studentId, courseCode, letterGrade },
-        ] as const;
-      }),
-    ).values(),
-  ];
-  if (standardizedCount > 0) {
-    warnings.push(
-      `[Transform]: Standardized ${standardizedCount} source record${standardizedCount === 1 ? "" : "s"} (name casing, whitespace, codes, or email).`,
-    );
-  }
-  if (failingNormalizedCount > 0) {
-    warnings.push(
-      `[Business Rule]: Converted ${failingNormalizedCount} failing grade${failingNormalizedCount === 1 ? "" : "s"} (3.00 or worse → 5.00 fail).`,
-    );
-  }
-  const studentIds = new Set(uniqueSIS.map((s) => s.studentId));
-  const duplicateCount =
-    sisData.length -
-    uniqueSIS.length +
-    lmsData.length -
-    uniqueLMS.length +
-    libraryData.length -
-    new Set(libraryData.map((s) => s.studentId)).size;
-  if (duplicateCount) {
-    warnings.push(
-      `Deduplicated ${duplicateCount} repeated source keys (last record wins).`,
-    );
-    anomaliesDetected += duplicateCount;
-  }
-
-  // Group LMS records by studentId
-  const lmsByStudent = new Map<string, LMSRecord[]>();
-  for (const lms of uniqueLMS) {
-    if (!lms.studentId || !studentIds.has(lms.studentId)) {
-      warnings.push(
-        `[LMS Data Quality Warning]: Found unlinked course record "${lms.courseCode}". Dropped from pipeline.`,
-      );
-      anomaliesDetected++;
-      continue;
-    }
-    const current = lmsByStudent.get(lms.studentId) || [];
-    current.push(lms);
-    lmsByStudent.set(lms.studentId, current);
-  }
-
-  // Group Library records by studentId
-  const libraryByStudent = new Map<string, LibraryRecord>();
-  for (const lib of libraryData) {
-    if (!lib.studentId || !studentIds.has(lib.studentId)) {
-      warnings.push(
-        "[Library Quality Warning]: Found unlinked checkout entry. Dropped.",
-      );
-      anomaliesDetected++;
-      continue;
-    }
-    libraryByStudent.set(lib.studentId, lib);
-  }
-
-  const hrByName = new Map<string, HRRecord>();
-  for (const hr of hrData) {
-    hrByName.set(hr.fullName.trim().toLowerCase(), hr);
-  }
-
-  const alumniByStudent = new Map<string, AlumniRecord>();
-  for (const alumni of alumniData) {
-    alumniByStudent.set(alumni.studentId.trim(), alumni);
-  }
-
-  const masterRecords: UnifiedStudentRecord[] = [];
-
-  // Transform and Merge using SIS as primary golden demographic master
-  for (const sis of uniqueSIS) {
-    let presentSources = 1;
-
-    // Check LMS reconciliation
-    const studentLmsList = lmsByStudent.get(sis.studentId) || [];
-    if (studentLmsList.length === 0) {
-      warnings.push(
-        `[Reconciliation Notice]: Student ${sis.studentId} has no active LMS course enrollment.`,
-      );
-    } else {
-      presentSources++;
-    }
-
-    // Check Library reconciliation
-    const studentLib = libraryByStudent.get(sis.studentId);
-    if (!studentLib) {
-      warnings.push(
-        `[Reconciliation Notice]: Student ${sis.studentId} has no Library card record.`,
-      );
-    } else {
-      presentSources++;
-    }
-
-    // Compute LMS summary statistics
-    let totalAttendance = 0;
-    let totalScore = 0;
-    let totalMissed = 0;
-    let highestRiskCourse: string | undefined = undefined;
-
-    studentLmsList.forEach((course) => {
-      totalAttendance += course.attendancePercentage;
-      totalScore += course.currentScorePercentage;
-      totalMissed += course.missedDeadlines;
-      if (course.riskIndicator === "High" && !highestRiskCourse) {
-        highestRiskCourse = `${course.courseCode} (${course.letterGrade})`;
-      }
-    });
-
-    const avgAttendance =
-      studentLmsList.length > 0
-        ? Math.round(totalAttendance / studentLmsList.length)
-        : 0;
-
-    const avgLmsGrade =
-      studentLmsList.length > 0
-        ? Math.round(totalScore / studentLmsList.length)
-        : 0;
-
-    // Library summary
-    const libSummary = studentLib
-      ? {
-          activeBorrows: studentLib.activeBorrows,
-          overdueCount: studentLib.overdueCount,
-          outstandingFines: studentLib.outstandingFines,
-          clearanceStatus: studentLib.clearanceStatus,
-        }
-      : {
-          activeBorrows: 0,
-          overdueCount: 0,
-          outstandingFines: 0,
-          clearanceStatus: "Pending Return" as const,
-        };
-
-    // Calculate Comprehensive Risk Category (1.00 highest – 5.00 fail; >= 3.00 is failing)
-    let overallRiskCategory: "Safe" | "Moderate Risk" | "Critical Alert" =
-      "Safe";
-    if (
-      sis.cumulativeGpa >= 3.0 ||
-      (studentLmsList.length > 0 && avgAttendance < 65) ||
-      totalMissed >= 4 ||
-      sis.academicStanding === "Academic Probation"
-    ) {
-      overallRiskCategory = "Critical Alert";
-    } else if (
-      sis.cumulativeGpa >= 2.5 ||
-      (studentLmsList.length > 0 && avgAttendance < 80) ||
-      totalMissed >= 2 ||
-      libSummary.clearanceStatus === "Hold Placed"
-    ) {
-      overallRiskCategory = "Moderate Risk";
-    }
-
-    const matchedHr = hrByName.get(sis.advisorName.trim().toLowerCase());
-    const matchedAlumni = alumniByStudent.get(sis.studentId);
-
-    const unifiedStudent: UnifiedStudentRecord = {
-      studentId: sis.studentId,
-      fullName: `${sis.firstName} ${sis.lastName}`,
-      email: sis.email,
-      ssn: sis.ssn,
-      dateOfBirth: sis.dateOfBirth,
-      major: sis.major,
-      department: sis.department,
-      yearLevel: sis.yearLevel,
-      cumulativeGpa: sis.cumulativeGpa,
-      totalCredits: sis.totalCredits,
-      academicStanding: sis.academicStanding,
-      financialAidStatus: sis.financialAidStatus,
-      advisorName: sis.advisorName,
-      enrollmentStatus: sis.enrollmentStatus,
-      lmsSummary: {
-        enrolledCoursesCount: studentLmsList.length,
-        averageAttendance: avgAttendance,
-        averageLmsGrade: avgLmsGrade,
-        totalMissedDeadlines: totalMissed,
-        courses: studentLmsList,
-        highestRiskCourse,
-      },
-      librarySummary: libSummary,
-      ...(matchedHr
-        ? {
-            hrSummary: {
-              facultyId: matchedHr.facultyId,
-              facultyName: matchedHr.fullName,
-              department: matchedHr.department,
-              title: matchedHr.title,
-              coursesTaught: matchedHr.coursesTaught,
-              employmentStatus: matchedHr.employmentStatus,
-              payrollBand: matchedHr.payrollBand,
-            },
-          }
-        : {}),
-      ...(matchedAlumni
-        ? {
-            alumniSummary: {
-              graduationYear: matchedAlumni.graduationYear,
-              degreeConferred: matchedAlumni.degreeConferred,
-              employmentStatus: matchedAlumni.employmentStatus,
-              employer: matchedAlumni.employer,
-              contactConsent: matchedAlumni.contactConsent,
-            },
-          }
-        : {}),
-      dataHealthScore: Math.round((presentSources / 3) * 100),
-      overallRiskCategory,
-      lastSyncedAt: startTime,
+function buildPersonalizedOffer(customer: CRMRecord): PersonalizedOffer {
+  const category = customer.favoriteCategory;
+  if (customer.gdprConsent === "Opted Out") {
+    return {
+      offerCode: "SUPPRESSED",
+      title: "Personalized offer suppressed",
+      discountLabel: "Blocked by GDPR Opt-Out",
+      targetCategory: category,
+      status: "Suppressed (GDPR Opt-Out)",
+      reason:
+        "GDPR consent is Opted Out — automated profiling & promotional targeting disabled.",
     };
+  }
+  const tag = category.split(" ")[0].toUpperCase().slice(0, 4);
+  if (customer.loyaltyTier === "VIP") {
+    return {
+      offerCode: `VIP-${tag}20`,
+      title: `VIP Priority · 20% Off ${category}`,
+      discountLabel: "20% OFF + Free Express",
+      targetCategory: category,
+      status: "Active",
+      reason: `Matched ${customer.loyaltyTier} tier (${customer.pointsBalance.toLocaleString()} pts) with ${category} affinity.`,
+    };
+  }
+  if (customer.loyaltyTier === "Gold") {
+    return {
+      offerCode: `GOLD-${tag}15`,
+      title: `Gold Exclusive · 15% Off ${category}`,
+      discountLabel: "15% OFF",
+      targetCategory: category,
+      status: "Active",
+      reason: `Triggered for Opted-In Gold member favoring ${category}.`,
+    };
+  }
+  if (customer.loyaltyTier === "Silver") {
+    return {
+      offerCode: `SILV-${tag}10`,
+      title: `Silver Reward · 10% Off ${category}`,
+      discountLabel: "10% OFF",
+      targetCategory: category,
+      status: "Active",
+      reason: `Triggered for Opted-In Silver member favoring ${category}.`,
+    };
+  }
+  return {
+    offerCode: "KARTO-SHIP",
+    title: `Free Same-Day / 3PL Delivery on ${category}`,
+    discountLabel: "FREE SHIPPING",
+    targetCategory: category,
+    status: "Active",
+    reason: `Onboarding reward for Opted-In Bronze shopper in ${customer.preferredBranch}.`,
+  };
+}
 
-    masterRecords.push(unifiedStudent);
+export function computeSalesSummary(
+  pos: POSRecord[],
+  online: OnlineOrderRecord[],
+  logistics: LogisticsRecord[],
+  inventoryMap: Map<string, InventoryRecord>,
+): SalesSummary {
+  let posManilaRevenue = 0;
+  let posCebuRevenue = 0;
+  let onlineRevenue = 0;
+
+  const categoryTotals = new Map<
+    ProductCategory,
+    { revenue: number; units: number }
+  >(CATEGORIES.map((c) => [c, { revenue: 0, units: 0 }]));
+
+  for (const tx of pos) {
+    if (tx.branch === "Manila") posManilaRevenue += tx.totalAmount;
+    else posCebuRevenue += tx.totalAmount;
+    const cat = inventoryMap.get(tx.sku)?.category || CATEGORIES[0];
+    const entry = categoryTotals.get(cat) || { revenue: 0, units: 0 };
+    entry.revenue += tx.totalAmount;
+    entry.units += tx.quantity;
+    categoryTotals.set(cat, entry);
   }
 
-  const endTime = options?.timestamp || new Date().toISOString();
+  for (const ord of online) {
+    onlineRevenue += ord.totalAmount;
+    const cat = inventoryMap.get(ord.sku)?.category || CATEGORIES[0];
+    const entry = categoryTotals.get(cat) || { revenue: 0, units: 0 };
+    entry.revenue += ord.totalAmount;
+    entry.units += ord.quantity;
+    categoryTotals.set(cat, entry);
+  }
 
+  const totalRevenue = posManilaRevenue + posCebuRevenue + onlineRevenue;
+  const totalOrders = pos.length + online.length;
+  const averageOrderValue = totalOrders ? Math.round(totalRevenue / totalOrders) : 0;
+
+  const delayedShipments = logistics.filter((s) => s.status === "Delayed").length;
+  const onTimeDeliveryRate = logistics.length
+    ? Math.round(((logistics.length - delayedShipments) / logistics.length) * 100)
+    : 100;
+
+  const carrierPerformance = CARRIERS.map((carrier) => {
+    const rows = logistics.filter((l) => l.carrier === carrier);
+    const delayed = rows.filter((l) => l.status === "Delayed").length;
+    return {
+      carrier,
+      total: rows.length,
+      deliveredOrOnTrack: rows.length - delayed,
+      delayed,
+    };
+  });
+
+  return {
+    totalRevenue,
+    posManilaRevenue,
+    posCebuRevenue,
+    onlineRevenue,
+    totalOrders,
+    averageOrderValue,
+    onTimeDeliveryRate,
+    delayedShipments,
+    revenueByCategory: CATEGORIES.map((category) => ({
+      category,
+      revenue: categoryTotals.get(category)?.revenue || 0,
+      units: categoryTotals.get(category)?.units || 0,
+    })),
+    carrierPerformance,
+  };
+}
+
+export function runRetailIntegration(
+  posInput: POSRecord[],
+  inventoryInput: InventoryRecord[],
+  crmInput: CRMRecord[],
+  onlineInput: OnlineOrderRecord[],
+  logisticsInput: LogisticsRecord[],
+) {
+  const startTime = new Date().toISOString();
+  const now = startTime;
+
+  const inventory = inventoryInput.map((item) => ({
+    ...item,
+    sku: item.sku.trim().toUpperCase(),
+    productName: item.productName.trim(),
+  }));
+  const inventoryMap = new Map(inventory.map((i) => [i.sku, i]));
+
+  const crm = crmInput.map((c) => ({
+    ...c,
+    customerId: c.customerId.trim().toUpperCase(),
+    fullName: cleanName(c.fullName),
+    email: c.email.trim().toLowerCase(),
+  }));
+  const crmMap = new Map(crm.map((c) => [c.customerId, c]));
+
+  const pos = posInput.map((p) => ({
+    ...p,
+    txId: p.txId.trim().toUpperCase(),
+    customerId: p.customerId.trim().toUpperCase(),
+    sku: p.sku.trim().toUpperCase(),
+  }));
+
+  const online = onlineInput.map((o) => ({
+    ...o,
+    orderId: o.orderId.trim().toUpperCase(),
+    customerId: o.customerId.trim().toUpperCase(),
+    sku: o.sku.trim().toUpperCase(),
+  }));
+
+  const logistics = logisticsInput.map((l) => ({
+    ...l,
+    shipmentId: l.shipmentId.trim().toUpperCase(),
+    orderId: l.orderId.trim().toUpperCase(),
+    customerId: l.customerId.trim().toUpperCase(),
+    trackingNumber: l.trackingNumber.trim().toUpperCase(),
+  }));
+
+  const alerts: ConsistencyAlert[] = [];
+
+  // 1. Real-Time Cross-Channel Stock Sync
+  const stockItems: UnifiedStockItem[] = inventory.map((item) => {
+    const posRows = pos.filter((p) => p.sku === item.sku);
+    const onlineRows = online.filter((o) => o.sku === item.sku);
+    const unitsSoldPOS = posRows.reduce((s, r) => s + r.quantity, 0);
+    const unitsSoldOnline = onlineRows.reduce((s, r) => s + r.quantity, 0);
+    const revenueTotal =
+      posRows.reduce((s, r) => s + r.totalAmount, 0) +
+      onlineRows.reduce((s, r) => s + r.totalAmount, 0);
+    const totalStock = item.manilaStock + item.cebuStock + item.warehouseStock;
+
+    let stockStatus: UnifiedStockItem["stockStatus"] = "Synced";
+    if (
+      item.manilaStock < 0 ||
+      item.cebuStock < 0 ||
+      item.warehouseStock < 0 ||
+      totalStock <= 0
+    ) {
+      stockStatus = "Oversell Risk";
+      alerts.push({
+        id: `ALT-OVER-${item.sku}`,
+        type: "CHANNEL_OVERSELL",
+        severity: "Critical",
+        feed: "INVENTORY",
+        referenceKey: item.sku,
+        message: `${item.sku} (${item.productName}) has negative or zero channel stock (Manila ${item.manilaStock}, Cebu ${item.cebuStock}, Online ${item.warehouseStock}). Restock immediately.`,
+        detectedAt: now,
+      });
+    } else if (
+      item.manilaStock <= 4 ||
+      item.cebuStock <= 4 ||
+      item.warehouseStock <= 4 ||
+      totalStock <= item.reorderPoint
+    ) {
+      stockStatus = "Low Stock";
+      alerts.push({
+        id: `ALT-LOW-${item.sku}`,
+        type: "LOW_STOCK",
+        severity: "Warning",
+        feed: "INVENTORY",
+        referenceKey: item.sku,
+        message: `${item.sku} (${item.productName}) is at low buffer (Manila ${item.manilaStock}, Cebu ${item.cebuStock}, Online ${item.warehouseStock}).`,
+        detectedAt: now,
+      });
+    }
+
+    return {
+      ...item,
+      totalStock,
+      unitsSoldPOS,
+      unitsSoldOnline,
+      revenueTotal,
+      stockStatus,
+    };
+  });
+
+  // 2. Virtualized Customer 360 + Personalized Offer Output
+  const customers: UnifiedCustomerRecord[] = crm.map((member) => {
+    const posTransactions = pos
+      .filter((p) => p.customerId === member.customerId)
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    const onlineOrders = online
+      .filter((o) => o.customerId === member.customerId)
+      .sort((a, b) => b.orderedAt.localeCompare(a.orderedAt));
+    const orderIds = new Set(onlineOrders.map((o) => o.orderId));
+    const shipments = logistics
+      .filter(
+        (l) => l.customerId === member.customerId || orderIds.has(l.orderId),
+      )
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+    const posSpend = posTransactions.reduce((s, r) => s + r.totalAmount, 0);
+    const onlineSpend = onlineOrders.reduce((s, r) => s + r.totalAmount, 0);
+    const totalSpend = posSpend + onlineSpend;
+
+    const latestCard =
+      onlineOrders.find((o) => o.cardNumber && o.cardNumber !== "N/A")
+        ?.cardNumber ||
+      posTransactions.find((p) => p.cardNumber && p.cardNumber !== "N/A")
+        ?.cardNumber ||
+      "N/A";
+
+    const timestamps = [
+      ...posTransactions.map((p) => p.timestamp),
+      ...onlineOrders.map((o) => o.orderedAt),
+    ].sort((a, b) => b.localeCompare(a));
+
+    return {
+      customerId: member.customerId,
+      fullName: member.fullName,
+      email: member.email,
+      phone: member.phone,
+      loyaltyTier: member.loyaltyTier,
+      pointsBalance: member.pointsBalance,
+      preferredBranch: member.preferredBranch,
+      gdprConsent: member.gdprConsent,
+      favoriteCategory: member.favoriteCategory,
+      posSpend,
+      onlineSpend,
+      totalSpend,
+      posOrderCount: posTransactions.length,
+      onlineOrderCount: onlineOrders.length,
+      lastPurchaseAt: timestamps[0] || member.joinedAt,
+      maskedCardOnFile: latestCard,
+      personalizedOffer: buildPersonalizedOffer(member),
+      posTransactions,
+      onlineOrders,
+      shipments,
+    };
+  });
+
+  // 3. Cross-Channel Data Consistency Checks (3PL & Unlinked POS)
+  const shippedOrders = new Set(logistics.map((l) => l.orderId));
+  for (const shipment of logistics) {
+    if (shipment.status === "Delayed") {
+      alerts.push({
+        id: `ALT-3PL-${shipment.shipmentId}`,
+        type: "DELAYED_3PL",
+        severity: "Warning",
+        feed: "LOGISTICS",
+        referenceKey: shipment.shipmentId,
+        message: `${shipment.carrier} (${shipment.trackingNumber}) for ${shipment.orderId} is Delayed${shipment.delayReason ? `: ${shipment.delayReason}` : "."}`,
+        detectedAt: now,
+      });
+    }
+  }
+
+  for (const ord of online) {
+    if (!shippedOrders.has(ord.orderId)) {
+      alerts.push({
+        id: `ALT-TRACK-${ord.orderId}`,
+        type: "MISSING_TRACKING",
+        severity: "Warning",
+        feed: "ONLINE",
+        referenceKey: ord.orderId,
+        message: `Online order ${ord.orderId} (${ord.productName}) is ${ord.orderStatus} with no assigned 3PL shipment record.`,
+        detectedAt: now,
+      });
+    }
+  }
+
+  for (const tx of pos) {
+    if (!crmMap.has(tx.customerId)) {
+      alerts.push({
+        id: `ALT-POS-${tx.txId}`,
+        type: "UNLINKED_POS_CUSTOMER",
+        severity: "Warning",
+        feed: "POS",
+        referenceKey: tx.txId,
+        message: `${tx.branch} POS sale ${tx.txId} (${tx.customerId}) is not linked to a registered CRM profile.`,
+        detectedAt: now,
+      });
+    }
+  }
+
+  const salesSummary = computeSalesSummary(
+    pos,
+    online,
+    logistics,
+    inventoryMap,
+  );
+  const endTime = new Date().toISOString();
   const report: ETLRunReport = {
-    id: options?.id || `ETL-${crypto.randomUUID()}`,
+    id: `SYNC-${randomUUID().slice(0, 8)}`,
     startTime,
     endTime,
-    status: warnings.length > 0 ? "PARTIAL_SUCCESS" : "SUCCESS",
+    status: alerts.some((a) => a.severity === "Critical")
+      ? "PARTIAL_SUCCESS"
+      : "SUCCESS",
     recordsExtracted: {
-      sis: sisData.length,
-      lms: lmsData.length,
-      library: libraryData.length,
-      hr: hrData.length,
-      alumni: alumniData.length,
+      POS: pos.length,
+      INVENTORY: inventory.length,
+      CRM: crm.length,
+      ONLINE: online.length,
+      LOGISTICS: logistics.length,
     },
-    recordsTransformed: masterRecords.length,
-    recordsLoaded: masterRecords.length,
-    anomaliesDetected,
-    warnings,
+    recordsLoaded: stockItems.length + customers.length,
+    anomaliesDetected: alerts.length,
+    warnings: alerts.slice(0, 6).map((a) => a.message),
   };
 
-  return { masterRecords, report };
+  return {
+    stockItems,
+    customers,
+    consistencyAlerts: alerts,
+    salesSummary,
+    report,
+  };
 }

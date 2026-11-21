@@ -18,19 +18,9 @@ export function BrandMark({
       fill="currentColor"
     >
       {compact ? (
-        <>
-          <rect x="30" y="28" width="40" height="140" />
-          <rect x="90" y="46" width="40" height="122" />
-          <path d="M146 40 L184.6 29.6 L221.7 168 H180.3 Z" />
-          <rect x="18" y="192" width="220" height="36" />
-        </>
+        <path d="M28 64 L70 22 H114 V86 L178 22 H228 V70 L170 128 L228 186 V234 H178 L114 170 V234 H70 L28 192 Z" />
       ) : (
-        <>
-          <rect x="38" y="34" width="36" height="140" />
-          <rect x="92" y="52" width="36" height="122" />
-          <path d="M146.5 46 L181.3 36.7 L218.1 174 H180.8 Z" />
-          <rect x="24" y="194" width="208" height="30" />
-        </>
+        <path d="M36 68 L76 28 H118 V88 L178 28 H220 V74 L166 128 L220 182 V228 H178 L118 168 V228 H76 L36 188 Z" />
       )}
     </svg>
   );

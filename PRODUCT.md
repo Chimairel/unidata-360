@@ -5,30 +5,21 @@
 web
 
 ## Users
-University registrars, academic advisors, students and compliance auditors are the demonstration personas. The group presents the system to its Enterprise Data Management class.
+Store Operations Managers, Marketing & CRM Specialists, Manila Branch Managers, and PCI DSS / GDPR Compliance Auditors are the four live demonstration roles presented in class with a one-click top-bar switcher.
 
 ## Product Purpose
-Demonstrate the education industry's complete EDM lifecycle: sources, integration, governance and outputs, with a working persistent full-stack application.
+Demonstrate Retail & E-Commerce Enterprise Data Management cleanly: 5 sources (POS, Inventory, CRM, Online Storefront, 3PL Logistics) unified through Real-Time APIs, CDC, and Virtualization under PCI DSS and GDPR into Stock Sync, Personalized Offers, and Sales Analytics.
 
 ## Operating Context
-Course demonstration using synthetic SIS, LMS and Library feeds. Presentation mode explains the lifecycle and comparative industry matrix supplied by the user.
+Frictionless classroom demonstration at `http://localhost:3005` backed by persistent Neon PostgreSQL (`retail_*` tables). Opens directly into the live workspace with no login wall and instant 1-click role switching (`OPS_MANAGER`, `MARKETING_CRM`, `BRANCH_MANAGER`, `COMPLIANCE_AUDITOR`).
 
 ## Capabilities and Constraints
-Next.js App Router, React, TypeScript and Tailwind. Use port 3005 exclusively. PostgreSQL stores student records and accounts. The workspace supports CSV/JSON ingestion, Student 360, academic analytics, role-based server projections, an audit trail, PDF reports and classroom slides. HR and Alumni CRM are planned extensions in the course's wider industry model.
-
-Account mode uses school ID/password sign-in for students and assigned email/password sign-in for staff with fixed server-assigned roles. The Registrar provisions student accounts from SIS. Students confirm their enrollment email and set their first password before access is granted. System Admin creates and manages Registrar, department-assigned Dean, Academic Advisor and Compliance Auditor accounts in the Accounts dashboard. Admin is a separate role with no student-record or academic-report access. Initial Admin provisioning and protected administrator recovery use the local account CLI. Student accounts link to their own student ID and access only their permitted record. The enrollment email is used for activation and student password recovery. Recovery links are single-use, expire after 30 minutes and revoke previous account sessions after a successful reset. Demo mode keeps classroom persona switching. Authentication is application-managed, not institutional SSO. The school has four departments: BSIT, BEED, BSED and BSHM. Registrars manage school-wide source feeds and integration; each Dean sees only their assigned department’s masked records, analytics, follow-ups and personal activity. Department restrictions also apply to direct API requests and exports.
-
-The operational extension adds Registrar/Auditor Data Quality work and real-account advising cases for Registrar, department Deans and Academic Advisors. Source issues persist with stewardship and history, resolve only after passing ETL, and retain receipt metadata. Cases link to active staff accounts and support notes, due dates, outcomes and reopening. Students and auditors do not receive case notes; System Admin remains limited to staff accounts. Term history, HR/Alumni integration and graduation review remain future lifecycle work.
-
-Registrar manages student activation and enrollment email corrections in Student 360. Local preview mode saves messages on the backend computer.
+Next.js 16.4.5 App Router, React 19, TypeScript, and CSS variables on ports 3005 (frontend) and 3006 (backend).
+- **Four clear views:** `Live Flow` (scenarios + 4-column Sources → Integration → Governance → Outputs pipeline), `Stock & Delivery` (branch/online inventory cards + 3PL courier status), `Customers & Offers` (unified customer profiles + live GDPR consent toggle + role-masked cards), and `Sales & Privacy` (unified Peso sales + role masking proof + SHA-256 audit log + collapsed raw data/CSV drawer).
+- **Server-enforced governance:** Zero raw 16-digit PANs leave the backend (`•••• •••• •••• 4242` for Ops/Branch, `[PCI DSS Restricted]` for Marketing, `[PCI DSS Masked]` for Auditor); GDPR Opt-Out suppresses automated offers and masks contact PII for Marketing; Branch Manager sees Manila POS only; Auditor sees pseudonymized `Customer #01..#06` records.
 
 ## Brand Commitments
-Preserve Estante’s name and university data purpose. The supplied 21st.dev MercuryLogin design guides typography, hierarchy and controls across the app. Bold Geist headings, underlined fields and rounded primary actions connect the account pages and workspaces. Account forms use the animated liquid backdrop, and workspace headings use a still version. Light remains the default, with a persistent dark-theme toggle in both headers.
-
-## Evidence on Hand
-Eight synthetic SIS students and matching learning/library seed data. Two supplied classroom reference slides. No real institution, live Canvas integration, regulatory certification or longitudinal retention dataset is supplied.
+Preserve the Estante brand ("shelf"), the inset `#111113` black rail, white/soft-gray workspace (`#ffffff` / `#f5f5f7`), Geist typography with tabular Peso numbers and Geist Mono identifiers, persistent light/dark theme toggle, and still Mercury liquid backdrop.
 
 ## Product Principles
-Make every lifecycle stage demonstrable. Enforce permissions before sending data to the browser. Distinguish synthetic demonstration data from institutional claims. Preserve audit history across demo resets.
-
-Keep interface copy brief: task titles, labels, useful status and essential guidance. Put detailed criteria behind disclosure and course explanations in presentation views. Avoid promotional introductions and repeated descriptions.
+Lead with a clear 4-stage visual flow, never nest cards inside cards, keep functional UI labels at 11px+, and place raw multi-feed tables and batch uploads behind progressive disclosure so every screen reads calmly during a live presentation.

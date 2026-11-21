@@ -19,6 +19,15 @@ if (
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.dummyjson.com",
+        pathname: "/product-images/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {

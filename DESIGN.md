@@ -1,6 +1,6 @@
 ---
 name: Estante
-description: A monochrome university workspace with Mercury typography, liquid accents and light and dark themes.
+description: A calm monochrome Retail & E-Commerce EDM workspace with Geist typography, flat hairline separation, and light/dark themes.
 colors:
   canvas: "#f1f1f3"
   rail: "#111113"
@@ -88,10 +88,10 @@ typography:
     lineHeight: 1.55
   workspace-headline:
     fontFamily: "Geist, Arial, sans-serif"
-    fontSize: "clamp(1.875rem, 4vw, 3.25rem)"
-    fontWeight: 800
-    lineHeight: 1.04
-    letterSpacing: "-0.04em"
+    fontSize: "clamp(1.5rem, 2.5vw, 2rem)"
+    fontWeight: 720
+    lineHeight: 1.15
+    letterSpacing: "-0.03em"
   workspace-panel-title:
     fontFamily: "Geist, Arial, sans-serif"
     fontSize: "18px"

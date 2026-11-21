@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Estante | Enterprise Data Management",
+  title: "Karto | Retail & E-Commerce EDM",
   description:
-    "Higher Education Enterprise Data Management System: Sources, ETL Integration, FERPA Governance & Student 360",
+    "Retail & E-Commerce Enterprise Data Management: POS, Inventory, CRM, Online Storefronts, 3PL Logistics, Real-Time APIs/CDC, and PCI DSS / GDPR Governance",
 };
 
 export default function RootLayout({

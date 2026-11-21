@@ -1,180 +1,80 @@
-import type { UnifiedStudentRecord } from "@/shared/types";
+export const retailSourceMap = [
+  {
+    source: "POS Systems (Manila & Cebu)",
+    owner: "Branch Cashiers & Managers",
+    data: "In-store sales transactions, SKU quantities, cash/GCash/card totals",
+    integration: "Real-Time API on sale + CSV/JSON upload",
+    governance: "PCI DSS card last-4 tokenization; branch-scoped access",
+    output: "Stock deduction, Branch sales analytics & Customer 360",
+    status: "Live",
+  },
+  {
+    source: "Inventory Management",
+    owner: "Store Operations & Warehouse",
+    data: "Manila, Cebu & Online warehouse counts, pricing, reorder points",
+    integration: "CDC stock sync + +20 Restock API",
+    governance: "Read across Ops/Branch; restock restricted to Ops/Branch",
+    output: "Real-Time Stock Sync table, Low Stock & Oversell alerts",
+    status: "Live",
+  },
+  {
+    source: "Customer CRM",
+    owner: "Marketing & CRM Team",
+    data: "Customer profiles, loyalty tier (VIP–Bronze), points, GDPR opt-in/out",
+    integration: "Virtualization + live GDPR consent API",
+    governance: "GDPR PII masking & automatic offer suppression on Opted Out",
+    output: "Virtualized Customer 360 & Personalized Offers",
+    status: "Live",
+  },
+  {
+    source: "Online Storefront",
+    owner: "E-Commerce Web & Mobile App",
+    data: "Web/App checkout orders, promo codes, tokenized card numbers",
+    integration: "Real-Time Order API + seasonal spike simulator",
+    governance: "PCI DSS masking ([PCI DSS Restricted] for Marketing)",
+    output: "Unified Sales Analytics & Online fulfillment tracking",
+    status: "Live",
+  },
+  {
+    source: "Logistics Providers (3PL)",
+    owner: "LBC Express, J&T Express, GrabExpress, DHL",
+    data: "Waybills, tracking numbers, delivery statuses & delay reasons",
+    integration: "CDC status webhooks + CSV/JSON import",
+    governance: "Branch-scoped delivery visibility; Auditor pseudonymized",
+    output: "3PL Delivery Tracker & Delay / Missing Tracking alerts",
+    status: "Live",
+  },
+];
 
-// Classroom reference: integration.pptx, slides 3–13 and 17–19.
-export function studentLifecycleSummary(student: UnifiedStudentRecord): {
-  stage: string;
-  graduationContext: string;
-} {
-  if (student.enrollmentStatus === "Graduated") {
-    if (student.alumniSummary) {
-      return {
-        stage: "Alumni (Graduated)",
-        graduationContext: `Class of ${student.alumniSummary.graduationYear} · ${student.alumniSummary.employmentStatus} · GDPR ${student.alumniSummary.contactConsent}`,
-      };
-    }
-    return {
-      stage: "Graduated · Alumni CRM pending",
-      graduationContext:
-        student.librarySummary.clearanceStatus === "Cleared"
-          ? "Graduated · Library cleared"
-          : `Graduated · Library ${student.librarySummary.clearanceStatus.toLowerCase()}`,
-    };
-  }
-  const senior =
-    student.yearLevel === "Senior" || student.yearLevel === "Graduate";
-  const stage = senior
-    ? "Graduation review"
-    : student.lmsSummary.enrolledCoursesCount > 0
-      ? "Learning"
-      : "Enrollment";
-  const blockers: string[] = [];
-  if (
-    student.academicStanding === "Academic Probation" ||
-    student.academicStanding === "At-Risk"
-  ) {
-    blockers.push(student.academicStanding);
-  }
-  if (student.librarySummary.clearanceStatus !== "Cleared") {
-    blockers.push(`Library: ${student.librarySummary.clearanceStatus}`);
-  }
-  if (!senior) {
-    return {
-      stage,
-      graduationContext: blockers.length
-        ? `${student.totalCredits} credits · ${blockers.join(" · ")}`
-        : `${student.totalCredits} credits · On track`,
-    };
-  }
-  return {
-    stage,
-    graduationContext: blockers.length
-      ? `Review required (${blockers.join("; ")})`
-      : `${student.totalCredits} credits · Standing & library clear for Registrar review`,
-  };
-}
-
-export const educationSourceMap = [
+export const retailChallenges = [
   {
-    source: "Student Information System",
-    owner: "Registrar",
-    data: "Identity, enrollment, program, GWA (1.00–5.00), credits and standing",
-    integration:
-      "CSV/JSON API ingestion; name/date/code cleansing; studentId master key",
-    governance:
-      "Registrar controls imports and student activation; server masks protected fields by role",
-    output: "Student 360, graduation workflow and academic analytics",
-    status: "Implemented",
-  },
-  {
-    source: "Learning Management System",
-    owner: "Academic departments",
-    data: "Courses, attendance, assignments, scores and last activity",
-    integration:
-      "CSV/JSON API ingestion; date/code standardization; studentId + courseCode upsert",
-    governance:
-      "Validate scores and dates; withhold raw feeds from non-registrars",
-    output: "Engagement summaries, warning signals and Advising Cases",
-    status: "Implemented",
-  },
-  {
-    source: "HR and payroll",
-    owner: "Human Resources",
-    data: "Faculty advisor identity, titles, courses taught and payroll band",
-    integration:
-      "CSV/JSON API ingestion; reconciled by advisor name into Student 360",
-    governance:
-      "Payroll bands masked ([HR Payroll Restricted]) for all non-Registrar roles",
-    output: "Faculty advisor and course-load context inside Student 360",
-    status: "Implemented",
-  },
-  {
-    source: "Library",
-    owner: "Library services",
-    data: "Loans, overdue items, fines and clearance status",
-    integration: "CSV/JSON API ingestion; studentId reconciliation",
-    governance: "Validate counts and fines; registrar-only raw records",
-    output: "Campus clearance context for graduation review",
-    status: "Implemented",
-  },
-  {
-    source: "Alumni CRM",
-    owner: "Alumni relations",
-    data: "Graduate identity, class year, employment and GDPR contact consent",
-    integration:
-      "CSV/JSON API ingestion + Registrar Graduation handoff into Alumni CRM",
-    governance:
-      "Respects Opted In / Opted Out GDPR preferences (masks opted-out employer)",
-    output: "Live post-graduation Alumni CRM directory and lifecycle handoff",
-    status: "Implemented",
-  },
-] as const;
-
-export const educationLifecycle = [
-  {
-    stage: "Enrollment",
+    pillar: "Integration: Real-Time APIs",
     evidence:
-      "SIS identity (YYYYMMDD), enrollment, program, credits, and mandatory 123456 student onboarding",
-    status: "Implemented",
+      "Record POS Sale, Place Online Order, +20 Restock, and GDPR Consent toggles run live against PostgreSQL.",
+    status: "Live",
   },
   {
-    stage: "Learning",
+    pillar: "Integration: CDC & Virtualization",
     evidence:
-      "LMS engagement joined to GWA (1.00–5.00; 3.00+ = fail/5.00), HR faculty advisors, and Advising Cases",
-    status: "Implemented",
+      "Every mutation appends to the CDC Event Stream with ms latency while Customer 360 virtualizes cross-channel spend.",
+    status: "Live",
   },
   {
-    stage: "Graduation",
+    pillar: "Governance: PCI DSS & GDPR",
     evidence:
-      "Credits, academic standing, Library clearance, and Registrar one-click Graduate -> Alumni CRM handoff",
-    status: "Implemented",
+      "Zero raw 16-digit PANs leave the server; Opted-Out customers automatically suppress Personalized Offers and redact PII.",
+    status: "Live",
   },
   {
-    stage: "Alumni",
+    pillar: "Challenge: Seasonal Spikes (11.11)",
     evidence:
-      "Live Alumni CRM feed tracking graduation year, placement, and GDPR Opted In / Opted Out consent",
-    status: "Implemented",
+      "One-click Simulate 11.11 Seasonal Spike fires 6 burst orders, creates CDC traffic, and surfaces instant Oversell Risk.",
+    status: "Live",
   },
-] as const;
-
-export const courseRequirements = [
   {
-    id: "COURSE-01",
-    slide: 19,
-    requirement: "Choose one industry",
+    pillar: "Challenge: 3PL & Consistency",
     evidence:
-      "Education / Universities throughout the workspace and presentation",
+      "Flags delayed J&T hubs, missing shipment tracking on ORD-5006, and unlinked walk-in POS guests automatically.",
+    status: "Live",
   },
-  {
-    id: "COURSE-02",
-    slide: 19,
-    requirement: "Map sources, integration, governance and outputs",
-    evidence:
-      "All 5 feeds (SIS, LMS, Library, HR/Payroll, Alumni CRM) live in pipeline and flowchart",
-  },
-  {
-    id: "COURSE-03",
-    slide: 19,
-    requirement: "Share a flowchart",
-    evidence: "Four-stage pipeline flow and interactive lifecycle diagram",
-  },
-  {
-    id: "COURSE-04",
-    slide: 18,
-    requirement: "Place the industry in a comparative matrix",
-    evidence: "Five-industry matrix, including the complete Education row",
-  },
-  {
-    id: "COURSE-05",
-    slide: 17,
-    requirement: "Explain the university lifecycle and its challenges",
-    evidence:
-      "Live Enrollment -> Learning -> Graduation -> Alumni lifecycle, vendor feeds, and secure access",
-  },
-  {
-    id: "COURSE-06",
-    slide: 3,
-    requirement: "Relate integration, governance and DQM",
-    evidence:
-      "Validated ingestion, reconciled master, field/payroll masking and audit integrity",
-  },
-] as const;
+];

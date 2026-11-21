@@ -12,15 +12,17 @@ import {
 import { slides, industryMatrix } from "@/frontend/lib/presentation";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { Badge } from "./ui";
-import { EducationFlowchart } from "./EducationFlowchart";
+import { RetailFlowchart } from "./RetailFlowchart";
+
 export function PresentationMode({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [index, setIndex] = useState(0);
   const [notes, setNotes] = useState(false);
   const [full, setFull] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
-  const { sourceCounts, masterRecords } = useEDM();
+  const { sourceCounts, customers } = useEDM();
   const slide = slides[index];
+
   useEffect(() => {
     const dialog = ref.current;
     dialog?.showModal();
@@ -31,6 +33,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
       document.removeEventListener("fullscreenchange", changed);
     };
   }, []);
+
   const next = () => setIndex((i) => Math.min(slides.length - 1, i + 1));
   const previous = () => setIndex((i) => Math.max(0, i - 1));
   const close = async () => {
@@ -38,11 +41,12 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
       await document.exitFullscreen().catch(() => {});
     onClose();
   };
+
   return (
     <dialog
       ref={ref}
       className="modal presentation"
-      aria-label="EDM classroom presentation"
+      aria-label="EDM Retail and E-Commerce presentation"
       onCancel={(e) => {
         e.preventDefault();
         void close();
@@ -69,8 +73,8 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
     >
       <div className="modal-heading">
         <div className="presentation-heading">
-          <h2>Estante</h2>
-          <Badge>EDM · Education / Universities</Badge>
+          <h2>Karto</h2>
+          <Badge>EDM · Retail &amp; E-Commerce</Badge>
         </div>
         <div className="presentation-tools">
           <button
@@ -85,7 +89,6 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
           <button
             className="button quiet"
             onClick={async () => {
-              // Fullscreen remains optional; the dialog is usable if denied.
               try {
                 setFullscreenError("");
                 if (full) await document.exitFullscreen();
@@ -124,9 +127,9 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {index === 1 ? (
-          <EducationFlowchart
+          <RetailFlowchart
             sourceCounts={sourceCounts}
-            masterCount={masterRecords.length}
+            customerCount={customers.length}
           />
         ) : index === 6 ? (
           <div className="table-wrap">
@@ -148,7 +151,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
                 {industryMatrix.map((row, i) => (
                   <tr
                     key={row[0]}
-                    className={i === 4 ? "matrix-highlight" : ""}
+                    className={i === 2 ? "matrix-highlight" : ""}
                   >
                     {row.map((cell, j) => (
                       <td key={j}>
@@ -172,11 +175,10 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
         )}
         {index === 0 && (
           <p className="small" style={{ marginTop: 20 }}>
-            Current permitted snapshot: {sourceCounts.SIS} SIS ·{" "}
-            {sourceCounts.LMS} LMS · {sourceCounts.LIBRARY} Library ·{" "}
-            {sourceCounts.HR} HR · {sourceCounts.ALUMNI} Alumni ·{" "}
-            {masterRecords.length} master students. Synthetic demonstration
-            data.
+            Live snapshot: {sourceCounts.POS} POS · {sourceCounts.INVENTORY} SKUs ·{" "}
+            {sourceCounts.CRM} CRM · {sourceCounts.ONLINE} Online ·{" "}
+            {sourceCounts.LOGISTICS} 3PL Shipments · {customers.length} Customer
+            360 profiles.
           </p>
         )}
       </article>

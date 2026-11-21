@@ -13,27 +13,25 @@ export function AccountHeader({
         <Link
           href="/login"
           className="account-header-brand"
-          aria-label="Estante sign in"
+          aria-label="Karto sign in"
         >
           <span className="brand-mark">
             <BrandMark size={22} compact />
           </span>
           <span>
-            <strong>Estante</strong>
+            <strong>Karto</strong>
             <span className="account-header-subtitle">
-              University data workspace
+              Retail &amp; E-Commerce EDM
             </span>
           </span>
         </Link>
         <nav className="account-header-nav" aria-label="Account navigation">
-          {current !== "onboarding" && (
-            <Link
-              href="/login"
-              aria-current={current === "login" ? "page" : undefined}
-            >
-              Sign in
-            </Link>
-          )}
+          <Link
+            href="/login"
+            aria-current={current === "login" ? "page" : undefined}
+          >
+            Sign in
+          </Link>
           <ThemeToggle />
         </nav>
       </div>

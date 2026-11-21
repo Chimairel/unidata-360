@@ -1,36 +1,34 @@
-import type {
-  AccessIdentity,
-  UnifiedStudentRecord,
-  UserRole,
-} from "@/shared/types";
-import { isDepartment } from "@/shared/school";
+import type { AccessIdentity, UserRole } from "@/shared/types";
+import { isBranch, type Branch } from "@/shared/retail";
 
-export function departmentScope(role: UserRole, identity?: AccessIdentity) {
-  if (role !== "DEAN") return undefined;
-  return identity?.mode === "account" ? identity.department : "BSIT";
+export function canManageOps(role: UserRole): boolean {
+  return role === "OPS_MANAGER";
 }
 
-export function canAccessStudent(
+export function canRecordPOSSale(role: UserRole): boolean {
+  return role === "OPS_MANAGER" || role === "BRANCH_MANAGER";
+}
+
+export function canToggleGDPR(role: UserRole): boolean {
+  return role === "OPS_MANAGER" || role === "MARKETING_CRM";
+}
+
+export function canViewAnalytics(role: UserRole): boolean {
+  return (
+    role === "OPS_MANAGER" ||
+    role === "MARKETING_CRM" ||
+    role === "BRANCH_MANAGER"
+  );
+}
+
+export function branchScope(
   role: UserRole,
-  identity: AccessIdentity | undefined,
-  student: Pick<UnifiedStudentRecord, "studentId" | "department">,
-) {
-  if (role === "SYSTEM_ADMIN") return false;
-  if (role === "STUDENT")
-    return (
-      student.studentId ===
-      (identity?.mode === "account" ? identity.studentId : "20221010")
-    );
-  if (role === "DEAN") {
-    const scope = departmentScope(role, identity);
-    return isDepartment(scope) && student.department === scope;
-  }
-  return true;
+  identity?: AccessIdentity,
+): Branch | undefined {
+  if (role !== "BRANCH_MANAGER") return undefined;
+  return isBranch(identity?.branch) ? identity.branch : "Manila";
 }
 
-export const canImport = (role: UserRole) => role === "REGISTRAR";
-export const canFollowUp = (role: UserRole) =>
-  ["DEAN", "REGISTRAR", "ACADEMIC_ADVISOR"].includes(role);
-export const canViewAnalytics = canFollowUp;
-export const ownAuditOnly = (role: UserRole) =>
-  role === "DEAN" || role === "ACADEMIC_ADVISOR";
+export function ownAuditOnly(role: UserRole): boolean {
+  return role === "MARKETING_CRM" || role === "BRANCH_MANAGER";
+}

@@ -12,16 +12,7 @@
     "start": "node scripts/services.mjs start",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
-    "test:api": "node scripts/smoke-api.mjs",
-    "format": "prettier --write frontend backend shared tests scripts",
-    "account:create": "tsx scripts/create-account.ts",
-    "account:password": "tsx scripts/create-account.ts --reset-password",
-    "school:setup": "tsx scripts/setup-school.ts",
-    "admin:setup": "tsx scripts/setup-admin.ts",
-    "test:auth": "tsx scripts/smoke-auth.ts",
-    "test:registration": "tsx scripts/smoke-registration.ts",
-    "test:admin": "tsx scripts/smoke-admin.ts",
-    "test:workflows": "tsx scripts/smoke-workflows.ts"
+    "format": "prettier --write frontend backend shared tests scripts"
   },
   "dependencies": {
     "@next/env": "16.4.5",

@@ -4,35 +4,21 @@ import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import { EDMProvider, useEDM } from "@/frontend/lib/context/EDMContext";
 import { Navbar } from "@/frontend/components/Navbar";
 import {
-  defaultWorkspaceTab,
   effectiveWorkspaceTab,
   type TabId,
 } from "@/frontend/lib/workspaceAccess";
-import { Student360Tab } from "@/frontend/components/tabs/Student360Tab";
-import { StudentWorkspace } from "@/frontend/components/StudentWorkspace";
-import { IntegrationPipelineTab } from "@/frontend/components/tabs/IntegrationPipelineTab";
-import { AcademicAnalyticsTab } from "@/frontend/components/tabs/AcademicAnalyticsTab";
-import { GovernanceTab } from "@/frontend/components/tabs/GovernanceTab";
+import { LiveFlowTab } from "@/frontend/components/tabs/LiveFlowTab";
+import { CheckoutTab } from "@/frontend/components/tabs/CheckoutTab";
+import { StockDeliveryTab } from "@/frontend/components/tabs/StockDeliveryTab";
+import { CustomersOffersTab } from "@/frontend/components/tabs/CustomersOffersTab";
+import { SalesPrivacyTab } from "@/frontend/components/tabs/SalesPrivacyTab";
 import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectureModal";
-import { PresentationMode } from "@/frontend/components/PresentationMode";
 import { SignIn } from "@/frontend/components/SignIn";
 import { MercuryBackdrop } from "@/frontend/components/ui/neural-access-login";
-import { AccountsTab } from "@/frontend/components/tabs/AccountsTab";
-import { CasesTab } from "@/frontend/components/tabs/CasesTab";
-import { QualityTab } from "@/frontend/components/tabs/QualityTab";
-import type { UserRole } from "@/shared/types";
 
 function Workspace() {
-  const [selection, setSelection] = useState<{
-    role: UserRole;
-    tab: TabId;
-  } | null>(null);
+  const [selectedTab, setSelectedTab] = useState<TabId>("checkout");
   const [architecture, setArchitecture] = useState(false);
-  const [presentation, setPresentation] = useState(false);
-  const [caseIntent, setCaseIntent] = useState<{
-    role: UserRole;
-    studentId: string;
-  } | null>(null);
   const {
     isLoading,
     error,
@@ -43,11 +29,11 @@ function Workspace() {
     actorName,
     requiresSignIn,
   } = useEDM();
+
   if (requiresSignIn) return <SignIn onSignedIn={() => void refresh()} />;
-  const activeTab =
-    selection?.role === currentRole
-      ? effectiveWorkspaceTab(currentRole, selection.tab)
-      : defaultWorkspaceTab(currentRole);
+
+  const activeTab = effectiveWorkspaceTab(currentRole, selectedTab);
+
   return (
     <div className="app-shell">
       <a href="#workspace" className="skip-link">
@@ -55,12 +41,8 @@ function Workspace() {
       </a>
       <Navbar
         activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setSelection({ role: currentRole, tab });
-          if (tab === "cases") setCaseIntent(null);
-        }}
+        setActiveTab={setSelectedTab}
         openArchitecture={() => setArchitecture(true)}
-        openPresentation={() => setPresentation(true)}
       />
       <main id="workspace" className="workspace">
         <MercuryBackdrop still />
@@ -89,77 +71,46 @@ function Workspace() {
           <div
             className="loading-state"
             aria-busy="true"
-            aria-label="Loading university workspace"
+            aria-label="Loading retail workspace"
           >
             <div />
             <div />
             <div />
-            <p>Loading your permitted workspace…</p>
+            <p>Loading your permitted retail workspace…</p>
           </div>
         ) : (
           <>
-            {activeTab === "accounts" && currentRole === "SYSTEM_ADMIN" && (
-              <AccountsTab />
+            {activeTab === "flow" && (
+              <LiveFlowTab onNavigate={(tab) => setSelectedTab(tab)} />
             )}
-            {activeTab === "quality" && <QualityTab />}
-            {activeTab === "cases" && (
-              <CasesTab
-                key={`${currentRole}:${caseIntent?.role === currentRole ? caseIntent.studentId : "queue"}`}
-                initialStudentId={
-                  caseIntent?.role === currentRole
-                    ? caseIntent.studentId
-                    : undefined
-                }
-              />
+            {activeTab === "checkout" && (
+              <CheckoutTab onNavigate={(tab) => setSelectedTab(tab)} />
             )}
-            {activeTab === "student360" &&
-              (currentRole === "STUDENT" ? (
-                <StudentWorkspace />
-              ) : (
-                <Student360Tab key={currentRole} />
-              ))}
-            {activeTab === "pipeline" && <IntegrationPipelineTab />}
-            {activeTab === "analytics" && (
-              <AcademicAnalyticsTab
-                key={currentRole}
-                onOpenCase={(studentId) => {
-                  setCaseIntent({ role: currentRole, studentId });
-                  setSelection({ role: currentRole, tab: "cases" });
-                }}
-              />
-            )}
-            {activeTab === "governance" && <GovernanceTab />}
+            {activeTab === "stock" && <StockDeliveryTab />}
+            {activeTab === "customers" && <CustomersOffersTab />}
+            {activeTab === "sales" && <SalesPrivacyTab />}
           </>
         )}
       </main>
       <footer className="app-footer">
         <span>
-          Estante <span className="footer-dot">·</span> EDM course
-          demonstration
+          Karto <span className="footer-dot">·</span> Retail &amp; E-Commerce EDM
         </span>
         <span>
-          Synthetic data <span className="footer-dot">·</span>{" "}
-          {currentRole === "STUDENT"
-            ? "Student self-access"
-            : actorName.split(" (")[0]}
+          PCI DSS &amp; GDPR Enforced <span className="footer-dot">·</span>{" "}
+          {actorName}
         </span>
       </footer>
-      {architecture &&
-        !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) &&
-        !isLoading && (
-          <SystemArchitectureModal
-            isOpen
-            onClose={() => setArchitecture(false)}
-          />
-        )}
-      {presentation &&
-        !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) &&
-        !isLoading && (
-          <PresentationMode onClose={() => setPresentation(false)} />
-        )}
+      {architecture && !isLoading && (
+        <SystemArchitectureModal
+          isOpen
+          onClose={() => setArchitecture(false)}
+        />
+      )}
     </div>
   );
 }
+
 export default function Dashboard() {
   return (
     <EDMProvider>

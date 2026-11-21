@@ -1,39 +1,51 @@
 import { z } from "zod";
 import { unstable_rethrow } from "next/navigation";
+import { accountsRequired } from "@/backend/auth";
 import {
-  session,
-  checkOrigin,
   AuthenticationRequired,
+  checkOrigin,
+  session,
 } from "@/backend/session";
 import {
   actors,
-  assignIntervention,
+  appendCDC,
   audit,
+  createCustomer,
+  customerById,
+  dispatchOnlineOrder,
   execute,
-  graduateStudent,
-  masters,
+  importCatalogProduct,
+  processCheckout,
+  recordOnlineOrder,
+  recordPOSSale,
   resetDemo,
+  restockSKU,
+  simulateSeasonalSpike,
   snapshot,
   sync,
+  toggleGDPRConsent,
   transaction,
+  transferStock,
+  updateShipmentStatus,
   upsert,
 } from "@/backend/store";
 import { parseImport } from "@/backend/validation";
-import type { UserRole } from "@/shared/types";
-import { canAccessStudent, canImport, canFollowUp } from "@/backend/access";
 import {
-  provisionStudentAccounts,
-  studentProvisionSummary,
-} from "@/backend/studentAccounts";
+  branchScope,
+  canManageOps,
+  canRecordPOSSale,
+  canToggleGDPR,
+} from "@/backend/access";
+import { BRANCHES, CARRIERS, CATEGORIES } from "@/shared/retail";
+import type { CheckoutReceipt, UserRole } from "@/shared/types";
 
 const command = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("role"),
     role: z.enum([
-      "REGISTRAR",
-      "DEAN",
-      "ACADEMIC_ADVISOR",
-      "STUDENT",
+      "OPS_MANAGER",
+      "MARKETING_CRM",
+      "BRANCH_MANAGER",
       "COMPLIANCE_AUDITOR",
     ]),
   }),
@@ -41,14 +53,98 @@ const command = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reset") }),
   z.object({
     type: z.literal("import"),
-    feed: z.enum(["SIS", "LMS", "LIBRARY", "HR", "ALUMNI"]),
+    feed: z.enum(["POS", "INVENTORY", "CRM", "ONLINE", "LOGISTICS"]),
     format: z.enum(["csv", "json"]),
     content: z.string().max(2_000_000),
   }),
-  z.object({ type: z.literal("graduate"), studentId: z.string().max(60) }),
-  z.object({ type: z.literal("intervention"), studentId: z.string().max(60) }),
-  z.object({ type: z.literal("view"), studentId: z.string().max(60) }),
+  z.object({
+    type: z.literal("pos_sale"),
+    branch: z.enum(BRANCHES),
+    sku: z.string().min(1).max(60),
+    customerId: z.string().max(60),
+    quantity: z.number().int().min(1).max(50),
+    paymentMethod: z.enum(["Card", "Cash", "GCash"]),
+  }),
+  z.object({
+    type: z.literal("online_order"),
+    sku: z.string().min(1).max(60),
+    customerId: z.string().min(1).max(60),
+    quantity: z.number().int().min(1).max(50),
+    carrier: z.enum(CARRIERS),
+    paymentMethod: z.enum(["Card", "GCash", "Maya"]),
+  }),
+  z.object({ type: z.literal("seasonal_spike") }),
+  z.object({
+    type: z.literal("restock"),
+    sku: z.string().min(1).max(60),
+    amount: z.number().int().min(1).max(500).optional(),
+  }),
+  z.object({
+    type: z.literal("toggle_gdpr"),
+    customerId: z.string().min(1).max(60),
+  }),
+  z.object({
+    type: z.literal("import_catalog_product"),
+    productId: z.number().int().min(1).max(1000),
+  }),
+  z.object({
+    type: z.literal("checkout"),
+    channel: z.enum(["POS", "ONLINE"]),
+    branch: z.enum(BRANCHES).optional(),
+    customerId: z.string().max(60),
+    paymentMethod: z.enum(["Card", "Cash", "GCash", "Maya"]),
+    cardNumber: z.string().max(30).optional(),
+    carrier: z.enum(CARRIERS).optional(),
+    items: z
+      .array(
+        z.object({
+          sku: z.string().min(1).max(60),
+          quantity: z.number().int().min(1).max(50),
+        }),
+      )
+      .min(1)
+      .max(20),
+  }),
+  z.object({
+    type: z.literal("create_customer"),
+    fullName: z.string().trim().min(2).max(120),
+    email: z.string().trim().toLowerCase().pipe(z.email().max(200)),
+    phone: z.string().trim().min(5).max(40),
+    preferredBranch: z.enum(BRANCHES),
+    favoriteCategory: z.enum(CATEGORIES),
+    loyaltyTier: z.enum(["VIP", "Gold", "Silver", "Bronze"]),
+    gdprConsent: z.enum(["Opted In", "Opted Out"]),
+  }),
+  z.object({
+    type: z.literal("dispatch_order"),
+    orderId: z.string().min(1).max(60),
+    carrier: z.enum(CARRIERS),
+  }),
+  z.object({
+    type: z.literal("update_shipment"),
+    shipmentId: z.string().min(1).max(60),
+    status: z.enum([
+      "Label Created",
+      "In Transit",
+      "Out for Delivery",
+      "Delivered",
+      "Delayed",
+    ]),
+    delayReason: z.string().max(200).optional(),
+  }),
+  z.object({
+    type: z.literal("transfer_stock"),
+    sku: z.string().min(1).max(60),
+    fromChannel: z.enum(["Manila", "Cebu", "Online"]),
+    toChannel: z.enum(["Manila", "Cebu", "Online"]),
+    quantity: z.number().int().min(1).max(500),
+  }),
+  z.object({
+    type: z.literal("view"),
+    customerId: z.string().min(1).max(60),
+  }),
 ]);
+
 export async function GET() {
   try {
     const s = await session();
@@ -57,11 +153,12 @@ export async function GET() {
     });
   } catch (e) {
     unstable_rethrow(e);
-    if (e instanceof AuthenticationRequired)
+    if (e instanceof AuthenticationRequired) {
       return Response.json(
         { error: e.message },
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
+    }
     console.error(e);
     return Response.json(
       {
@@ -72,132 +169,95 @@ export async function GET() {
     );
   }
 }
+
 export async function POST(request: Request) {
   try {
     checkOrigin(request);
-    if (Number(request.headers.get("content-length") || 0) > 2_100_000)
+    if (Number(request.headers.get("content-length") || 0) > 2_100_000) {
       return Response.json(
         { error: "File too large. Maximum size is 2 MB." },
         { status: 413 },
       );
+    }
     const raw = await request.text();
-    if (raw.length > 2_100_000)
+    if (raw.length > 2_100_000) {
       return Response.json(
         { error: "File too large. Maximum size is 2 MB." },
         { status: 413 },
       );
+    }
     const parsed = command.safeParse(JSON.parse(raw));
-    if (!parsed.success)
+    if (!parsed.success) {
       return Response.json(
-        { error: "Invalid request. Check the selected feed and file format." },
+        { error: "Invalid request payload. Check fields and try again." },
         { status: 400 },
       );
+    }
+
     const cmd = parsed.data;
-    const s = await session();
+    let s = await session();
     let role: UserRole = s.role;
     let message = "Saved";
+    let receipt: CheckoutReceipt | undefined;
+
+    const opsOnly =
+      [
+        "sync",
+        "reset",
+        "import",
+        "online_order",
+        "seasonal_spike",
+        "import_catalog_product",
+        "dispatch_order",
+        "update_shipment",
+        "transfer_stock",
+      ].includes(cmd.type) ||
+      (cmd.type === "checkout" && cmd.channel === "ONLINE");
+    const posPerm =
+      cmd.type === "pos_sale" ||
+      cmd.type === "restock" ||
+      (cmd.type === "checkout" && cmd.channel === "POS");
+    const gdprPerm =
+      cmd.type === "toggle_gdpr" || cmd.type === "create_customer";
+
     if (
-      role === "SYSTEM_ADMIN" ||
-      (["sync", "reset", "import", "graduate"].includes(cmd.type) &&
-        !canImport(role)) ||
-      (cmd.type === "intervention" && !canFollowUp(role))
+      (opsOnly && !canManageOps(role)) ||
+      (posPerm && !canRecordPOSSale(role)) ||
+      (gdprPerm && !canToggleGDPR(role))
     ) {
       await audit(
         role,
-        "MASKING_OVERRIDE_ATTEMPT",
+        "ACCESS_DENIED",
         cmd.type,
-        "Server denied a command outside this persona’s permissions.",
+        "Server denied a command outside this role's permissions.",
         "RESTRICTED_MASKED",
         s,
       );
       return Response.json(
-        { error: "This action requires a permitted persona." },
+        { error: "This action requires a permitted retail role." },
         { status: 403 },
       );
     }
-    if (cmd.type === "view" || cmd.type === "intervention") {
-      const [student] = await masters(cmd.studentId);
-      if (!student || !canAccessStudent(role, s, student))
+
+    if (cmd.type === "view") {
+      const cust = await customerById(cmd.customerId);
+      const scope = branchScope(role, s);
+      if (
+        !cust ||
+        (scope &&
+          cust.preferredBranch !== scope &&
+          !cust.posTransactions.some((p) => p.branch === scope))
+      ) {
         return Response.json(
-          { error: "Record unavailable to this account." },
+          { error: "Customer record unavailable to this role." },
           { status: 404 },
         );
-    }
-    if (cmd.type === "role") {
-      if (s.mode === "account") {
-        await audit(
-          role,
-          "MASKING_OVERRIDE_ATTEMPT",
-          "Account role",
-          "Denied role switching for an authenticated account.",
-          "RESTRICTED_MASKED",
-          s,
-        );
-        return Response.json(
-          {
-            error:
-              "Your role is assigned to your account and cannot be changed here.",
-          },
-          { status: 403 },
-        );
       }
-      await transaction(async () => {
-        await execute("UPDATE sessions SET role=? WHERE id=?", cmd.role, s.id);
-        await audit(
-          cmd.role,
-          "MASKING_OVERRIDE_ATTEMPT",
-          "Demo persona",
-          `Switched demonstration perspective from ${actors[role]} to ${actors[cmd.role]}.`,
-        );
-      });
-      role = cmd.role;
-      message = "Persona updated. Server permissions applied.";
-    } else if (cmd.type === "sync") {
-      await transaction(async () => {
-        const report = await sync(s);
-        await audit(
-          role,
-          "ETL_SYNC_RUN",
-          report.id,
-          `Reconciled ${report.recordsLoaded} student records.`,
-          "ALLOWED",
-          s,
-        );
-      });
-      message = "ETL complete. Master records updated.";
-    } else if (cmd.type === "reset") {
-      await transaction(() => resetDemo(role, s));
-      message = "Demo restored. Audit history retained.";
-    } else if (cmd.type === "import") {
-      const rows = parseImport(cmd.feed, cmd.content, cmd.format);
-      await transaction(async () => {
-        const result = await upsert(cmd.feed, rows, s);
-        message = `${result.inserted} inserted, ${result.updated} updated; ${result.duplicates} duplicate keys merged. Run ETL to update the master store.`;
-        if (cmd.feed === "SIS" && s.mode === "account") {
-          const { created, conflicts } = await provisionStudentAccounts(
-            s,
-            new Set(
-              (rows as Array<{ studentId: string }>).map((row) =>
-                row.studentId.toLowerCase(),
-              ),
-            ),
-          );
-          message += ` ${studentProvisionSummary(created, conflicts)}`;
-        }
-        await audit(role, "IMPORT_DATA", cmd.feed, message, "ALLOWED", s);
-      });
-    } else if (cmd.type === "graduate") {
-      await transaction(() => graduateStudent(role, cmd.studentId, s));
-      message = "Student graduated and handed off to Alumni CRM.";
-    } else if (cmd.type === "intervention") {
-      await transaction(() => assignIntervention(role, cmd.studentId, s));
-      message = "Advisor follow-up saved.";
-    } else if (cmd.type === "view") {
       const auditEntry = await audit(
         role,
-        "READ_STUDENT_360",
-        cmd.studentId,
-        "Opened a student dossier with server-applied field permissions.",
+        "READ_CUSTOMER_360",
+        cust.customerId,
+        "Viewed Customer 360 profile with server-applied PCI DSS & GDPR permissions.",
         "ALLOWED",
         s,
       );
@@ -206,17 +266,160 @@ export async function POST(request: Request) {
         { headers: { "Cache-Control": "no-store" } },
       );
     }
+
+    if (cmd.type === "role") {
+      if (accountsRequired() && s.mode === "account") {
+        await audit(
+          role,
+          "ACCESS_DENIED",
+          "Account role",
+          "Denied role switching for an authenticated account.",
+          "RESTRICTED_MASKED",
+          s,
+        );
+        return Response.json(
+          {
+            error:
+              "Your role is bound to your signed-in account. Sign out to switch roles.",
+          },
+          { status: 403 },
+        );
+      }
+      await transaction(async () => {
+        await execute(
+          "UPDATE retail_sessions SET role=?, user_id=NULL WHERE id=?",
+          cmd.role,
+          s.id,
+        );
+        await audit(
+          cmd.role,
+          "ROLE_SWITCH",
+          "Demo role",
+          `Switched role to ${actors[cmd.role]}.`,
+        );
+      });
+      s = {
+        ...s,
+        mode: "demo",
+        userId: undefined,
+        displayName: undefined,
+        branch: cmd.role === "BRANCH_MANAGER" ? "Manila" : undefined,
+      };
+      role = cmd.role;
+      message = `Now viewing as ${actors[cmd.role]}. Server governance policies applied.`;
+    } else if (cmd.type === "sync") {
+      await transaction(async () => {
+        const report = await sync();
+        await audit(
+          role,
+          "INTEGRATION_SYNC",
+          report.id,
+          `Reconciled 5 feeds into ${report.recordsLoaded} master views (${report.anomaliesDetected} alerts).`,
+          "ALLOWED",
+          s,
+        );
+      });
+      message = "All 5 feeds synchronized across Stock Sync, Customer 360 & Analytics.";
+    } else if (cmd.type === "reset") {
+      await transaction(() => resetDemo(role, s));
+      message = "Baseline retail demo dataset restored. Audit chain retained.";
+    } else if (cmd.type === "import") {
+      const rows = parseImport(cmd.feed, cmd.content, cmd.format);
+      await transaction(async () => {
+        const result = await upsert(cmd.feed, rows);
+        const now = new Date().toISOString();
+        await appendCDC({
+          timestamp: now,
+          feed: cmd.feed,
+          operation: "BATCH_IMPORT",
+          integrationMethod: "Virtualization",
+          recordKey: `${cmd.feed} (${rows.length})`,
+          summary: `Imported ${rows.length} ${cmd.feed} row(s) (${result.inserted} new, ${result.updated} updated)`,
+          latencyMs: 32,
+        });
+        await sync();
+        message = `${result.inserted} inserted, ${result.updated} updated into ${cmd.feed}; master views synced.`;
+        await audit(role, "IMPORT_FEED", cmd.feed, message, "ALLOWED", s);
+      });
+    } else if (cmd.type === "pos_sale") {
+      await transaction(() => recordPOSSale(role, s, cmd));
+      message = `POS sale synced (${cmd.sku} × ${cmd.quantity}) & channel stock updated.`;
+    } else if (cmd.type === "online_order") {
+      await transaction(() => recordOnlineOrder(role, s, cmd));
+      message = `Online order placed & ${cmd.carrier} 3PL shipment created.`;
+    } else if (cmd.type === "seasonal_spike") {
+      await transaction(() => simulateSeasonalSpike(role, s));
+      message =
+        "11.11 Flash Sale burst simulated: 6 orders synced, oversell & 3PL delay flagged.";
+    } else if (cmd.type === "restock") {
+      await transaction(() => restockSKU(role, s, cmd.sku, cmd.amount ?? 20));
+      message = `Replenished ${cmd.sku.toUpperCase()} across Manila, Cebu, and Online.`;
+    } else if (cmd.type === "import_catalog_product") {
+      let importedSku = "";
+      let importedName = "";
+      await transaction(async () => {
+        const record = await importCatalogProduct(role, s, cmd.productId);
+        importedSku = record.sku;
+        importedName = record.productName;
+      });
+      message = `Synced "${importedName}" (${importedSku}) from DummyJSON Catalog API into all channels.`;
+    } else if (cmd.type === "checkout") {
+      receipt = await transaction(() => processCheckout(role, s, cmd));
+      message =
+        receipt.channel === "POS"
+          ? `${receipt.branch} POS checkout completed (₱${receipt.totalAmount.toLocaleString()}).`
+          : `Online order placed & booked via ${receipt.carrier} (${receipt.trackingNumber}).`;
+    } else if (cmd.type === "create_customer") {
+      await transaction(async () => {
+        const created = await createCustomer(role, s, cmd);
+        message = `Registered ${created.fullName} (${created.customerId}, ${created.loyaltyTier}) in CRM.`;
+      });
+    } else if (cmd.type === "dispatch_order") {
+      await transaction(async () => {
+        const shipment = await dispatchOnlineOrder(
+          role,
+          s,
+          cmd.orderId,
+          cmd.carrier,
+        );
+        message = `Dispatched ${cmd.orderId} via ${shipment.carrier} (${shipment.trackingNumber}).`;
+      });
+    } else if (cmd.type === "update_shipment") {
+      await transaction(async () => {
+        const shipment = await updateShipmentStatus(
+          role,
+          s,
+          cmd.shipmentId,
+          cmd.status,
+          cmd.delayReason,
+        );
+        message = `${shipment.shipmentId} (${shipment.carrier}) updated to ${shipment.status}.`;
+      });
+    } else if (cmd.type === "transfer_stock") {
+      await transaction(async () => {
+        const inv = await transferStock(role, s, cmd);
+        message = `Transferred ${cmd.quantity} unit(s) of ${inv.sku} from ${cmd.fromChannel} to ${cmd.toChannel}.`;
+      });
+    } else if (cmd.type === "toggle_gdpr") {
+      let nextConsent = "Opted In";
+      await transaction(async () => {
+        nextConsent = await toggleGDPRConsent(role, s, cmd.customerId);
+      });
+      message = `GDPR preference updated to ${nextConsent} (${nextConsent === "Opted Out" ? "offers suppressed" : "offers active"}).`;
+    }
+
     return Response.json(
-      { snapshot: await snapshot(role, s), message },
+      { snapshot: await snapshot(role, s), message, ...(receipt ? { receipt } : {}) },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {
     unstable_rethrow(e);
-    if (e instanceof AuthenticationRequired)
+    if (e instanceof AuthenticationRequired) {
       return Response.json(
         { error: e.message },
         { status: 401, headers: { "Cache-Control": "no-store" } },
       );
+    }
     return Response.json(
       { error: e instanceof Error ? e.message : "Request failed. Try again." },
       { status: 400 },

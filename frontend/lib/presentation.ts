@@ -35,221 +35,172 @@ export const industryMatrix = [
     "Unified Student Lifecycle, Academic Analytics",
   ],
 ];
+
 export const slides = [
   {
-    title: "One student lifecycle. Disconnected university systems.",
+    title: "Retail & E-Commerce EDM. One omnichannel shelf.",
     intro:
-      "Estante integrates SIS, LMS, Library, HR/Payroll, and Alumni CRM into a governed master view across enrollment, learning, graduation, and alumni stages.",
+      "Karto integrates in-store POS, Inventory, CRM, Online Storefronts, and 3PL Logistics into one real-time governed workspace with PCI DSS & GDPR compliance.",
     items: [
       [
-        "The industry",
-        "Education / Universities (BSIT, BEED, BSED, BSHM) using School IDs (YYYYMMDD) and Philippine 1.00–5.00 GWA grading (3.00 or worse = fail / 5.00).",
+        "Data sources (5 live feeds)",
+        "Manila & Cebu POS terminals, multi-location Inventory, Customer CRM, Online Storefront orders, and 3PL Logistics carriers (LBC Express, J&T Express, GrabExpress, DHL).",
       ],
       [
-        "The central problem",
-        "Multiple vendors and siloed departments tell incomplete stories: declining LMS attendance hides behind early grades, library holds block graduation clearance, and HR/Alumni data sits apart.",
+        "Integration goals",
+        "Real-time stock sync across channels, personalized customer offers, and unified omnichannel sales reporting under PCI DSS and GDPR.",
       ],
       [
-        "The working application",
-        "Next.js frontend and server API backed by persistent Neon PostgreSQL, 5-feed batch ETL, Data Quality stewardship, and Advising Cases.",
+        "Key challenges solved",
+        "Handling seasonal flash-sale spikes (11.11), integrating third-party logistics (3PL delays & tracking), and ensuring cross-channel data consistency.",
       ],
       [
-        "The outcome",
-        "Unified Student 360 dossiers, GWA analytics & early-warning radar, Registrar graduation handoff to Alumni CRM, and a hash-chained audit trail.",
+        "The live application",
+        "Next.js workspace backed by persistent Neon PostgreSQL, Real-Time API + CDC event stream, Virtualized Customer 360, and a SHA-256 audit chain.",
       ],
     ],
     notes:
-      "Introduce the Education / Universities case. Explain that all 5 data sources from the slide (SIS, LMS, Library, HR/Payroll, Alumni CRM) run live on PostgreSQL (ports 3005 and 3006).",
+      "Introduce Karto ('shelf') as an omnichannel Filipino retail store (Manila POS, Cebu POS, Online Storefront) solving every point on the Retail & E-Commerce class slide.",
   },
   {
-    title: "Education data integration flowchart.",
+    title: "Retail & E-Commerce data integration flowchart.",
     intro:
-      "5 Live Sources → Integration & DQM → FERPA/GDPR Governance → Governed Outputs, Analytics & AI Readiness.",
+      "5 Live Sources → Real-Time APIs, CDC & Virtualization → PCI DSS / GDPR Governance → Stock Sync, Offers & Sales Analytics.",
     items: [],
     notes:
-      "Walk left to right through the diagram: all 5 sources (SIS, LMS, Library, HR/Payroll, Alumni CRM) show live PostgreSQL row counts, flowing through DQM + FERPA/GDPR Governance into Student 360, Cases, Quality, and Analytics.",
+      "Walk left to right through the diagram: all 5 sources show live PostgreSQL row counts flowing into Karto's integration hub and out to live retail outputs.",
   },
   {
-    title: "Start with five sources, preserve their meaning.",
+    title: "Five retail sources connected in real time.",
     intro:
-      "Each source represents an independent campus vendor and owner, reconciled without flattening departmental ownership.",
+      "Each retail system owns its domain records while feeding Karto's unified omnichannel views.",
     items: [
       [
-        "SIS · identity & academic history",
-        "Owned by the Registrar. School ID (YYYYMMDD), email, department, program, GWA (1.00–5.00), credits, standing, financial aid, and SSN.",
+        "POS systems & Inventory",
+        "Manila and Cebu branches record in-store checkout transactions while Inventory tracks branch stock, online warehouse buffers, and reorder thresholds.",
       ],
       [
-        "LMS · learning engagement",
-        "Owned by academic departments. Course scores, attendance percentages, assignments, missed deadlines, and activity timestamps.",
+        "Customer CRM",
+        "Stores customer profiles, VIP–Bronze loyalty tiers, points balance, preferred branch, favorite category, and explicit GDPR Opted In / Opted Out consent.",
       ],
       [
-        "Library & HR/Payroll · campus context",
-        "Library tracks loans, overdue items, fines, and holds; HR/Payroll maps faculty advisors, courses taught, and role-masked payroll bands.",
+        "Online Storefronts",
+        "Captures web and mobile checkout orders, promo codes, tokenized card methods, and fulfillment statuses into the same master stock pool.",
       ],
       [
-        "Alumni CRM · post-graduation handoff",
-        "Owned by Alumni Relations. Tracks graduation year, conferred degree, employment status, employer, and GDPR Opted In / Opted Out consent.",
+        "Third-Party Logistics (3PL)",
+        "Consolidates tracking updates and carrier exceptions across LBC Express, J&T Express, GrabExpress, and DHL alongside every online order.",
       ],
     ],
     notes:
-      "Open Integration pipeline -> Source record inspector to inspect all 5 tabs (SIS, LMS, LIBRARY, HR, ALUMNI) live in the app.",
+      "Open Sales & Privacy -> Inspect Raw Data & Batch Upload (Advanced) to inspect all 5 source tabs (POS, INVENTORY, CRM, ONLINE, LOGISTICS).",
   },
   {
-    title: "ETL: Extract, Transform, Load.",
+    title: "Real-Time APIs, CDC & Data Virtualization.",
     intro:
-      "Imports validate atomically into staging first. An explicit ETL run cleanses, applies grading & business rules, reconciles all 5 feeds, and publishes transactionally.",
+      "Karto demonstrates all three integration methods from the course matrix together in one workflow.",
     items: [
       [
-        "Extract & validate",
-        "Ingest CSV or JSON across SIS, LMS, Library, HR, and Alumni (up to 2 MB / 1,000 rows). Reject out-of-range numbers, invalid dates, or unknown columns.",
+        "Real-Time APIs",
+        "In-store POS checkouts, online orders, +20 SKU restocks, and GDPR preference updates call transactional API routes and immediately update channel stock.",
       ],
       [
-        "Transform: standardize & enforce rules",
-        "Normalize name casing, slash dates (ISO YYYY-MM-DD), department codes, emails, and enforce the 1.00–5.00 rule (exact 3.00 or worse normalized to 5.00 fail).",
+        "Change Data Capture (CDC)",
+        "Every stock decrement, flash-sale burst, consent change, and 3PL status event writes to an append-only CDC event stream with latency metrics.",
       ],
       [
-        "Transform: combine 5 sources",
-        "Join LMS, Library, and Alumni CRM by studentId and HR/Payroll faculty context by advisor name; compute completeness (core feeds ÷ 3) and risk flags.",
+        "Data Virtualization",
+        "Customer 360 cards and Stock Sync status combine live transactional feeds on the fly without duplicating or exposing raw payment card numbers.",
       ],
       [
-        "Load the golden master",
-        "Commit the unified master table, ETL run report, quality reconciliation, and hash-chained audit entry together in one PostgreSQL transaction.",
+        "Batch feed ingestion",
+        "Store Operations can also upload CSV or JSON batches up to 1,000 rows into any of the 5 feeds with strict schema validation.",
       ],
     ],
     notes:
-      "Show Integration pipeline: upload or inspect records and run ETL to see standardization, [Business Rule] 3.00 -> 5.00 normalization, and cross-source reconciliation.",
+      "Click a scenario on Live Flow to watch Column 2 (Integration) update in real time with new CDC events.",
   },
   {
-    title: "Data Quality Management: automated and stewarded.",
+    title: "Handling seasonal spikes, 3PL & cross-channel consistency.",
     intro:
-      "Every ETL run checks cross-source integrity across campus feeds and maintains an issue queue with ownership, lineage, and re-verification.",
+      "Operational retail challenges are surfaced automatically across every view.",
     items: [
       [
-        "Automated quality checks",
-        "Detects MISSING_LMS, MISSING_LIBRARY, ORPHAN_LMS, and ORPHAN_LIBRARY on every ETL run with stable issue IDs and first/last-seen timestamps.",
+        "11.11 Seasonal Spike simulation",
+        "A single click fires 6 concurrent POS and Online flash-sale orders, immediately revealing stock exhaustion and Oversell Risk on hot SKUs.",
       ],
       [
-        "Stewardship & staged repair",
-        "Registrars assign stewards, record notes, and relink orphaned LMS/Library rows to valid SIS identities with destination collision protection.",
+        "Third-Party Logistics (3PL) visibility",
+        "Delayed shipments (e.g., Cebu hub congestion) and orders missing 3PL tracking numbers surface automatically under Stock & Delivery.",
       ],
       [
-        "ETL-confirmed resolution",
-        "Issues cannot be manually forged to Resolved. They close only when a subsequent ETL recheck passes, and reopen if the source regresses.",
+        "Cross-channel data consistency",
+        "Monitors channel oversells, low stock, 3PL delays, missing tracking, and unlinked walk-in POS guests continuously.",
       ],
       [
-        "5-source catalog & provenance",
-        "Tracks owners (Registrar, Departments, Library, HR, Alumni), record keys, receipt timestamps, revisions, and the 30 most recent ETL runs.",
+        "One-click recovery",
+        "Clicking +20 Restock or Reset Demo immediately resolves oversell alerts via Real-Time API + CDC replenishment.",
       ],
     ],
     notes:
-      "Open Data quality -> Source catalog & provenance to show all 5 source systems listed with owners and live row counts.",
+      "Demonstrate clicking 3. 11.11 Flash Sale Spike on Live Flow or 11.11 Spike on Stock & Delivery, inspecting Oversell Risk, and clicking +20 Restock.",
   },
   {
-    title: "Governance: FERPA, GDPR & secure student/faculty access.",
+    title: "Governance: PCI DSS, GDPR & role-based masking.",
     intro:
-      "Server-enforced RBAC, PII/payroll masking, and GDPR consent controls protect every API response and export across students, faculty, and staff.",
+      "Server-enforced RBAC ensures sensitive payment and customer data is protected before reaching any browser or export.",
     items: [
       [
-        "Registrar & System Admin (IT)",
-        "System Admin manages staff accounts only (zero student records). Registrar stewards all 5 feeds, ETL, student portal accounts, and walk-in resets.",
+        "PCI DSS payment protection",
+        "Raw card numbers never leave the server. Ops and Manila Branch Managers see last-4 tokens (•••• •••• •••• 4242); Marketing & Auditors see [PCI DSS Restricted/Masked].",
       ],
       [
-        "Deans & Academic Advisors / Faculty",
-        "Deans see only their assigned department (BSIT, BEED, BSED, BSHM). Deans & Advisors/Faculty receive masked SSN, DOB, financial aid, HR payroll bands, and GDPR-masked alumni.",
+        "GDPR consent enforcement",
+        "Customers marked Opted Out automatically have email/phone redacted for Marketing and their Personalized Offers suppressed under GDPR Article 21.",
       ],
       [
-        "Mandatory student 123456 onboarding",
-        "Students receive default password 123456 upon SIS enrollment, confirm their enrollment email & set a strong personal password at first login (/onboarding), and view only their own record.",
+        "Branch isolation",
+        "The Manila Branch Manager sees only Manila POS revenue and Manila-linked buyers with customer emails/phones masked — zero visibility into Cebu or national online totals.",
       ],
       [
-        "Compliance Auditor & audit chain",
-        "Auditors see pseudonymized Student XXX summaries, restricted HR/DOB fields, read-only Quality, and the SHA-256 hash-chained audit trail protected by PostgreSQL triggers.",
+        "Append-only SHA-256 audit chain",
+        "Protected by PostgreSQL triggers, every sign-in, sale, consent toggle, and PDF/CSV export is hash-chained and verifiable under Sales & Privacy.",
       ],
     ],
     notes:
-      "Emphasize how both Student security (123456 mandatory onboarding, self-access) and Faculty/Department boundaries (Deans, Advisors/Faculty, HR payroll masking) are enforced server-side.",
+      "Open Customers & Offers and click the top-bar Role Switcher (Marketing -> Manila Branch -> Auditor) to show PCI DSS and GDPR masking transform live.",
   },
   {
-    title: "Different industries. A shared integration pattern.",
+    title: "Comparative industry matrix.",
     intro:
-      "The comparative matrix from the course reference shows how sources and compliance needs differ while the EDM lifecycle stays universal.",
+      "Every group's industry shares the same Sources → Integration → Governance → Outputs pattern with tailored compliance needs.",
     items: [],
     notes:
-      "Highlight the Education / Universities row (SIS, LMS, HR, Library, Alumni CRM | FERPA, GDPR) and compare with Healthcare and Banking.",
+      "Point out the highlighted Retail & E-Commerce row and compare PCI DSS / GDPR + Real-time APIs/CDC/Virtualization with Banking, Healthcare, Manufacturing, and Education.",
   },
   {
-    title: "Outputs, measured outcomes & AI readiness.",
+    title: "Live 3-minute class walkthrough.",
     intro:
-      "Success is measured by staff workflows and student outcomes across the whole lifecycle — not just moving files between tables.",
+      "Everything on the Retail & E-Commerce slide can be demonstrated live across four simple views.",
     items: [
       [
-        "Student 360, HR & Alumni dossier",
-        "Unifies academics (GWA 1.00–5.00), LMS engagement, Library holds, HR faculty advisor context, and Alumni CRM consent in one governed dossier and PDF/JSON.",
+        "1. Live Flow (Home)",
+        "Click In-Store Purchase, Online Order + 3PL, or 11.11 Flash Sale Spike and read 'What just happened' beside the 4-column Sources -> Outputs diagram.",
       ],
       [
-        "Academic analytics & early warning",
-        "GWA distribution bands (1.00–1.75 Dean's List through 3.00–5.00 Fail), inverted GWA cohort chart, program averages, and early-warning radar.",
+        "2. Stock & Delivery",
+        "Inspect the live DummyJSON product cards (Manila, Cebu, Online counts) or import new items via Catalog API, watch Eyeshadow Palette with Mirror flip to Oversell Risk during a spike, and click +20 Restock to recover.",
       ],
       [
-        "Advising cases & outcomes",
-        "Faculty advisors and Deans open cases from flagged students, record private staff-only notes, set due dates, and track resolution outcomes.",
+        "3. Customers & Offers",
+        "Toggle GDPR consent right on Bianca Dela Rosa's card (Offer Blocked <-> Active), then click Marketing, Manila Branch, or Auditor in the top bar.",
       ],
       [
-        "AI & ML readiness foundation",
-        "Current warning rules are deterministic and explainable (not black-box ML). Clean, deduplicated 5-source master data provides the foundation for trustworthy AI.",
+        "4. Sales & Privacy",
+        "Compare Manila vs Cebu vs Online revenue cards, inspect the live PCI DSS / GDPR comparison, verify the SHA-256 log, and expand Raw Data if asked.",
       ],
     ],
     notes:
-      "Open Student 360 -> click a student dossier -> point out LMS, Library, and HR Faculty context, plus the analytics charts on the 1.00–5.00 GWA scale.",
-  },
-  {
-    title: "Live lifecycle: Enrollment to Alumni CRM.",
-    intro:
-      "Every stage from initial SIS enrollment through graduation clearance and post-graduation Alumni CRM runs live in Estante.",
-    items: [
-      [
-        "Enrollment",
-        "Registrar encodes/imports SIS record (YYYYMMDD ID), provisions portal login (123456), and student completes mandatory first-login onboarding.",
-      ],
-      [
-        "Learning",
-        "LMS attendance, scores, and deadlines join SIS GWA (1.00–5.00) and HR faculty advisor records to drive analytics and Advising Cases.",
-      ],
-      [
-        "Graduation",
-        "Credits, academic standing, and Library clearance surface graduation blockers; Registrar triggers one-click Graduate -> Alumni inside Student 360.",
-      ],
-      [
-        "Alumni CRM",
-        "Graduated students transition immediately into the live Alumni CRM feed with degree, placement tracking, and GDPR Opted In / Opted Out enforcement.",
-      ],
-    ],
-    notes:
-      "Demonstrate the full lifecycle live by clicking 'Graduate -> Alumni' inside a Student 360 dossier as Registrar, then viewing the updated ALUMNI feed and GDPR consent flag.",
-  },
-  {
-    title: "Integration trade-offs & live demonstration.",
-    intro:
-      "Estante uses Batch ETL + REST APIs for a clear governance boundary across 5 campus sources, with enterprise scaling paths documented.",
-    items: [
-      [
-        "Why Batch ETL + REST APIs",
-        "Uploads validate atomically into staging; the Registrar controls when ETL reconciles and publishes to Student 360. ELT, CDC, and Data Fabric fit larger multi-cloud scale.",
-      ],
-      [
-        "1. Ingest & inspect 5 sources",
-        "Open Integration pipeline -> inspect SIS, LMS, LIBRARY, HR, and ALUMNI -> add a student or upload CSV/JSON -> Run pipeline.",
-      ],
-      [
-        "2. Monitor & repair quality",
-        "Open Data quality to review the 5-source catalog, assign a steward or relink an orphan issue, and rerun ETL to confirm resolution.",
-      ],
-      [
-        "3. Graduate, mask & verify audit",
-        "Graduate a student to Alumni CRM in Student 360, then sign in as Dean / Advisor / Student / Compliance Auditor to verify RBAC, payroll/GDPR masking, and the audit hash chain.",
-      ],
-    ],
-    notes:
-      "Close by connecting all 3 requirements from the Education slide: 5 sources (SIS, LMS, HR, Library, Alumni CRM), full lifecycle + FERPA/GDPR, and solving vendor, departmental silo, and student/faculty access challenges.",
+      "Click Reset Demo on Live Flow or Stock & Delivery anytime to return all 5 PostgreSQL feeds cleanly to baseline.",
   },
 ];

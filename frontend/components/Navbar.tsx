@@ -1,118 +1,101 @@
 "use client";
 import Link from "next/link";
 import {
-  Database,
+  Workflow,
+  ShoppingCart,
+  Package,
   Users,
-  ChartNoAxesCombined,
   ShieldCheck,
-  Presentation,
   Network,
-  RefreshCw,
-  LogIn,
+  Store,
   LogOut,
   ChevronRight,
-  UserCog,
-  ClipboardCheck,
-  ListChecks,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
-import type { UserRole } from "@/shared/types";
+import { ROLE_LABELS } from "@/shared/retail";
 import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
 import { ThemeToggle } from "./ThemeToggle";
 import { BrandMark } from "./BrandMark";
+
 export type { TabId } from "@/frontend/lib/workspaceAccess";
+
 const tabs = [
-  { id: "accounts", label: "Staff accounts", short: "Accounts", icon: UserCog },
-  { id: "quality", label: "Data quality", short: "Quality", icon: ListChecks },
+  { id: "checkout", label: "POS Register", short: "POS", icon: ShoppingCart },
   {
-    id: "cases",
-    label: "Advising cases",
-    short: "Cases",
-    icon: ClipboardCheck,
-  },
-  { id: "student360", label: "Student 360", short: "Students", icon: Users },
-  {
-    id: "pipeline",
-    label: "Integration pipeline",
-    short: "Pipeline",
-    icon: Database,
+    id: "stock",
+    label: "Stock & 3PL",
+    short: "Stock",
+    icon: Package,
   },
   {
-    id: "analytics",
-    label: "Academic analytics",
-    short: "Analytics",
-    icon: ChartNoAxesCombined,
+    id: "customers",
+    label: "Customers",
+    short: "Customers",
+    icon: Users,
   },
   {
-    id: "governance",
-    label: "Governance & audit",
-    short: "Governance",
+    id: "sales",
+    label: "Sales & Audit",
+    short: "Sales",
     icon: ShieldCheck,
   },
+  { id: "flow", label: "Data Flow", short: "Flow", icon: Workflow },
 ] as const;
+
+function cleanActorName(raw: string): string {
+  return raw.replace(/\s*\([^)]*\)\s*$/, "").trim() || "Lourdes Bautista";
+}
+
+function actorInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("");
+}
+
 export function Navbar({
   activeTab,
   setActiveTab,
   openArchitecture,
-  openPresentation,
 }: {
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
   openArchitecture: () => void;
-  openPresentation: () => void;
 }) {
   const {
     currentRole,
-    setCurrentRole,
     actorName,
-    executeETL,
     isSyncing,
     isLoading,
     accessMode,
     signOut,
-    departmentScope,
   } = useEDM();
+
   const allowed = workspaceTabs(currentRole);
   const visibleTabs = isLoading
     ? []
-    : allowed.map((id) => {
-        const tab = tabs.find((t) => t.id === id)!;
-        if (id === "student360" && currentRole === "STUDENT")
-          return { ...tab, label: "My student record", short: "My record" };
-        if (id === "student360" && currentRole === "COMPLIANCE_AUDITOR")
-          return {
-            ...tab,
-            label: "Masked student summaries",
-            short: "Summaries",
-          };
-        if (
-          id === "governance" &&
-          ["DEAN", "ACADEMIC_ADVISOR"].includes(currentRole)
-        )
-          return {
-            ...tab,
-            label: "My activity & access",
-            short: "My activity",
-          };
-        return tab;
-      });
-  const staff =
-    !["STUDENT", "SYSTEM_ADMIN"].includes(currentRole) && !isLoading;
+    : allowed.map((id) => tabs.find((t) => t.id === id)!);
+
+  const displayName = cleanActorName(actorName);
+
   const brand = (
-    <Link className="brand" href="/" aria-label="Estante home">
+    <Link className="brand" href="/" aria-label="Karto home">
       <span className="brand-mark">
         <BrandMark size={22} compact />
       </span>
       <span>
-        <strong>Estante</strong>
-        <small>University workspace</small>
+        <strong>Karto</strong>
+        <small>Retail &amp; E-Commerce</small>
       </span>
     </Link>
   );
+
   return (
     <>
-      <aside className="workspace-sidebar" aria-label="University workspace">
-        <Link className="rail-brand" href="/" aria-label="Estante home">
+      <aside className="workspace-sidebar" aria-label="Retail workspace">
+        <Link className="rail-brand" href="/" aria-label="Karto home">
           <BrandMark size={26} />
         </Link>
         <nav className="sidebar-nav" aria-label="Workspace navigation">
@@ -131,17 +114,27 @@ export function Navbar({
           ))}
         </nav>
         <div className="sidebar-bottom">
-          {staff && (
+          {!isLoading && (
+            <Link
+              href="/shop"
+              className="rail-tool"
+              aria-label="Open Online Storefront"
+              title="Open Online Storefront (/shop)"
+            >
+              <Store size={21} />
+            </Link>
+          )}
+          {!isLoading && (
             <button
               className="rail-tool"
-              aria-label="Course matrix"
-              title="Course matrix"
+              aria-label="Data pipeline map"
+              title="Data pipeline map"
               onClick={openArchitecture}
             >
               <Network size={23} />
             </button>
           )}
-          {accessMode === "account" ? (
+          {accessMode === "account" && (
             <button
               className="rail-tool"
               aria-label="Sign out"
@@ -151,18 +144,10 @@ export function Navbar({
             >
               <LogOut size={22} />
             </button>
-          ) : (
-            <Link
-              className="rail-tool"
-              href="/login"
-              aria-label="Sign in"
-              title="Sign in"
-            >
-              <LogIn size={22} />
-            </Link>
           )}
         </div>
       </aside>
+
       <header className="workspace-header">
         <div className="workspace-header-main">
           <div className="header-brand">{brand}</div>
@@ -172,105 +157,47 @@ export function Navbar({
               {visibleTabs.find((t) => t.id === activeTab)?.label}
             </strong>
           </div>
+
           <div className="workspace-actions">
             <ThemeToggle />
-            {staff && (
-              <button
-                className="button secondary present-action"
-                aria-label="Present"
-                onClick={openPresentation}
+            {!isLoading && (
+              <Link
+                href="/shop"
+                className="icon-button mobile-matrix"
+                aria-label="Open Online Storefront"
+                title="Open Online Storefront (/shop)"
               >
-                <Presentation size={16} />
-                <span>Present</span>
-              </button>
+                <Store size={18} />
+              </Link>
             )}
-            {currentRole === "REGISTRAR" && !isLoading && (
-              <button
-                className="button primary run-action"
-                aria-label={isSyncing ? "Saving changes" : "Run ETL"}
-                disabled={isSyncing || isLoading || currentRole !== "REGISTRAR"}
-                title={
-                  currentRole !== "REGISTRAR"
-                    ? "Registrar access is required to run ETL"
-                    : undefined
-                }
-                onClick={() => void executeETL()}
-              >
-                <RefreshCw size={15} className={isSyncing ? "spin" : ""} />
-                <span>{isSyncing ? "Saving…" : "Run ETL"}</span>
-              </button>
-            )}
-            {staff && (
+            {!isLoading && (
               <button
                 className="icon-button mobile-matrix"
-                aria-label="Course matrix"
+                aria-label="Data pipeline map"
                 onClick={openArchitecture}
               >
                 <Network size={18} />
               </button>
             )}
-          </div>
-          <div className="header-identity">
-            <span className="user-initials" aria-hidden="true">
-              {actorName
-                .split(" ")
-                .filter((n) => !n.includes("."))
-                .slice(0, 2)
-                .map((n) => n[0])
-                .join("")}
-            </span>
-            <label className="role-picker">
-              <span>
-                {accessMode === "account" ? "Account role" : "Demo persona"}
-              </span>
-              <select
-                aria-label={
-                  accessMode === "account" ? "Account role" : "Demo persona"
-                }
-                value={currentRole}
-                disabled={isSyncing || isLoading || accessMode === "account"}
-                onChange={(e) =>
-                  void setCurrentRole(e.target.value as UserRole)
-                }
-                title={actorName}
-              >
-                {currentRole === "SYSTEM_ADMIN" && (
-                  <option value="SYSTEM_ADMIN">System Admin</option>
-                )}
-                <option value="REGISTRAR">Registrar</option>
-                <option value="DEAN">Dean · {departmentScope || "BSIT"}</option>
-                <option value="ACADEMIC_ADVISOR">Academic Advisor</option>
-                <option value="STUDENT">
-                  {accessMode === "account" ? "Student" : "Student · Marcus"}
-                </option>
-                <option value="COMPLIANCE_AUDITOR">Compliance Auditor</option>
-              </select>
-            </label>
-            {accessMode === "account" ? (
-              <button
-                className="icon-button mobile-account"
-                aria-label="Sign out"
-                disabled={isSyncing}
-                onClick={() => void signOut()}
-              >
-                <LogOut size={18} />
-              </button>
-            ) : (
-              <Link
-                className="icon-button mobile-account"
-                href="/login"
-                aria-label="Sign in"
-              >
-                <LogIn size={18} />
-              </Link>
+            {!isLoading && (
+              <div className="workspace-user">
+                <span className="workspace-user-avatar" aria-hidden="true">
+                  {actorInitials(displayName)}
+                </span>
+                <div className="workspace-user-meta">
+                  <strong>{displayName}</strong>
+                  <span>{ROLE_LABELS[currentRole]}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
+
         <nav
           className="compact-nav"
           aria-label="Mobile workspace navigation"
           style={{
-            gridTemplateColumns: `repeat(${visibleTabs.length > 4 ? 3 : visibleTabs.length || 1}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${visibleTabs.length || 1}, minmax(0, 1fr))`,
           }}
         >
           {visibleTabs.map(({ id, label, short, icon: Icon }) => (

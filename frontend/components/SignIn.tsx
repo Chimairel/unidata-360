@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle, Eye, EyeOff, LogOut } from "lucide-react";
 import { AccountAccess } from "./AccountAccess";
 import { NeuralSubmit } from "./ui/neural-access-login";
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "@/shared/retail";
 import "./AuthControls.css";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const router = useRouter();
   const formId = useId();
-  const identifierId = `${formId}-identifier`;
+  const emailId = `${formId}-email`;
   const passwordId = `${formId}-password`;
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
@@ -24,6 +25,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
     displayName?: string;
     role?: string;
   } | null>(null);
+
   useEffect(() => {
     let active = true;
     void fetch("/api/auth", { cache: "no-store" })
@@ -33,23 +35,21 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       })
       .then((s) => {
         if (!active) return;
-        if (s.onboardingRequired) {
-          router.replace("/onboarding");
-          return;
-        }
         setAccountsRequired(s.accountsRequired);
         setSignedInUser(s.authenticated ? s.identity || {} : null);
       })
       .catch(() => {
-        if (active)
+        if (active) {
           setError(
             "Unable to reach the authentication service. Refresh this page to try again.",
           );
+        }
       });
     return () => {
       active = false;
     };
-  }, [router]);
+  }, []);
+
   const handleSignOut = async () => {
     setPending(true);
     setError("");
@@ -63,6 +63,7 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       setPending(false);
     }
   };
+
   return (
     <AccountAccess current="login">
       <h1>Sign in</h1>
@@ -94,101 +95,115 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
           </div>
         </div>
       ) : (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setPending(true);
-            setError("");
-            try {
-              const response = await fetch("/api/auth", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ identifier, password }),
-              });
-              const result = await response.json();
-              if (!response.ok) throw new Error(result.error);
-              setPassword("");
-              if (result.onboardingRequired) {
-                router.replace("/onboarding");
-                return;
+        <>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setPending(true);
+              setError("");
+              try {
+                const response = await fetch("/api/auth", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email, password }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                setPassword("");
+                if (onSignedIn) onSignedIn();
+                else router.replace("/");
+              } catch (e) {
+                setError(
+                  e instanceof Error
+                    ? e.message
+                    : "Unable to sign in. Try again.",
+                );
+              } finally {
+                setPending(false);
               }
-              if (onSignedIn) onSignedIn();
-              else router.replace("/");
-            } catch (e) {
-              setError(
-                e instanceof Error
-                  ? e.message
-                  : "Unable to sign in. Try again.",
-              );
-            } finally {
-              setPending(false);
-            }
-          }}
-          className="sign-in-form"
-        >
-          <label htmlFor={identifierId}>
-            School ID
-            <input
-              id={identifierId}
-              name="identifier"
-              type="text"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              required
-              maxLength={200}
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="20221010"
-              disabled={pending}
-            />
-          </label>
-          <label htmlFor={passwordId}>
-            Password
-            <div className="password-input-wrap">
+            }}
+            className="sign-in-form"
+          >
+            <label htmlFor={emailId}>
+              Work email
               <input
-                id={passwordId}
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
+                id={emailId}
+                name="email"
+                type="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 required
-                maxLength={128}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                maxLength={200}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ops@karto.ph"
                 disabled={pending}
               />
-              <button
-                type="button"
-                className="password-toggle"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowPassword((prev) => !prev)}
-                disabled={pending}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </label>
+            <label htmlFor={passwordId}>
+              Password
+              <div className="password-input-wrap">
+                <input
+                  id={passwordId}
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  maxLength={128}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={pending}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  disabled={pending}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </label>
+            <NeuralSubmit>
+              <button className="button primary" disabled={pending}>
+                {pending ? "Signing in…" : "Sign in"}
+                <ArrowRight size={16} />
               </button>
+            </NeuralSubmit>
+          </form>
+
+          <div className="demo-role-box" aria-label="Demo roles quick-fill">
+            <span className="small muted">Demo roles — click to fill</span>
+            <div className="demo-role-grid">
+              {DEMO_ACCOUNTS.map((acct) => {
+                const selected =
+                  email.trim().toLowerCase() === acct.email.toLowerCase();
+                return (
+                  <button
+                    key={acct.email}
+                    type="button"
+                    className={`demo-role-pill${selected ? " is-selected" : ""}`}
+                    disabled={pending}
+                    onClick={() => {
+                      setEmail(acct.email);
+                      setPassword(DEMO_PASSWORD);
+                      setError("");
+                    }}
+                  >
+                    <div className="demo-role-head">
+                      <strong>{acct.displayName}</strong>
+                      <span>{acct.badge}</span>
+                    </div>
+                    <small>{acct.scopeSummary}</small>
+                  </button>
+                );
+              })}
             </div>
-          </label>
-          <NeuralSubmit>
-            <button className="button primary" disabled={pending}>
-              {pending ? "Signing in…" : "Sign in"}
-              <ArrowRight size={16} />
-            </button>
-          </NeuralSubmit>
-        </form>
+          </div>
+        </>
       )}
-      <p className="small sign-in-help">
-        <Link className="text-link" href="/reset-password">
-          Forgot password?
-        </Link>
-      </p>
-      <p className="small sign-in-help muted">
-        First time signing in? Enter your School ID and default password
-        (123456) to activate your account.
-      </p>
-      <p className="small sign-in-help muted">
-        Staff access: sign in with your assigned email or contact your
-        administrator.
-      </p>
       {accountsRequired === false && (
         <div className="sign-in-demo">
           <Link className="text-link" href="/">

@@ -1,136 +1,194 @@
-import { UserRole, UnifiedStudentRecord, AuditLogEntry } from "@/shared/types";
+import { branchScope } from "@/backend/access";
+import { computeSalesSummary } from "@/backend/etl/pipeline";
+import type {
+  AccessIdentity,
+  CRMRecord,
+  InventoryRecord,
+  LogisticsRecord,
+  OnlineOrderRecord,
+  POSRecord,
+  SalesSummary,
+  UnifiedCustomerRecord,
+  UnifiedStockItem,
+  UserRole,
+} from "@/shared/types";
 
-export function applyFERPAMasking(
-  student: UnifiedStudentRecord,
+export function maskPaymentCard(
+  raw: string | undefined,
   role: UserRole,
-): UnifiedStudentRecord {
-  // Classroom application policy: registrar persona receives full demonstration fields.
-  if (role === "REGISTRAR") {
-    return { ...student };
+): string {
+  if (!raw || raw === "N/A" || raw === "Cash / E-Wallet") {
+    return "Cash / E-Wallet";
   }
-
-  // Academic Advisor & Dean: Allowed to see academic performance, but PII, financial aid & payroll are masked
-  if (role === "ACADEMIC_ADVISOR" || role === "DEAN") {
-    return {
-      ...student,
-      ssn: maskSSN(student.ssn),
-      dateOfBirth: "••••-••-••",
-      financialAidStatus: "[FERPA Masked: Financial Need Restricted]",
-      ...(student.hrSummary
-        ? {
-            hrSummary: {
-              ...student.hrSummary,
-              payrollBand: "[HR Payroll Restricted]",
-            },
-          }
-        : {}),
-      ...(student.alumniSummary
-        ? {
-            alumniSummary: {
-              ...student.alumniSummary,
-              employer:
-                student.alumniSummary.contactConsent === "Opted Out"
-                  ? "[GDPR Opted Out]"
-                  : student.alumniSummary.employer,
-            },
-          }
-        : {}),
-    };
+  const digits = raw.replace(/\D/g, "");
+  const last4 = digits.slice(-4);
+  if (role === "OPS_MANAGER" || role === "BRANCH_MANAGER") {
+    return last4 ? `•••• •••• •••• ${last4}` : "•••• ••••";
   }
+  if (role === "MARKETING_CRM") return "[PCI DSS Restricted]";
+  return "[PCI DSS Masked]";
+}
 
-  // Compliance Auditor: Focuses on governance & metadata, masking PII & HR details
-  if (role === "COMPLIANCE_AUDITOR") {
-    return {
-      ...student,
-      ssn: "•••-••-••••",
-      email: maskEmail(student.email),
-      financialAidStatus: "[Restricted Compliance Audit Mode]",
-      fullName: `Student ${student.studentId.slice(-3)}`,
-      dateOfBirth: "Restricted",
-      advisorName: "Restricted",
-      hrSummary: undefined,
-      ...(student.alumniSummary
-        ? {
-            alumniSummary: {
-              ...student.alumniSummary,
-              employer: "[Restricted]",
-            },
-          }
-        : {}),
-      lmsSummary: { ...student.lmsSummary, courses: [] },
-    };
-  }
+function pseudonym(index: number): string {
+  return `Customer #${String(index + 1).padStart(2, "0")}`;
+}
 
-  // Student: Student viewing their own record
-  if (role === "STUDENT") {
-    return {
-      ...student,
-      ssn: maskSSN(student.ssn),
-      financialAidStatus: "Restricted in student demonstration",
-      ...(student.hrSummary
-        ? {
-            hrSummary: {
-              ...student.hrSummary,
-              payrollBand: "[HR Payroll Restricted]",
-            },
-          }
-        : {}),
-    };
-  }
+export function applyRetailGovernance(
+  role: UserRole,
+  identity: AccessIdentity | undefined,
+  data: {
+    posRecords: POSRecord[];
+    inventoryRecords: InventoryRecord[];
+    crmRecords: CRMRecord[];
+    onlineRecords: OnlineOrderRecord[];
+    logisticsRecords: LogisticsRecord[];
+    stockItems: UnifiedStockItem[];
+    customers: UnifiedCustomerRecord[];
+    salesSummary: SalesSummary;
+  },
+) {
+  const scope = branchScope(role, identity);
+  const invMap = new Map(data.inventoryRecords.map((i) => [i.sku, i]));
 
-  // Fail closed for any other role (e.g., SYSTEM_ADMIN should never receive student records)
+  // Pseudonym index map sorted consistently by customerId
+  const pseudoOrder = [...data.customers]
+    .sort((a, b) => a.customerId.localeCompare(b.customerId))
+    .map((c, idx) => [c.customerId, pseudonym(idx)] as const);
+  const pseudoMap = new Map(pseudoOrder);
+
+  // Determine branch-scoped customers if Branch Manager
+  const branchBuyerIds = new Set(
+    scope
+      ? [
+          ...data.customers
+            .filter((c) => c.preferredBranch === scope)
+            .map((c) => c.customerId),
+          ...data.posRecords
+            .filter((p) => p.branch === scope)
+            .map((p) => p.customerId),
+        ]
+      : data.customers.map((c) => c.customerId),
+  );
+
+  const scopedPOS = data.posRecords
+    .filter((p) => !scope || p.branch === scope)
+    .map((p) => ({
+      ...p,
+      customerId:
+        role === "COMPLIANCE_AUDITOR"
+          ? pseudoMap.get(p.customerId) || "Walk-In Guest"
+          : p.customerId,
+      cardNumber: maskPaymentCard(p.cardNumber, role),
+    }));
+
+  const scopedOnline = data.onlineRecords
+    .filter((o) => !scope || branchBuyerIds.has(o.customerId))
+    .map((o) => ({
+      ...o,
+      customerId:
+        role === "COMPLIANCE_AUDITOR"
+          ? pseudoMap.get(o.customerId) || o.customerId
+          : o.customerId,
+      cardNumber: maskPaymentCard(o.cardNumber, role),
+    }));
+
+  const scopedLogistics = data.logisticsRecords
+    .filter((l) => !scope || branchBuyerIds.has(l.customerId))
+    .map((l) => ({
+      ...l,
+      customerId:
+        role === "COMPLIANCE_AUDITOR"
+          ? pseudoMap.get(l.customerId) || l.customerId
+          : l.customerId,
+    }));
+
+  const scopedCRM: CRMRecord[] = data.crmRecords
+    .filter((c) => !scope || branchBuyerIds.has(c.customerId))
+    .map((c) => {
+      if (role === "COMPLIANCE_AUDITOR") {
+        return {
+          ...c,
+          fullName: pseudoMap.get(c.customerId) || c.customerId,
+          email: "[GDPR Masked]",
+          phone: "[GDPR Masked]",
+        };
+      }
+      if (role === "BRANCH_MANAGER") {
+        return {
+          ...c,
+          email: "[GDPR Masked]",
+          phone: "[GDPR Masked]",
+        };
+      }
+      if (role === "MARKETING_CRM" && c.gdprConsent === "Opted Out") {
+        return {
+          ...c,
+          email: "[GDPR Opted Out]",
+          phone: "[GDPR Opted Out]",
+        };
+      }
+      return c;
+    });
+
+  const scopedCustomers: UnifiedCustomerRecord[] = data.customers
+    .filter((c) => !scope || branchBuyerIds.has(c.customerId))
+    .map((c) => {
+      const maskedPos = c.posTransactions
+        .filter((p) => !scope || p.branch === scope)
+        .map((p) => ({
+          ...p,
+          cardNumber: maskPaymentCard(p.cardNumber, role),
+        }));
+      const maskedOnline = c.onlineOrders
+        .filter(() => !scope)
+        .map((o) => ({
+          ...o,
+          cardNumber: maskPaymentCard(o.cardNumber, role),
+        }));
+      const maskedShipments = scope ? [] : c.shipments;
+
+      let fullName = c.fullName;
+      let email = c.email;
+      let phone = c.phone;
+
+      if (role === "COMPLIANCE_AUDITOR") {
+        fullName = pseudoMap.get(c.customerId) || c.customerId;
+        email = "[GDPR Masked]";
+        phone = "[GDPR Masked]";
+      } else if (role === "BRANCH_MANAGER") {
+        email = "[GDPR Masked]";
+        phone = "[GDPR Masked]";
+      } else if (role === "MARKETING_CRM" && c.gdprConsent === "Opted Out") {
+        email = "[GDPR Opted Out]";
+        phone = "[GDPR Opted Out]";
+      }
+
+      return {
+        ...c,
+        fullName,
+        email,
+        phone,
+        maskedCardOnFile: maskPaymentCard(c.maskedCardOnFile, role),
+        posTransactions: maskedPos,
+        onlineOrders: maskedOnline,
+        shipments: maskedShipments,
+      };
+    });
+
+  // For BRANCH_MANAGER, calculate salesSummary for their Manila POS branch only
+  const salesSummary = scope
+    ? computeSalesSummary(scopedPOS, [], scopedLogistics, invMap)
+    : data.salesSummary;
+
   return {
-    ...student,
-    ssn: "•••-••-••••",
-    email: maskEmail(student.email),
-    financialAidStatus: "[Restricted]",
-    fullName: `Student ${student.studentId.slice(-3)}`,
-    dateOfBirth: "Restricted",
-    advisorName: "Restricted",
-    hrSummary: undefined,
-    ...(student.alumniSummary
-      ? {
-          alumniSummary: {
-            ...student.alumniSummary,
-            employer: "[Restricted]",
-          },
-        }
-      : {}),
-    lmsSummary: { ...student.lmsSummary, courses: [] },
-  };
-}
-
-export function maskSSN(ssn: string): string {
-  if (!ssn || ssn.length < 4) return "•••-••-••••";
-  const lastFour = ssn.slice(-4);
-  return `•••-••-${lastFour}`;
-}
-
-export function maskEmail(email: string): string {
-  if (!email || !email.includes("@")) return "••••••@••••";
-  const [username, domain] = email.split("@");
-  if (username.length <= 2) return `${username[0]}*@${domain}`;
-  return `${username.slice(0, 2)}${"*".repeat(username.length - 2)}@${domain}`;
-}
-
-export function createAuditLog(
-  userRole: UserRole,
-  actorName: string,
-  action: AuditLogEntry["action"],
-  targetResource: string,
-  details: string,
-  status: AuditLogEntry["status"] = "ALLOWED",
-  overrideTimestamp?: string,
-  overrideId?: string,
-): AuditLogEntry {
-  return {
-    id: overrideId || `AUDIT-${crypto.randomUUID()}`,
-    timestamp: overrideTimestamp || new Date().toISOString(),
-    userRole,
-    actorName,
-    action,
-    targetResource,
-    status,
-    details,
+    branchScope: scope,
+    posRecords: scopedPOS,
+    inventoryRecords: data.inventoryRecords,
+    crmRecords: scopedCRM,
+    onlineRecords: scopedOnline,
+    logisticsRecords: scopedLogistics,
+    stockItems: data.stockItems,
+    customers: scopedCustomers,
+    salesSummary,
   };
 }
