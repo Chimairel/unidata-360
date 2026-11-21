@@ -2,7 +2,9 @@
 
 **Karto** uses **PostgreSQL** (**Structured Query Language** relational database) authentication (`retail_users` and `retail_sessions`) seeded automatically on first database startup. Opening `http://localhost:3005` always requires signing in at `/login`, while the customer storefront at `http://localhost:3005/shop` stays public for online shoppers.
 
-## Seeded Staff Roles (Demo Password: `123456`)
+## Seeded staff accounts
+
+All eight staff accounts below use the password **`123456`** on the local and hosted classroom demos. Use the cashier emails for walk-in sales and `manila@karto.ph` for the Manila Branch Manager. [Open the hosted staff sign-in](https://karto-edm.vercel.app/login).
 
 Staff accounts use **RBAC** (Role-Based Access Control), **PCI DSS** (Payment Card Industry Data Security Standard) masking, and **GDPR** (General Data Protection Regulation) privacy controls. The backend enforces permissions for both data access and updates.
 
@@ -13,9 +15,9 @@ Staff accounts use **RBAC** (Role-Based Access Control), **PCI DSS** (Payment Ca
 | **Nico Lim** | `cashier.cebu@karto.ph` | `123456` | Cebu Cashier. Records walk-in sales and prints receipts at the Cebu register. |
 | **Iris Mendoza** | `inventory@karto.ph` | `123456` | Inventory Staff. Checks stock, restocks products, and transfers units between Manila, Cebu, and the online warehouse. |
 | **Rafael Cruz** | `delivery@karto.ph` | `123456` | Delivery Coordinator. Dispatches website orders and updates **3PL** (Third-Party Logistics) shipments, tracking, and delays. |
-| **Camille Reyes** | `marketing@karto.ph` | `123456` | Marketing & **CRM** (**Customer Relationship Management** — loyalty profiles & promotions) — Manages opted-in personalized campaigns and consents; cardholder payment numbers are restricted and **GDPR** opt-out customers are hidden. |
-| **Marco Villanueva** | `manila@karto.ph` | `123456` | Manila Branch Manager — Scoped strictly to Manila **POS** checkouts and Manila store stock; Cebu branch, Online totals, and **PII** (**Personally Identifiable Information** — customer emails & phone numbers) are masked. |
-| **Atty. Gabriel Torres** | `auditor@karto.ph` | `123456` | Compliance Auditor — Strictly read-only inspection across all tabs; customer identities are pseudonymized, **PII** and full **PAN** (**Primary Account Number** — full 16-digit card numbers) are masked, and every action is verified against the **SHA-256** (**Secure Hash Algorithm 256-bit** — tamper-evident cryptographic hash) audit chain. |
+| **Camille Reyes** | `marketing@karto.ph` | `123456` | Marketing and **CRM** (Customer Relationship Management). Manages consent and personalized offers. Opted-out contact details and payment card numbers are masked in this view. |
+| **Marco Villanueva** | `manila@karto.ph` | `123456` | Manila Branch Manager. Records Manila register sales and views Manila sales analytics. Customer email addresses and phone numbers are masked. |
+| **Atty. Gabriel Torres** | `auditor@karto.ph` | `123456` | Compliance Auditor. Reviews pseudonymized records and the **SHA-256** (Secure Hash Algorithm 256-bit) audit chain. Customer contact and payment card information are masked. |
 
 ## Presentation walkthrough
 
@@ -23,6 +25,8 @@ Staff accounts use **RBAC** (Role-Based Access Control), **PCI DSS** (Payment Ca
 2. Open `/shop` as a customer and place an order. Online warehouse stock decreases and the receipt includes courier tracking. Sign in as the Delivery Coordinator to move the shipment to **In Transit** and flag a delay.
 3. Sign in as Inventory Staff to inspect the new counts and demonstrate a restock or stock transfer.
 4. Sign in as Operations and open **Stock**, **Sales & Audit**, and **Quality**. Show the updated counts, the staff account credited with each change, and the flagged shipment.
+
+[Download the Karto presentation guide](../docs/Karto_Core_Concepts_Presentation_Guide.docx) for the three core concepts, seven data quality dimensions, and what to open for each demonstration.
 
 ## Environment & Database Notes
 

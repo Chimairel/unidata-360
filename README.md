@@ -56,4 +56,5 @@ npm run build
 - **Online Storefront (public):** `http://localhost:3005/shop`
 - **Operations Hub (staff login required):** `http://localhost:3005` (`/login`)
 - **Staff Accounts Guide:** [accounts/README.md](accounts/README.md)
+- **Presentation Guide:** [Integration, Data Governance, and Data Quality](docs/Karto_Core_Concepts_Presentation_Guide.docx)
 - **Software Requirements Specification (SRS, version 2.1):** [docs/Karto_Software_Requirements_Specification.docx](docs/Karto_Software_Requirements_Specification.docx)
