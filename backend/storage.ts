@@ -51,12 +51,15 @@ async function connect<T>(
       !process.env.RAILWAY_PROJECT_ID &&
       ["localhost", "127.0.0.1", "[::1]"].includes(connectionString.hostname) &&
       connectionString.searchParams.get("sslmode") === "disable";
-    // Cloud connections always verify the database server's TLS certificate.
+    // Render's private Postgres endpoints use self-signed certificates.
+    const renderInternal =
+      process.env.RENDER === "true" &&
+      /^dpg-[a-z0-9]+-a$/.test(connectionString.hostname);
     for (const key of ["sslmode", "sslcert", "sslkey", "sslrootcert", "ssl"])
       connectionString.searchParams.delete(key);
     pool = new Pool({
       connectionString: connectionString.href,
-      ssl: local ? false : { rejectUnauthorized: true },
+      ssl: local ? false : { rejectUnauthorized: !renderInternal },
       max: 6,
       connectionTimeoutMillis: 12000,
       keepAlive: true,

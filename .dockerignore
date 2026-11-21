@@ -11,7 +11,6 @@
 !shared/**
 !scripts/
 !scripts/start-hosted.mjs
-!scripts/create-account.ts
 **/.env*
 **/*.pem
 **/.next/**

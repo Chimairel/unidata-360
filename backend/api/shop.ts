@@ -12,7 +12,6 @@ const shopCheckoutSchema = z
   .object({
     customerId: z.string().trim().min(1).max(60),
     paymentMethod: z.enum(["Card", "GCash", "Maya"]),
-    cardNumber: z.string().max(30).optional(),
     carrier: z.enum(CARRIERS).default("LBC Express"),
     items: z
       .array(
@@ -68,7 +67,6 @@ export async function POST(request: Request) {
           channel: "ONLINE",
           customerId: body.customerId,
           paymentMethod: body.paymentMethod,
-          cardNumber: body.cardNumber,
           carrier: body.carrier,
           items: body.items,
         },

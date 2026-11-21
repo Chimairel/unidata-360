@@ -70,12 +70,42 @@ let seededUsersPromise: Promise<void> | undefined;
 export async function ensureDemoUsers() {
   if (!seededUsersPromise) {
     seededUsersPromise = (async () => {
-      const existing = await first<{ c: string | number }>(
-        "SELECT COUNT(*) AS c FROM retail_users",
-      );
-      if (Number(existing?.c || 0) >= DEMO_ACCOUNTS.length) return;
-      const defaultHash = await hashPassword(DEMO_PASSWORD);
+      const hosted = process.env.EDM_SECURE_COOKIES === "true";
       for (const account of DEMO_ACCOUNTS) {
+        const key = `EDM_STAFF_${account.role}_PASSWORD`;
+        const password = hosted ? process.env[key] : DEMO_PASSWORD;
+        if (
+          !password ||
+          (hosted && (password.length < 16 || password.length > 128))
+        ) {
+          throw new Error(`Set ${key} to a password of 16–128 characters.`);
+        }
+        const existing = await first<{ id: string; password_hash: string }>(
+          "SELECT id, password_hash FROM retail_users WHERE email=?",
+          account.email,
+        );
+        if (existing) {
+          if (
+            hosted &&
+            (await verifyPassword(DEMO_PASSWORD, existing.password_hash))
+          ) {
+            await transaction(async () => {
+              const changed = await first(
+                "UPDATE retail_users SET password_hash=? WHERE id=? AND password_hash=? RETURNING id",
+                await hashPassword(password),
+                existing.id,
+                existing.password_hash,
+              );
+              if (changed) {
+                await execute(
+                  "DELETE FROM retail_sessions WHERE user_id=?",
+                  existing.id,
+                );
+              }
+            });
+          }
+          continue;
+        }
         await execute(
           `INSERT INTO retail_users(id, email, display_name, password_hash, role, branch, active)
            VALUES(?,?,?,?,?,?,1)
@@ -83,7 +113,7 @@ export async function ensureDemoUsers() {
           randomUUID(),
           account.email,
           account.displayName,
-          defaultHash,
+          await hashPassword(password),
           account.role,
           account.branch || null,
         );

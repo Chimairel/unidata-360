@@ -129,7 +129,6 @@ export function ShopStorefront() {
   const [paymentMethod, setPaymentMethod] = useState<"Card" | "GCash" | "Maya">(
     "Card",
   );
-  const [cardNumber, setCardNumber] = useState("4532-8910-4421-4242");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<CheckoutReceipt | null>(null);
 
@@ -321,7 +320,6 @@ export function ShopStorefront() {
         body: JSON.stringify({
           customerId: activeShopper.customerId,
           paymentMethod,
-          cardNumber: paymentMethod === "Card" ? cardNumber : undefined,
           carrier,
           items: bagLines.map((l) => ({
             sku: l.product.sku,
@@ -892,7 +890,7 @@ export function ShopStorefront() {
 
                   <div>
                     <span className="shop-field-label">
-                      Payment Method (PCI DSS Protected)
+                      Payment Method (Demo)
                     </span>
                     <div className="shop-pill-grid cols-3">
                       {(["Card", "GCash", "Maya"] as const).map((m) => (
@@ -906,16 +904,6 @@ export function ShopStorefront() {
                         </button>
                       ))}
                     </div>
-                    {paymentMethod === "Card" && (
-                      <input
-                        aria-label="Demo card number"
-                        className="shop-input"
-                        style={{ marginTop: 8 }}
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="4532-8910-4421-4242"
-                      />
-                    )}
                   </div>
                 </>
               )}

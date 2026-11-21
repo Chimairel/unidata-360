@@ -8,8 +8,8 @@ function fail(message) {
   process.exit(1);
 }
 
-if (env.EDM_AUTH_MODE !== "accounts" || env.EDM_SECURE_COOKIES !== "true") {
-  fail("Hosted Estante requires accounts mode and secure cookies.");
+if (env.EDM_SECURE_COOKIES !== "true") {
+  fail("Hosted Karto requires secure cookies.");
 }
 let origin;
 try {
@@ -33,7 +33,7 @@ try {
     throw new Error("Invalid PostgreSQL URL");
   }
 } catch {
-  fail("Set DATABASE_URL to the Neon PostgreSQL connection string.");
+  fail("Set DATABASE_URL to the PostgreSQL connection string.");
 }
 
 const child = spawn(
@@ -44,7 +44,7 @@ const child = spawn(
     "-H",
     "0.0.0.0",
     "-p",
-    "3006",
+    env.PORT || "3006",
   ],
   { cwd: resolve("backend"), env, stdio: "inherit" },
 );
