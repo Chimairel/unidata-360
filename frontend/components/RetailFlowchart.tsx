@@ -47,7 +47,7 @@ export function RetailFlowchart({
     },
     {
       name: "Online Storefronts",
-      detail: "Web & app orders, promo codes & checkout",
+      detail: "Website orders, promo codes & checkout",
       count: sourceCounts?.ONLINE,
       icon: Globe,
     },

@@ -17,7 +17,7 @@ import type {
   CheckoutReceipt,
   ShopperSummary,
   ShopSnapshot,
-  UnifiedStockItem,
+  ShopProduct,
 } from "@/shared/types";
 import { BrandMark } from "./BrandMark";
 import { ProductImage } from "./ui";
@@ -31,7 +31,7 @@ interface BagLine {
 
 function previewShopDiscount(
   shopper: ShopperSummary | undefined,
-  lines: Array<{ product: UnifiedStockItem; quantity: number }>,
+  lines: Array<{ product: ShopProduct; quantity: number }>,
 ): { promoCode: string; discountAmount: number; note: string; state: "active" | "suppressed" | "neutral" } {
   if (!shopper) {
     return {
@@ -98,7 +98,7 @@ function previewShopDiscount(
   };
 }
 
-function originalPricePhp(item: UnifiedStockItem): number | null {
+function originalPricePhp(item: ShopProduct): number | null {
   const pct = item.discountPercentage ?? 0;
   if (pct <= 1 || pct >= 90) return null;
   const orig = Math.round(item.unitPrice / (1 - pct / 100));
@@ -259,7 +259,7 @@ export function ShopStorefront() {
           return product ? { product, quantity: line.quantity } : null;
         })
         .filter(
-          (x): x is { product: UnifiedStockItem; quantity: number } => x !== null,
+          (x): x is { product: ShopProduct; quantity: number } => x !== null,
         ),
     [bag, productMap],
   );
@@ -281,7 +281,7 @@ export function ShopStorefront() {
         : []
     : [];
 
-  const addToBag = (item: UnifiedStockItem) => {
+  const addToBag = (item: ShopProduct) => {
     setReceipt(null);
     setBag((prev) => {
       const existing = prev.find((b) => b.sku === item.sku);

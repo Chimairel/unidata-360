@@ -35,6 +35,27 @@ const roleCompare: Array<{
     gdpr: "Full + Consent toggle",
   },
   {
+    role: "CASHIER",
+    label: "Cashier",
+    scope: "Assigned branch register",
+    pci: "Last 4 on receipt",
+    gdpr: "Walk-in sales only",
+  },
+  {
+    role: "INVENTORY_STAFF",
+    label: "Inventory Staff",
+    scope: "Stock counts, restocks, and transfers",
+    pci: "No card records",
+    gdpr: "No customer profiles",
+  },
+  {
+    role: "DELIVERY_COORDINATOR",
+    label: "Delivery Coordinator",
+    scope: "Dispatch and shipment status",
+    pci: "No card records",
+    gdpr: "Customer reference only",
+  },
+  {
     role: "MARKETING_CRM",
     label: "Marketing",
     scope: "All profiles",

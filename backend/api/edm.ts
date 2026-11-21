@@ -16,7 +16,6 @@ import {
   execute,
   importCatalogProduct,
   processCheckout,
-  recordOnlineOrder,
   recordPOSSale,
   resetDemo,
   restockSKU,
@@ -32,22 +31,27 @@ import {
 import { parseImport } from "@/backend/validation";
 import {
   branchScope,
+  canManageDeliveries,
+  canManageInventory,
   canManageOps,
   canRecordPOSSale,
   canToggleGDPR,
-} from "@/backend/access";
-import { BRANCHES, CARRIERS, CATEGORIES } from "@/shared/retail";
+  isAssignedCashierSale,
+  isSpecialist,
+} from "@/shared/access";
+import {
+  BRANCHES,
+  CARRIERS,
+  CATEGORIES,
+  RETAIL_ROLES,
+  WEBSITE_ORDER_DEMO,
+} from "@/shared/retail";
 import type { CheckoutReceipt, UserRole } from "@/shared/types";
 
 const command = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("role"),
-    role: z.enum([
-      "OPS_MANAGER",
-      "MARKETING_CRM",
-      "BRANCH_MANAGER",
-      "COMPLIANCE_AUDITOR",
-    ]),
+    role: z.enum(RETAIL_ROLES),
   }),
   z.object({ type: z.literal("sync") }),
   z.object({ type: z.literal("reset") }),
@@ -65,14 +69,7 @@ const command = z.discriminatedUnion("type", [
     quantity: z.number().int().min(1).max(50),
     paymentMethod: z.enum(["Card", "Cash", "GCash"]),
   }),
-  z.object({
-    type: z.literal("online_order"),
-    sku: z.string().min(1).max(60),
-    customerId: z.string().min(1).max(60),
-    quantity: z.number().int().min(1).max(50),
-    carrier: z.enum(CARRIERS),
-    paymentMethod: z.enum(["Card", "GCash", "Maya"]),
-  }),
+  z.strictObject({ type: z.literal("simulate_website_order") }),
   z.object({ type: z.literal("seasonal_spike") }),
   z.object({
     type: z.literal("restock"),
@@ -87,14 +84,13 @@ const command = z.discriminatedUnion("type", [
     type: z.literal("import_catalog_product"),
     productId: z.number().int().min(1).max(1000),
   }),
-  z.object({
+  z.strictObject({
     type: z.literal("checkout"),
-    channel: z.enum(["POS", "ONLINE"]),
+    channel: z.literal("POS"),
     branch: z.enum(BRANCHES).optional(),
     customerId: z.string().max(60),
-    paymentMethod: z.enum(["Card", "Cash", "GCash", "Maya"]),
+    paymentMethod: z.enum(["Card", "Cash", "GCash"]),
     cardNumber: z.string().max(30).optional(),
-    carrier: z.enum(CARRIERS).optional(),
     items: z
       .array(
         z.object({
@@ -144,6 +140,28 @@ const command = z.discriminatedUnion("type", [
     customerId: z.string().min(1).max(60),
   }),
 ]);
+
+const commandPermission: Record<
+  z.infer<typeof command>["type"],
+  (role: UserRole) => boolean
+> = {
+  role: (role) => !isSpecialist(role),
+  view: (role) => !isSpecialist(role),
+  sync: canManageOps,
+  reset: canManageOps,
+  import: canManageOps,
+  simulate_website_order: canManageOps,
+  seasonal_spike: canManageOps,
+  import_catalog_product: canManageOps,
+  pos_sale: (role) => canRecordPOSSale(role) && role !== "CASHIER",
+  checkout: canRecordPOSSale,
+  restock: canManageInventory,
+  transfer_stock: canManageInventory,
+  dispatch_order: canManageDeliveries,
+  update_shipment: canManageDeliveries,
+  create_customer: canToggleGDPR,
+  toggle_gdpr: canToggleGDPR,
+};
 
 export async function GET() {
   try {
@@ -200,31 +218,12 @@ export async function POST(request: Request) {
     let message = "Saved";
     let receipt: CheckoutReceipt | undefined;
 
-    const opsOnly =
-      [
-        "sync",
-        "reset",
-        "import",
-        "online_order",
-        "seasonal_spike",
-        "import_catalog_product",
-        "dispatch_order",
-        "update_shipment",
-        "transfer_stock",
-      ].includes(cmd.type) ||
-      (cmd.type === "checkout" && cmd.channel === "ONLINE");
-    const posPerm =
-      cmd.type === "pos_sale" ||
-      cmd.type === "restock" ||
-      (cmd.type === "checkout" && cmd.channel === "POS");
-    const gdprPerm =
-      cmd.type === "toggle_gdpr" || cmd.type === "create_customer";
+    const outsideCashierScope =
+      role === "CASHIER" &&
+      cmd.type === "checkout" &&
+      !isAssignedCashierSale(s, cmd.branch, cmd.customerId);
 
-    if (
-      (opsOnly && !canManageOps(role)) ||
-      (posPerm && !canRecordPOSSale(role)) ||
-      (gdprPerm && !canToggleGDPR(role))
-    ) {
+    if (!commandPermission[cmd.type](role) || outsideCashierScope) {
       await audit(
         role,
         "ACCESS_DENIED",
@@ -319,7 +318,8 @@ export async function POST(request: Request) {
           s,
         );
       });
-      message = "All 5 feeds synchronized across Stock Sync, Customer 360 & Analytics.";
+      message =
+        "All 5 feeds synchronized across Stock Sync, Customer 360 & Analytics.";
     } else if (cmd.type === "reset") {
       await transaction(() => resetDemo(role, s));
       message = "Baseline retail demo dataset restored. Audit chain retained.";
@@ -344,9 +344,20 @@ export async function POST(request: Request) {
     } else if (cmd.type === "pos_sale") {
       await transaction(() => recordPOSSale(role, s, cmd));
       message = `POS sale synced (${cmd.sku} × ${cmd.quantity}) & channel stock updated.`;
-    } else if (cmd.type === "online_order") {
-      await transaction(() => recordOnlineOrder(role, s, cmd));
-      message = `Online order placed & ${cmd.carrier} 3PL shipment created.`;
+    } else if (cmd.type === "simulate_website_order") {
+      const { customerId, sku, quantity, carrier, paymentMethod } =
+        WEBSITE_ORDER_DEMO;
+      await transaction(() =>
+        processCheckout(role, s, {
+          channel: "ONLINE",
+          customerId,
+          carrier,
+          paymentMethod,
+          simulated: true,
+          items: [{ sku, quantity }],
+        }),
+      );
+      message = `Simulated a website order and created a sample ${carrier} shipment.`;
     } else if (cmd.type === "seasonal_spike") {
       await transaction(() => simulateSeasonalSpike(role, s));
       message =
@@ -365,10 +376,7 @@ export async function POST(request: Request) {
       message = `Synced "${importedName}" (${importedSku}) from DummyJSON Catalog API into all channels.`;
     } else if (cmd.type === "checkout") {
       receipt = await transaction(() => processCheckout(role, s, cmd));
-      message =
-        receipt.channel === "POS"
-          ? `${receipt.branch} POS checkout completed (₱${receipt.totalAmount.toLocaleString()}).`
-          : `Online order placed & booked via ${receipt.carrier} (${receipt.trackingNumber}).`;
+      message = `${receipt.branch} POS checkout completed (₱${receipt.totalAmount.toLocaleString()}).`;
     } else if (cmd.type === "create_customer") {
       await transaction(async () => {
         const created = await createCustomer(role, s, cmd);
@@ -409,7 +417,11 @@ export async function POST(request: Request) {
     }
 
     return Response.json(
-      { snapshot: await snapshot(role, s), message, ...(receipt ? { receipt } : {}) },
+      {
+        snapshot: await snapshot(role, s),
+        message,
+        ...(receipt ? { receipt } : {}),
+      },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {

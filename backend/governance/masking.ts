@@ -1,4 +1,4 @@
-import { branchScope } from "@/backend/access";
+import { branchScope, isSpecialist } from "@/shared/access";
 import { computeSalesSummary } from "@/backend/etl/pipeline";
 import type {
   AccessIdentity,
@@ -22,7 +22,11 @@ export function maskPaymentCard(
   }
   const digits = raw.replace(/\D/g, "");
   const last4 = digits.slice(-4);
-  if (role === "OPS_MANAGER" || role === "BRANCH_MANAGER") {
+  if (
+    role === "OPS_MANAGER" ||
+    role === "BRANCH_MANAGER" ||
+    role === "CASHIER"
+  ) {
     return last4 ? `•••• •••• •••• ${last4}` : "•••• ••••";
   }
   if (role === "MARKETING_CRM") return "[PCI DSS Restricted]";
@@ -48,6 +52,51 @@ export function applyRetailGovernance(
   },
 ) {
   const scope = branchScope(role, identity);
+  if (isSpecialist(role)) {
+    const logisticsRecords =
+      role === "DELIVERY_COORDINATOR" ? data.logisticsRecords : [];
+    let stockItems: UnifiedStockItem[] = [];
+    if (role === "INVENTORY_STAFF") {
+      stockItems = data.stockItems.map((item) => ({
+        ...item,
+        revenueTotal: 0,
+      }));
+    } else if (role === "CASHIER" && scope) {
+      stockItems = data.stockItems.map((item) => {
+        const available =
+          scope === "Manila" ? item.manilaStock : item.cebuStock;
+        return {
+          ...item,
+          manilaStock: scope === "Manila" ? available : 0,
+          cebuStock: scope === "Cebu" ? available : 0,
+          warehouseStock: 0,
+          totalStock: available,
+          unitsSoldPOS: 0,
+          unitsSoldOnline: 0,
+          revenueTotal: 0,
+          stockStatus:
+            available < 0
+              ? "Oversell Risk"
+              : available <= 4
+                ? "Low Stock"
+                : "Synced",
+        };
+      });
+    }
+
+    return {
+      branchScope: scope,
+      posRecords: [],
+      inventoryRecords: role === "INVENTORY_STAFF" ? data.inventoryRecords : [],
+      crmRecords: [],
+      onlineRecords: [],
+      logisticsRecords,
+      stockItems,
+      customers: [],
+      salesSummary: computeSalesSummary([], [], logisticsRecords, new Map()),
+    };
+  }
+
   const invMap = new Map(data.inventoryRecords.map((i) => [i.sku, i]));
 
   // Pseudonym index map sorted consistently by customerId

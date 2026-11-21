@@ -59,7 +59,7 @@ export interface CRMRecord {
   joinedAt: string;
 }
 
-// 4. DATA SOURCE: Online Storefront (Web & Mobile App)
+// 4. DATA SOURCE: Public Storefront Website
 export interface OnlineOrderRecord {
   orderId: string;
   customerId: string;
@@ -330,8 +330,14 @@ export interface ShopperSummary {
   personalizedOffer: PersonalizedOffer;
 }
 
+export type ShopProduct = Pick<UnifiedStockItem,
+  "sku" | "productName" | "category" | "unitPrice" | "warehouseStock" |
+  "unitsSoldOnline" | "brand" | "rating" | "discountPercentage" | "description" |
+  "thumbnail" | "images"
+>;
+
 export interface ShopSnapshot {
-  products: UnifiedStockItem[];
+  products: ShopProduct[];
   shoppers: ShopperSummary[];
   lastSyncedAt: string;
 }

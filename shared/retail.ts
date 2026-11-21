@@ -49,13 +49,27 @@ export const CARRIERS = [
 ] as const;
 export type Carrier = (typeof CARRIERS)[number];
 
-export const DEMO_PASSWORD = "123456";
+export const WEBSITE_ORDER_DEMO = {
+  customerId: "CUST-002",
+  sku: "SKU-102",
+  quantity: 1,
+  carrier: "LBC Express",
+  paymentMethod: "Card",
+} as const;
 
-export type RetailRole =
-  | "OPS_MANAGER"
-  | "MARKETING_CRM"
-  | "BRANCH_MANAGER"
-  | "COMPLIANCE_AUDITOR";
+export const DEMO_PASSWORD = "123456";
+export const WALK_IN_CUSTOMER_ID = "WALKIN-01";
+
+export const RETAIL_ROLES = [
+  "OPS_MANAGER",
+  "MARKETING_CRM",
+  "BRANCH_MANAGER",
+  "COMPLIANCE_AUDITOR",
+  "CASHIER",
+  "INVENTORY_STAFF",
+  "DELIVERY_COORDINATOR",
+] as const;
+export type RetailRole = (typeof RETAIL_ROLES)[number];
 
 export const DEMO_ACCOUNTS: Array<{
   email: string;
@@ -99,6 +113,40 @@ export const DEMO_ACCOUNTS: Array<{
     badge: "PCI / GDPR",
     scopeSummary: "Pseudonymized customers, masked cards & SHA-256 audit chain",
   },
+  {
+    email: "cashier.manila@karto.ph",
+    displayName: "Bea Santos",
+    role: "CASHIER",
+    branch: "Manila",
+    title: "Manila Cashier",
+    badge: "Manila POS",
+    scopeSummary: "Walk-in sales and receipts at the Manila register",
+  },
+  {
+    email: "cashier.cebu@karto.ph",
+    displayName: "Nico Lim",
+    role: "CASHIER",
+    branch: "Cebu",
+    title: "Cebu Cashier",
+    badge: "Cebu POS",
+    scopeSummary: "Walk-in sales and receipts at the Cebu register",
+  },
+  {
+    email: "inventory@karto.ph",
+    displayName: "Iris Mendoza",
+    role: "INVENTORY_STAFF",
+    title: "Inventory Staff",
+    badge: "Inventory",
+    scopeSummary: "Stock counts, restocks, and transfers across all locations",
+  },
+  {
+    email: "delivery@karto.ph",
+    displayName: "Rafael Cruz",
+    role: "DELIVERY_COORDINATOR",
+    title: "Delivery Coordinator",
+    badge: "Delivery",
+    scopeSummary: "Website order dispatch, tracking, and delivery status",
+  },
 ];
 
 export const ROLE_LABELS: Record<RetailRole, string> = {
@@ -106,6 +154,9 @@ export const ROLE_LABELS: Record<RetailRole, string> = {
   MARKETING_CRM: "Marketing & CRM",
   BRANCH_MANAGER: "Branch Manager · Manila",
   COMPLIANCE_AUDITOR: "PCI DSS / GDPR Auditor",
+  CASHIER: "Cashier",
+  INVENTORY_STAFF: "Inventory Staff",
+  DELIVERY_COORDINATOR: "Delivery Coordinator",
 };
 
 export function formatPHP(amount: number): string {

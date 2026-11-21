@@ -13,16 +13,17 @@ import {
   Search,
   Smartphone,
   Tag,
-  Wallet,
   X,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
+import { canRecordPOSSale } from "@/shared/access";
 import {
   buildQuickCashAmounts,
-  CARRIERS,
+  BRANCHES,
   CATEGORIES,
   formatPHP,
-  type Carrier,
+  WALK_IN_CUSTOMER_ID,
+  type Branch,
   type ProductCategory,
 } from "@/shared/retail";
 import type { CheckoutReceipt, UnifiedCustomerRecord } from "@/shared/types";
@@ -35,13 +36,12 @@ import {
   formatTime,
 } from "@/frontend/components/ui";
 
-type ChannelMode = "MANILA_POS" | "CEBU_POS" | "ONLINE";
-type TenderMethod = "Cash" | "Card" | "GCash" | "Maya";
+type TenderMethod = "Cash" | "Card" | "GCash";
 
 interface HeldSale {
   id: string;
   label: string;
-  channelMode: ChannelMode;
+  branch: Branch;
   customerId: string;
   cart: Record<string, number>;
 }
@@ -124,12 +124,11 @@ export function CheckoutTab({
     processCheckout,
   } = useEDM();
 
-  const isOps = currentRole === "OPS_MANAGER";
-  const canPOS =
-    currentRole === "OPS_MANAGER" || currentRole === "BRANCH_MANAGER";
+  const cashier = currentRole === "CASHIER";
+  const canPOS = canRecordPOSSale(currentRole);
 
-  const [channelMode, setChannelMode] = useState<ChannelMode>(
-    branchScope === "Cebu" ? "CEBU_POS" : "MANILA_POS",
+  const [selectedBranch, setSelectedBranch] = useState<Branch>(
+    branchScope || "Manila",
   );
   const [query, setQuery] = useState("");
   const [scanMessage, setScanMessage] = useState<string | null>(null);
@@ -138,38 +137,21 @@ export function CheckoutTab({
   );
   const [cart, setCart] = useState<Record<string, number>>({});
   const [heldSales, setHeldSales] = useState<HeldSale[]>([]);
-  const [customerId, setCustomerId] = useState("CUST-001");
+  const [selectedCustomerId, setCustomerId] = useState("CUST-001");
 
   // Two-step Tender & Receipt modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [tenderMethod, setTenderMethod] = useState<TenderMethod>("Cash");
   const [cashInput, setCashInput] = useState("");
   const [cardNumber, setCardNumber] = useState("");
-  const [carrier, setCarrier] = useState<Carrier>("LBC Express");
   const [completedReceipt, setCompletedReceipt] =
     useState<CompletedReceiptView | null>(null);
 
-  const effectiveChannel: ChannelMode = branchScope
-    ? branchScope === "Cebu"
-      ? "CEBU_POS"
-      : "MANILA_POS"
-    : channelMode;
-  const isOnline = effectiveChannel === "ONLINE";
-
-  const effectiveCustomerId =
-    isOnline && customerId === "WALKIN-01"
-      ? customers[0]?.customerId || ""
-      : customerId;
-  const activeCustomer = customers.find(
-    (c) => c.customerId === effectiveCustomerId,
-  );
-
-  const effectiveTenderMethod: TenderMethod =
-    isOnline && tenderMethod === "Cash"
-      ? "Card"
-      : !isOnline && tenderMethod === "Maya"
-        ? "GCash"
-        : tenderMethod;
+  const branch = branchScope || selectedBranch;
+  const customerId = cashier ? WALK_IN_CUSTOMER_ID : selectedCustomerId;
+  const activeCustomer = customers.find((c) => c.customerId === customerId);
+  const stockForBranch = (item: (typeof stockItems)[number]) =>
+    branch === "Cebu" ? item.cebuStock : item.manilaStock;
 
   const visibleProducts = stockItems.filter((item) => {
     const q = query.trim().toLowerCase();
@@ -213,6 +195,16 @@ export function CheckoutTab({
   const totalQty = cleanCart.reduce((sum, l) => sum + l.qty, 0);
 
   const updateCartQty = (sku: string, delta: number) => {
+    const item = stockMap.get(sku);
+    if (
+      cashier &&
+      delta > 0 &&
+      item &&
+      (cart[sku] || 0) >= stockForBranch(item)
+    ) {
+      setScanMessage(`No more ${item.productName} available at ${branch}.`);
+      return false;
+    }
     setCart((prev) => {
       const next = (prev[sku] || 0) + delta;
       if (next <= 0) {
@@ -222,6 +214,7 @@ export function CheckoutTab({
       }
       return { ...prev, [sku]: Math.min(50, next) };
     });
+    return true;
   };
 
   const handleScanSubmit = (e: FormEvent) => {
@@ -234,14 +227,16 @@ export function CheckoutTab({
         (item.externalSku || "").toLowerCase() === q,
     );
     const target =
-      exactMatch || (visibleProducts.length === 1 ? visibleProducts[0] : undefined);
+      exactMatch ||
+      (visibleProducts.length === 1 ? visibleProducts[0] : undefined);
     if (!target) {
       setScanMessage(`No exact SKU match for "${query.trim()}".`);
       return;
     }
-    updateCartQty(target.sku, 1);
-    setQuery("");
-    setScanMessage(`Scanned +1 ${target.productName}`);
+    if (updateCartQty(target.sku, 1)) {
+      setQuery("");
+      setScanMessage(`Scanned +1 ${target.productName}`);
+    }
   };
 
   const handleHoldSale = () => {
@@ -250,8 +245,8 @@ export function CheckoutTab({
     const held: HeldSale = {
       id: `HOLD-${Date.now().toString().slice(-4)}`,
       label: `${name} (${totalQty})`,
-      channelMode: effectiveChannel,
-      customerId: effectiveCustomerId || "WALKIN-01",
+      branch,
+      customerId,
       cart: { ...cart },
     };
     setHeldSales((prev) => [held, ...prev]);
@@ -263,7 +258,7 @@ export function CheckoutTab({
     const [latest, ...rest] = heldSales;
     if (!latest) return;
     setHeldSales(rest);
-    setChannelMode(latest.channelMode);
+    setSelectedBranch(latest.branch);
     setCustomerId(latest.customerId);
     setCart(latest.cart);
     setScanMessage(`Resumed ${latest.label}.`);
@@ -271,7 +266,7 @@ export function CheckoutTab({
 
   const openChargeModal = () => {
     setCompletedReceipt(null);
-    setTenderMethod(isOnline ? "Card" : "Cash");
+    setTenderMethod("Cash");
     setCashInput("");
     setCardNumber("");
     setPaymentModalOpen(true);
@@ -292,56 +287,37 @@ export function CheckoutTab({
     });
   };
 
-  const stockForChannel = (item: (typeof stockItems)[number]) =>
-    isOnline
-      ? item.warehouseStock
-      : effectiveChannel === "CEBU_POS"
-        ? item.cebuStock
-        : item.manilaStock;
-
-  const channelLabel = isOnline
-    ? "Online Order"
-    : effectiveChannel === "CEBU_POS"
-      ? "Cebu POS"
-      : "Manila POS";
+  const registerLabel = `${branch} POS`;
 
   const quickCashAmounts = buildQuickCashAmounts(totalAmount);
   const parsedCash = Number(cashInput || "0") || 0;
   const cashShortBy = Math.max(0, totalAmount - parsedCash);
   const cashChangeDue = Math.max(0, parsedCash - totalAmount);
 
+  const exceedsStock =
+    cashier && cleanCart.some(({ item, qty }) => qty > stockForBranch(item));
   const canCharge =
-    cleanCart.length > 0 &&
-    !isSyncing &&
-    (isOnline ? isOps && Boolean(effectiveCustomerId) : canPOS);
+    cleanCart.length > 0 && !isSyncing && canPOS && !exceedsStock;
 
   const canCompleteTender =
-    !isSyncing &&
-    (effectiveTenderMethod !== "Cash" || parsedCash >= totalAmount);
+    canCharge && (tenderMethod !== "Cash" || parsedCash >= totalAmount);
 
   const handleCompletePayment = async () => {
-    if (!canCompleteTender || !cleanCart.length) return;
+    if (!canCompleteTender) return;
     const itemSnapshot = cleanCart.map((line) => ({
       title: line.item.productName,
       qty: line.qty,
       unitPrice: line.item.unitPrice,
       lineTotal: line.item.unitPrice * line.qty,
     }));
-    const cashUsed =
-      effectiveTenderMethod === "Cash" ? parsedCash : undefined;
-    const changeAmt =
-      effectiveTenderMethod === "Cash"
-        ? Math.max(0, parsedCash - totalAmount)
-        : 0;
+    const cashUsed = tenderMethod === "Cash" ? parsedCash : undefined;
+    const changeAmt = tenderMethod === "Cash" ? cashChangeDue : 0;
 
     const receipt = await processCheckout({
-      channel: isOnline ? "ONLINE" : "POS",
-      ...(isOnline
-        ? { carrier }
-        : { branch: effectiveChannel === "CEBU_POS" ? "Cebu" : "Manila" }),
-      customerId: effectiveCustomerId || "WALKIN-01",
-      paymentMethod: effectiveTenderMethod,
-      ...(effectiveTenderMethod === "Card" && cardNumber.trim()
+      branch,
+      customerId,
+      paymentMethod: tenderMethod,
+      ...(tenderMethod === "Card" && cardNumber.trim()
         ? { cardNumber: cardNumber.trim() }
         : {}),
       items: cleanCart.map((l) => ({ sku: l.sku, quantity: l.qty })),
@@ -351,7 +327,7 @@ export function CheckoutTab({
       setCompletedReceipt({
         receipt,
         items: itemSnapshot,
-        paymentMethod: effectiveTenderMethod,
+        paymentMethod: tenderMethod,
         cashTendered: cashUsed,
         changeDue: changeAmt,
         vatIncluded,
@@ -372,41 +348,23 @@ export function CheckoutTab({
             role="tablist"
             aria-label="Select POS register"
           >
-            {(
-              [
-                {
-                  id: "MANILA_POS",
-                  label: "Manila POS",
-                  disabled: Boolean(branchScope && branchScope !== "Manila"),
-                },
-                {
-                  id: "CEBU_POS",
-                  label: "Cebu POS",
-                  disabled: Boolean(branchScope && branchScope !== "Cebu"),
-                },
-                {
-                  id: "ONLINE",
-                  label: "Online Order",
-                  disabled: !isOps,
-                },
-              ] as const
-            ).map((ch) => (
+            {(cashier ? [branch] : BRANCHES).map((registerBranch) => (
               <button
-                key={ch.id}
+                key={registerBranch}
                 type="button"
                 role="tab"
-                disabled={ch.disabled}
-                aria-selected={effectiveChannel === ch.id}
-                className={effectiveChannel === ch.id ? "active" : ""}
-                onClick={() => setChannelMode(ch.id)}
+                disabled={Boolean(
+                  branchScope && branchScope !== registerBranch,
+                )}
+                aria-selected={branch === registerBranch}
+                className={branch === registerBranch ? "active" : ""}
+                onClick={() => setSelectedBranch(registerBranch)}
               >
-                {ch.label}
+                {registerBranch} POS
               </button>
             ))}
           </div>
-          <span className="pos-terminal-tag">
-            {isOnline ? "Web + 3PL Hub" : "Register #01 · VAT Incl."}
-          </span>
+          <span className="pos-terminal-tag">Register #01 · VAT Incl.</span>
         </div>
 
         <div className="pos-topbar-right">
@@ -458,7 +416,11 @@ export function CheckoutTab({
               )}
             </form>
 
-            <div className="feed-tabs" role="tablist" aria-label="Category filter">
+            <div
+              className="feed-tabs"
+              role="tablist"
+              aria-label="Category filter"
+            >
               {(["ALL", ...CATEGORIES] as const).map((cat) => (
                 <button
                   key={cat}
@@ -476,23 +438,26 @@ export function CheckoutTab({
 
           {!visibleProducts.length ? (
             <EmptyState title="No items match your search">
-              Clear search or add items from Stock &amp; 3PL.
+              Clear your search or choose a different category.
             </EmptyState>
           ) : (
             <div className="pos-grid">
               {visibleProducts.map((item) => {
                 const qtyInCart = cart[item.sku] || 0;
-                const channelQty = stockForChannel(item);
+                const branchQty = stockForBranch(item);
                 return (
                   <button
                     key={item.sku}
                     type="button"
-                    disabled={isSyncing}
+                    disabled={isSyncing || (cashier && qtyInCart >= branchQty)}
                     className={`pos-tile${qtyInCart > 0 ? " is-selected" : ""}`}
                     onClick={() => updateCartQty(item.sku, 1)}
                   >
                     {qtyInCart > 0 && (
-                      <span className="pos-tile-qty" aria-label={`${qtyInCart} in sale`}>
+                      <span
+                        className="pos-tile-qty"
+                        aria-label={`${qtyInCart} in sale`}
+                      >
                         {qtyInCart}
                       </span>
                     )}
@@ -513,14 +478,14 @@ export function CheckoutTab({
                         <strong>{formatPHP(item.unitPrice)}</strong>
                         <span
                           className={
-                            channelQty <= 0
+                            branchQty <= 0
                               ? "text-danger"
-                              : channelQty <= 4
+                              : branchQty <= 4
                                 ? "text-warning"
                                 : "muted"
                           }
                         >
-                          {channelQty <= 0 ? "Out" : `${channelQty} left`}
+                          {branchQty <= 0 ? "Out" : `${branchQty} left`}
                         </span>
                       </div>
                     </div>
@@ -537,7 +502,7 @@ export function CheckoutTab({
             <div>
               <h2>Current Sale</h2>
               <small className="muted">
-                {totalQty} item(s) · {channelLabel}
+                {totalQty} item(s) · {registerLabel}
               </small>
             </div>
             <div className="pos-ticket-actions">
@@ -561,22 +526,24 @@ export function CheckoutTab({
           </div>
 
           <div className="pos-ticket-customer">
-            <label className="checkout-field">
-              <span>Customer</span>
-              <select
-                value={effectiveCustomerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                {!isOnline && (
-                  <option value="WALKIN-01">Walk-In Customer</option>
-                )}
-                {customers.map((c) => (
-                  <option key={c.customerId} value={c.customerId}>
-                    {c.fullName} ({c.loyaltyTier} · {c.gdprConsent})
-                  </option>
-                ))}
-              </select>
-            </label>
+            {cashier ? (
+              <strong>Walk-in sale</strong>
+            ) : (
+              <label className="checkout-field">
+                <span>Customer</span>
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                >
+                  <option value={WALK_IN_CUSTOMER_ID}>Walk-In Customer</option>
+                  {customers.map((c) => (
+                    <option key={c.customerId} value={c.customerId}>
+                      {c.fullName} ({c.loyaltyTier} · {c.gdprConsent})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             {activeCustomer && (
               <div
@@ -649,6 +616,7 @@ export function CheckoutTab({
                     <button
                       type="button"
                       aria-label={`Increase ${item.productName}`}
+                      disabled={cashier && qty >= stockForBranch(item)}
                       onClick={() => updateCartQty(sku, 1)}
                     >
                       <Plus size={12} />
@@ -692,13 +660,18 @@ export function CheckoutTab({
               </div>
             </dl>
 
+            {exceedsStock && (
+              <p className="text-warning" role="status">
+                Stock changed. Reduce the quantities in this sale to continue.
+              </p>
+            )}
             <button
               type="button"
               className="button primary pos-charge-btn"
               disabled={!canCharge}
               onClick={openChargeModal}
             >
-              {isOnline ? "Checkout Online" : "Charge"} {formatPHP(totalAmount)}
+              Charge {formatPHP(totalAmount)}
             </button>
           </div>
         </aside>
@@ -720,17 +693,13 @@ export function CheckoutTab({
                   <CheckCircle2 size={22} className="text-success" />
                   <strong>KARTO</strong>
                   <small>
-                    {completedReceipt.receipt.channel === "POS"
-                      ? `${completedReceipt.receipt.branch} Branch · POS Register #01`
-                      : `Online Storefront · ${completedReceipt.receipt.carrier}`}
+                    {completedReceipt.receipt.branch} Branch · POS Register #01
                   </small>
                   <span className="muted mono">
                     {completedReceipt.receipt.referenceIds.join(", ")} ·{" "}
                     {formatTime(completedReceipt.receipt.timestamp)}
                   </span>
-                  <span>
-                    Customer: {completedReceipt.receipt.customerName}
-                  </span>
+                  <span>Customer: {completedReceipt.receipt.customerName}</span>
                 </div>
 
                 <hr className="pos-receipt-divider" />
@@ -791,19 +760,12 @@ export function CheckoutTab({
                     </div>
                   )}
 
-                  {completedReceipt.receipt.trackingNumber && (
-                    <div>
-                      <dt>3PL Tracking</dt>
-                      <dd className="mono">
-                        {completedReceipt.receipt.trackingNumber}
-                      </dd>
-                    </div>
-                  )}
                   {completedReceipt.receipt.pointsEarned > 0 && (
                     <div>
                       <dt>Loyalty Earned</dt>
                       <dd>
-                        +{completedReceipt.receipt.pointsEarned.toLocaleString()}{" "}
+                        +
+                        {completedReceipt.receipt.pointsEarned.toLocaleString()}{" "}
                         pts
                       </dd>
                     </div>
@@ -820,17 +782,19 @@ export function CheckoutTab({
                   <Printer size={15} />
                   Print Receipt
                 </button>
-                <button
-                  type="button"
-                  className="button quiet"
-                  onClick={() => {
-                    setPaymentModalOpen(false);
-                    setCompletedReceipt(null);
-                    onNavigate("stock");
-                  }}
-                >
-                  Stock &amp; 3PL
-                </button>
+                {!cashier && (
+                  <button
+                    type="button"
+                    className="button quiet"
+                    onClick={() => {
+                      setPaymentModalOpen(false);
+                      setCompletedReceipt(null);
+                      onNavigate("stock");
+                    }}
+                  >
+                    View Stock
+                  </button>
+                )}
                 <button
                   type="button"
                   className="button primary"
@@ -850,7 +814,7 @@ export function CheckoutTab({
                 <span className="muted">Amount Due</span>
                 <strong>{formatPHP(totalAmount)}</strong>
                 <small className="muted">
-                  {totalQty} item(s) · {channelLabel} ·{" "}
+                  {totalQty} item(s) · {registerLabel} ·{" "}
                   {activeCustomer?.fullName || "Walk-In Customer"}
                 </small>
               </div>
@@ -860,94 +824,39 @@ export function CheckoutTab({
                 role="radiogroup"
                 aria-label="Payment tender method"
               >
-                {!isOnline ? (
-                  <>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "Cash"}
-                      className={`tender-method-btn${effectiveTenderMethod === "Cash" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("Cash")}
-                    >
-                      <Banknote size={18} />
-                      <span>Cash</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "Card"}
-                      className={`tender-method-btn${effectiveTenderMethod === "Card" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("Card")}
-                    >
-                      <CreditCard size={18} />
-                      <span>Card (Tap/Chip)</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "GCash"}
-                      className={`tender-method-btn${effectiveTenderMethod === "GCash" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("GCash")}
-                    >
-                      <Smartphone size={18} />
-                      <span>GCash</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "Card"}
-                      className={`tender-method-btn${effectiveTenderMethod === "Card" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("Card")}
-                    >
-                      <CreditCard size={18} />
-                      <span>Card</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "GCash"}
-                      className={`tender-method-btn${effectiveTenderMethod === "GCash" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("GCash")}
-                    >
-                      <Smartphone size={18} />
-                      <span>GCash</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={effectiveTenderMethod === "Maya"}
-                      className={`tender-method-btn${effectiveTenderMethod === "Maya" ? " is-active" : ""}`}
-                      onClick={() => setTenderMethod("Maya")}
-                    >
-                      <Wallet size={18} />
-                      <span>Maya</span>
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tenderMethod === "Cash"}
+                  className={`tender-method-btn${tenderMethod === "Cash" ? " is-active" : ""}`}
+                  onClick={() => setTenderMethod("Cash")}
+                >
+                  <Banknote size={18} />
+                  <span>Cash</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tenderMethod === "Card"}
+                  className={`tender-method-btn${tenderMethod === "Card" ? " is-active" : ""}`}
+                  onClick={() => setTenderMethod("Card")}
+                >
+                  <CreditCard size={18} />
+                  <span>Card (Tap/Chip)</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tenderMethod === "GCash"}
+                  className={`tender-method-btn${tenderMethod === "GCash" ? " is-active" : ""}`}
+                  onClick={() => setTenderMethod("GCash")}
+                >
+                  <Smartphone size={18} />
+                  <span>GCash</span>
+                </button>
               </div>
 
-              {isOnline && (
-                <div className="tender-courier-strip">
-                  <span className="muted">3PL Courier</span>
-                  <div className="feed-tabs">
-                    {CARRIERS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        className={carrier === c ? "active" : ""}
-                        onClick={() => setCarrier(c)}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {effectiveTenderMethod === "Cash" && (
+              {tenderMethod === "Cash" && (
                 <div className="cash-tender-section">
                   <div className="quick-cash-row">
                     {quickCashAmounts.map((amt, idx) => (
@@ -963,7 +872,10 @@ export function CheckoutTab({
                   </div>
 
                   <div className="cash-keypad-wrap">
-                    <div className="cash-keypad" aria-label="Cash amount keypad">
+                    <div
+                      className="cash-keypad"
+                      aria-label="Cash amount keypad"
+                    >
                       {KEYPAD_KEYS.map((key) => (
                         <button
                           key={key}
@@ -983,7 +895,9 @@ export function CheckoutTab({
                       </div>
                       <div className="change-due-result">
                         <span>
-                          {parsedCash >= totalAmount ? "Change Due" : "Remaining"}
+                          {parsedCash >= totalAmount
+                            ? "Change Due"
+                            : "Remaining"}
                         </span>
                         <strong
                           className={
@@ -1002,7 +916,7 @@ export function CheckoutTab({
                 </div>
               )}
 
-              {effectiveTenderMethod === "Card" && (
+              {tenderMethod === "Card" && (
                 <div className="card-tender-box">
                   <div className="card-tender-head">
                     <span>Tap, insert EMV chip, or enter card number</span>
@@ -1022,11 +936,10 @@ export function CheckoutTab({
                 </div>
               )}
 
-              {(effectiveTenderMethod === "GCash" ||
-                effectiveTenderMethod === "Maya") && (
+              {tenderMethod === "GCash" && (
                 <div className="wallet-tender-note">
-                  Ready to confirm <strong>{effectiveTenderMethod}</strong> QR /
-                  instant wallet payment for {formatPHP(totalAmount)}.
+                  Ready to confirm <strong>GCash</strong> QR / instant wallet
+                  payment for {formatPHP(totalAmount)}.
                 </div>
               )}
 
@@ -1036,8 +949,7 @@ export function CheckoutTab({
                 disabled={!canCompleteTender}
                 onClick={() => void handleCompletePayment()}
               >
-                {isOnline ? "Confirm Online Order" : "Complete Sale"} ·{" "}
-                {formatPHP(totalAmount)}
+                Complete Sale · {formatPHP(totalAmount)}
               </button>
             </div>
           )}

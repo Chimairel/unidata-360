@@ -14,11 +14,13 @@ import {
   Zap,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
+import { canManageDeliveries, canManageInventory } from "@/shared/access";
 import {
   BRANCHES,
   CARRIERS,
   CATEGORIES,
   formatPHP,
+  WALK_IN_CUSTOMER_ID,
   type Branch,
   type Carrier,
   type ProductCategory,
@@ -93,7 +95,6 @@ export function StockDeliveryTab() {
     salesSummary,
     isSyncing,
     recordPOSSale,
-    recordOnlineOrder,
     dispatchOrder,
     updateShipment,
     transferStock,
@@ -104,16 +105,17 @@ export function StockDeliveryTab() {
   } = useEDM();
 
   const isOps = currentRole === "OPS_MANAGER";
-  const canPOS =
-    currentRole === "OPS_MANAGER" || currentRole === "BRANCH_MANAGER";
+  const inventoryOnly = currentRole === "INVENTORY_STAFF";
+  const deliveryOnly = currentRole === "DELIVERY_COORDINATOR";
+  const canPOS = isOps || currentRole === "BRANCH_MANAGER";
+  const canInventory = canManageInventory(currentRole);
+  const canDelivery = canManageDeliveries(currentRole);
 
   const [saleModalOpen, setSaleModalOpen] = useState(false);
-  const [saleChannel, setSaleChannel] = useState<"POS" | "ONLINE">("POS");
   const [branch, setBranch] = useState<Branch>(branchScope || "Manila");
   const [sku, setSku] = useState("SKU-101");
   const [customerId, setCustomerId] = useState("CUST-001");
   const [quantity, setQuantity] = useState(1);
-  const [carrier, setCarrier] = useState<Carrier>("LBC Express");
   const [paymentMethod, setPaymentMethod] = useState<"Card" | "Cash" | "GCash">(
     "Card",
   );
@@ -235,7 +237,9 @@ export function StockDeliveryTab() {
   );
   const visibleOrderIds = new Set(onlineRecords.map((order) => order.orderId));
   const missingTrackingAlerts = consistencyAlerts.filter(
-    (a) => a.type === "MISSING_TRACKING" && visibleOrderIds.has(a.referenceKey),
+    (a) =>
+      a.type === "MISSING_TRACKING" &&
+      (deliveryOnly || visibleOrderIds.has(a.referenceKey)),
   );
 
   const deliveries: DeliveryRow[] = [
@@ -267,11 +271,21 @@ export function StockDeliveryTab() {
     <div className="page-stack">
       <PageHeading
         title={
-          branchScope
-            ? `${branchScope} Stock & Delivery`
-            : "Stock & 3PL Delivery"
+          inventoryOnly
+            ? "Inventory"
+            : deliveryOnly
+              ? "Website Deliveries"
+              : branchScope
+                ? `${branchScope} Stock & Delivery`
+                : "Stock & 3PL Delivery"
         }
-        description="Real-time inventory across Manila Store, Cebu Store, and Online Warehouse synced with the live product catalog and 3PL couriers."
+        description={
+          inventoryOnly
+            ? "Review stock counts, restock products, and transfer units between Manila, Cebu, and the online warehouse."
+            : deliveryOnly
+              ? "Dispatch website orders and update courier tracking and delivery status."
+              : "Track Manila and Cebu inventory, online warehouse stock, and courier shipments for website orders."
+        }
         action={
           <>
             {isOps && (
@@ -291,7 +305,6 @@ export function StockDeliveryTab() {
                 className="button secondary"
                 disabled={isSyncing}
                 onClick={() => {
-                  setSaleChannel("POS");
                   setBranch(branchScope || "Manila");
                   setSaleModalOpen(true);
                 }}
@@ -391,184 +404,208 @@ export function StockDeliveryTab() {
         </section>
       )}
 
-      <dl className="metric-strip cols-3">
-        <div className="metric-cell">
-          <dt>Total units in stock</dt>
-          <dd>{totalUnits}</dd>
-        </div>
-        <div className="metric-cell">
-          <dt>Products needing restock</dt>
-          <dd className={restockCount > 0 ? "text-danger" : ""}>
-            {restockCount}
-            <span>of {stockItems.length} SKUs</span>
-          </dd>
-        </div>
-        <div className="metric-cell">
-          <dt>3PL deliveries on time</dt>
-          <dd>
-            {salesSummary.onTimeDeliveryRate}%
-            <span>{salesSummary.delayedShipments} delayed</span>
-          </dd>
-        </div>
+      <dl
+        className={`metric-strip ${inventoryOnly || deliveryOnly ? "cols-2" : "cols-3"}`}
+      >
+        {!deliveryOnly && (
+          <>
+            <div className="metric-cell">
+              <dt>Total units in stock</dt>
+              <dd>{totalUnits}</dd>
+            </div>
+            <div className="metric-cell">
+              <dt>Products needing restock</dt>
+              <dd className={restockCount > 0 ? "text-danger" : ""}>
+                {restockCount}
+                <span>of {stockItems.length} SKUs</span>
+              </dd>
+            </div>
+          </>
+        )}
+        {deliveryOnly && (
+          <div className="metric-cell">
+            <dt>Orders awaiting pickup</dt>
+            <dd>{missingTrackingAlerts.length}</dd>
+          </div>
+        )}
+        {!inventoryOnly && (
+          <div className="metric-cell">
+            <dt>3PL deliveries on time</dt>
+            <dd>
+              {salesSummary.onTimeDeliveryRate}%
+              <span>{salesSummary.delayedShipments} delayed</span>
+            </dd>
+          </div>
+        )}
       </dl>
 
-      <section
-        id="stock-products"
-        aria-label="Live product stock cards"
-        tabIndex={-1}
-      >
-        <div className="section-subhead">
-          <h2>Live Product Stock</h2>
-          <p>
-            Click any product to inspect photos, pricing, and channel counts
-          </p>
-        </div>
-
-        <div className="stock-card-grid">
-          {prioritizedStock.map((item) => {
-            const urgent = item.stockStatus !== "Synced";
-            return (
-              <article
-                key={item.sku}
-                className={`stock-card${item.stockStatus === "Oversell Risk" ? " is-danger" : item.stockStatus === "Low Stock" ? " is-warning" : ""}`}
-              >
-                {urgent && (
-                  <div className="stock-card-alert">
-                    <AlertTriangle aria-hidden="true" size={16} />
-                    <div>
-                      <strong>{item.stockStatus}</strong>
-                      <span>{stockWarning(item)}</span>
-                    </div>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="stock-card-media"
-                  aria-label={`Inspect ${item.productName}`}
-                  onClick={() => openDetailModal(item)}
-                >
-                  <ProductImage
-                    src={item.thumbnail}
-                    alt={item.productName}
-                    size={140}
-                  />
-                </button>
-
-                <div className="stock-card-body">
-                  <div className="stock-card-top">
-                    <div>
-                      <button
-                        type="button"
-                        className="stock-title-btn"
-                        onClick={() => openDetailModal(item)}
-                      >
-                        {item.productName}
-                      </button>
-                      <small className="muted">
-                        {item.brand ? `${item.brand} · ` : ""}
-                        <span className="mono">{item.sku}</span> ·{" "}
-                        {formatPHP(item.unitPrice)}
-                        {typeof item.rating === "number"
-                          ? ` · ★ ${item.rating.toFixed(1)}`
-                          : ""}
-                      </small>
-                    </div>
-                    {!urgent && <StockStatusBadge status={item.stockStatus} />}
-                  </div>
-
-                  <div className="channel-stock-strip">
-                    <div>
-                      <span>Manila</span>
-                      <strong
-                        className={
-                          item.manilaStock < 0
-                            ? "text-danger"
-                            : item.manilaStock <= 4
-                              ? "text-warning"
-                              : ""
-                        }
-                      >
-                        {item.manilaStock}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Cebu</span>
-                      <strong
-                        className={
-                          item.cebuStock < 0
-                            ? "text-danger"
-                            : item.cebuStock <= 4
-                              ? "text-warning"
-                              : ""
-                        }
-                      >
-                        {item.cebuStock}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Online</span>
-                      <strong
-                        className={
-                          item.warehouseStock < 0
-                            ? "text-danger"
-                            : item.warehouseStock <= 4
-                              ? "text-warning"
-                              : ""
-                        }
-                      >
-                        {item.warehouseStock}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="stock-card-footer">
-                    <span>
-                      {item.totalStock} on hand ·{" "}
-                      {item.unitsSoldPOS + item.unitsSoldOnline} sold
-                    </span>
-                    {canPOS && (
-                      <button
-                        type="button"
-                        className={`button ${urgent ? "primary" : "quiet"}`}
-                        style={{ minHeight: 34, padding: "5px 12px" }}
-                        disabled={isSyncing}
-                        onClick={() => void restockSKU(item.sku, 20)}
-                      >
-                        <Plus size={13} />
-                        +20 Restock
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section
-        id="partner-deliveries"
-        className="panel"
-        aria-labelledby="partner-deliveries-heading"
-        tabIndex={-1}
-      >
-        <div className="panel-header">
-          <div>
-            <h2 id="partner-deliveries-heading">3PL Partner Deliveries</h2>
+      {!deliveryOnly && (
+        <section
+          id="stock-products"
+          aria-label="Live product stock cards"
+          tabIndex={-1}
+        >
+          <div className="section-subhead">
+            <h2>Live Product Stock</h2>
             <p>
-              Shipments tracked across LBC Express, J&amp;T Express,
-              GrabExpress, and DHL
+              Click any product to inspect photos, pricing, and channel counts
             </p>
           </div>
-          <div
-            className="feed-tabs"
-            role="tablist"
-            aria-label="Filter deliveries"
-          >
-            {(
-              ["ALL", "Delayed", "Awaiting pickup", "IN_TRANSIT", "Delivered"] as const
-            ).map(
-              (f) => (
+
+          <div className="stock-card-grid">
+            {prioritizedStock.map((item) => {
+              const urgent = item.stockStatus !== "Synced";
+              return (
+                <article
+                  key={item.sku}
+                  className={`stock-card${item.stockStatus === "Oversell Risk" ? " is-danger" : item.stockStatus === "Low Stock" ? " is-warning" : ""}`}
+                >
+                  {urgent && (
+                    <div className="stock-card-alert">
+                      <AlertTriangle aria-hidden="true" size={16} />
+                      <div>
+                        <strong>{item.stockStatus}</strong>
+                        <span>{stockWarning(item)}</span>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="stock-card-media"
+                    aria-label={`Inspect ${item.productName}`}
+                    onClick={() => openDetailModal(item)}
+                  >
+                    <ProductImage
+                      src={item.thumbnail}
+                      alt={item.productName}
+                      size={140}
+                    />
+                  </button>
+
+                  <div className="stock-card-body">
+                    <div className="stock-card-top">
+                      <div>
+                        <button
+                          type="button"
+                          className="stock-title-btn"
+                          onClick={() => openDetailModal(item)}
+                        >
+                          {item.productName}
+                        </button>
+                        <small className="muted">
+                          {item.brand ? `${item.brand} · ` : ""}
+                          <span className="mono">{item.sku}</span> ·{" "}
+                          {formatPHP(item.unitPrice)}
+                          {typeof item.rating === "number"
+                            ? ` · ★ ${item.rating.toFixed(1)}`
+                            : ""}
+                        </small>
+                      </div>
+                      {!urgent && (
+                        <StockStatusBadge status={item.stockStatus} />
+                      )}
+                    </div>
+
+                    <div className="channel-stock-strip">
+                      <div>
+                        <span>Manila</span>
+                        <strong
+                          className={
+                            item.manilaStock < 0
+                              ? "text-danger"
+                              : item.manilaStock <= 4
+                                ? "text-warning"
+                                : ""
+                          }
+                        >
+                          {item.manilaStock}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Cebu</span>
+                        <strong
+                          className={
+                            item.cebuStock < 0
+                              ? "text-danger"
+                              : item.cebuStock <= 4
+                                ? "text-warning"
+                                : ""
+                          }
+                        >
+                          {item.cebuStock}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Online</span>
+                        <strong
+                          className={
+                            item.warehouseStock < 0
+                              ? "text-danger"
+                              : item.warehouseStock <= 4
+                                ? "text-warning"
+                                : ""
+                          }
+                        >
+                          {item.warehouseStock}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="stock-card-footer">
+                      <span>
+                        {item.totalStock} on hand ·{" "}
+                        {item.unitsSoldPOS + item.unitsSoldOnline} sold
+                      </span>
+                      {canInventory && (
+                        <button
+                          type="button"
+                          className={`button ${urgent ? "primary" : "quiet"}`}
+                          style={{ minHeight: 34, padding: "5px 12px" }}
+                          disabled={isSyncing}
+                          onClick={() => void restockSKU(item.sku, 20)}
+                        >
+                          <Plus size={13} />
+                          +20 Restock
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {!inventoryOnly && (
+        <section
+          id="partner-deliveries"
+          className="panel"
+          aria-labelledby="partner-deliveries-heading"
+          tabIndex={-1}
+        >
+          <div className="panel-header">
+            <div>
+              <h2 id="partner-deliveries-heading">3PL Partner Deliveries</h2>
+              <p>
+                Shipments tracked across LBC Express, J&amp;T Express,
+                GrabExpress, and DHL
+              </p>
+            </div>
+            <div
+              className="feed-tabs"
+              role="tablist"
+              aria-label="Filter deliveries"
+            >
+              {(
+                [
+                  "ALL",
+                  "Delayed",
+                  "Awaiting pickup",
+                  "IN_TRANSIT",
+                  "Delivered",
+                ] as const
+              ).map((f) => (
                 <button
                   key={f}
                   role="tab"
@@ -578,125 +615,169 @@ export function StockDeliveryTab() {
                 >
                   {f === "ALL" ? "All" : f === "IN_TRANSIT" ? "In Transit" : f}
                 </button>
-              ),
-            )}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="hairline-list">
-          {visibleDeliveries.map(({ alert, shipment: s }) => {
-            if (alert) {
-              const selectedCarrier =
-                dispatchCarriers[alert.referenceKey] || "LBC Express";
+          <div className="hairline-list">
+            {visibleDeliveries.map(({ alert, shipment: s }) => {
+              if (alert) {
+                const selectedCarrier =
+                  dispatchCarriers[alert.referenceKey] || "LBC Express";
+                return (
+                  <div
+                    key={alert.id}
+                    className="hairline-list-row delivery-row is-awaiting"
+                  >
+                    <div className="delivery-main">
+                      <strong>
+                        <AlertTriangle size={14} className="text-warning" />{" "}
+                        Order {alert.referenceKey} awaiting courier pickup
+                      </strong>
+                      <small>{alert.message}</small>
+                    </div>
+                    <div className="shipment-actions">
+                      {canDelivery ? (
+                        <div className="shipment-dispatch-inline">
+                          <select
+                            aria-label={`Select carrier for ${alert.referenceKey}`}
+                            value={selectedCarrier}
+                            disabled={isSyncing}
+                            onChange={(e) =>
+                              setDispatchCarriers((prev) => ({
+                                ...prev,
+                                [alert.referenceKey]: e.target.value as Carrier,
+                              }))
+                            }
+                          >
+                            {CARRIERS.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            style={{ minHeight: 32, padding: "4px 10px" }}
+                            disabled={isSyncing}
+                            onClick={() =>
+                              void dispatchOrder(
+                                alert.referenceKey,
+                                selectedCarrier,
+                              )
+                            }
+                          >
+                            Dispatch 3PL
+                          </button>
+                        </div>
+                      ) : (
+                        <Badge tone="warning">Missing 3PL Tracking</Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div
-                  key={alert.id}
-                  className="hairline-list-row delivery-row is-awaiting"
+                  key={s.shipmentId}
+                  className={`hairline-list-row delivery-row${s.status === "Delayed" ? " is-delayed" : ""}`}
                 >
                   <div className="delivery-main">
                     <strong>
-                      <AlertTriangle size={14} className="text-warning" /> Order{" "}
-                      {alert.referenceKey} awaiting courier pickup
+                      {s.status === "Delayed" ? (
+                        <AlertTriangle aria-hidden="true" size={15} />
+                      ) : (
+                        <Truck aria-hidden="true" size={14} />
+                      )}
+                      {s.carrier} ·{" "}
+                      {customerMap.get(s.customerId) || s.customerId}
                     </strong>
-                    <small>{alert.message}</small>
+                    <small>
+                      Order <span className="mono">{s.orderId}</span> · Tracking{" "}
+                      <span className="mono">{s.trackingNumber}</span> · ETA{" "}
+                      {s.estimatedDelivery}
+                    </small>
+                    {s.delayReason && (
+                      <small className="text-danger">
+                        Delay reason: {s.delayReason}
+                      </small>
+                    )}
                   </div>
                   <div className="shipment-actions">
-                    {isOps ? (
-                      <div className="shipment-dispatch-inline">
-                        <select
-                          aria-label={`Select carrier for ${alert.referenceKey}`}
-                          value={selectedCarrier}
-                          disabled={isSyncing}
-                          onChange={(e) =>
-                            setDispatchCarriers((prev) => ({
-                              ...prev,
-                              [alert.referenceKey]: e.target.value as Carrier,
-                            }))
-                          }
-                        >
-                          {CARRIERS.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
+                    <Badge
+                      tone={
+                        s.status === "Delayed"
+                          ? "danger"
+                          : s.status === "Delivered"
+                            ? "success"
+                            : s.status === "Out for Delivery"
+                              ? "info"
+                              : "warning"
+                      }
+                    >
+                      {s.status}
+                    </Badge>
+                    {canDelivery && s.status === "Label Created" && (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        style={{ minHeight: 30, padding: "4px 10px" }}
+                        disabled={isSyncing}
+                        onClick={() =>
+                          void updateShipment(s.shipmentId, "In Transit")
+                        }
+                      >
+                        Mark In Transit
+                      </button>
+                    )}
+                    {canDelivery && s.status === "In Transit" && (
+                      <>
                         <button
                           type="button"
                           className="button secondary"
-                          style={{ minHeight: 32, padding: "4px 10px" }}
+                          style={{ minHeight: 30, padding: "4px 10px" }}
                           disabled={isSyncing}
                           onClick={() =>
-                            void dispatchOrder(
-                              alert.referenceKey,
-                              selectedCarrier,
+                            void updateShipment(
+                              s.shipmentId,
+                              "Out for Delivery",
                             )
                           }
                         >
-                          Dispatch 3PL
+                          Out for Delivery
                         </button>
-                      </div>
-                    ) : (
-                      <Badge tone="warning">Missing 3PL Tracking</Badge>
+                        <button
+                          type="button"
+                          className="button quiet"
+                          style={{ minHeight: 30, padding: "4px 10px" }}
+                          disabled={isSyncing}
+                          onClick={() =>
+                            void updateShipment(
+                              s.shipmentId,
+                              "Delayed",
+                              "Hub weather delay",
+                            )
+                          }
+                        >
+                          Flag Delay
+                        </button>
+                      </>
                     )}
-                  </div>
-                </div>
-              );
-            }
-            return (
-              <div
-                key={s.shipmentId}
-                className={`hairline-list-row delivery-row${s.status === "Delayed" ? " is-delayed" : ""}`}
-              >
-                <div className="delivery-main">
-                  <strong>
-                    {s.status === "Delayed" ? (
-                      <AlertTriangle aria-hidden="true" size={15} />
-                    ) : (
-                      <Truck aria-hidden="true" size={14} />
+                    {canDelivery && s.status === "Out for Delivery" && (
+                      <button
+                        type="button"
+                        className="button primary"
+                        style={{ minHeight: 30, padding: "4px 10px" }}
+                        disabled={isSyncing}
+                        onClick={() =>
+                          void updateShipment(s.shipmentId, "Delivered")
+                        }
+                      >
+                        Mark Delivered
+                      </button>
                     )}
-                    {s.carrier} ·{" "}
-                    {customerMap.get(s.customerId) || s.customerId}
-                  </strong>
-                  <small>
-                    Order <span className="mono">{s.orderId}</span> · Tracking{" "}
-                    <span className="mono">{s.trackingNumber}</span> · ETA{" "}
-                    {s.estimatedDelivery}
-                  </small>
-                  {s.delayReason && (
-                    <small className="text-danger">
-                      Delay reason: {s.delayReason}
-                    </small>
-                  )}
-                </div>
-                <div className="shipment-actions">
-                  <Badge
-                    tone={
-                      s.status === "Delayed"
-                        ? "danger"
-                        : s.status === "Delivered"
-                          ? "success"
-                          : s.status === "Out for Delivery"
-                            ? "info"
-                            : "warning"
-                    }
-                  >
-                    {s.status}
-                  </Badge>
-                  {isOps && s.status === "Label Created" && (
-                    <button
-                      type="button"
-                      className="button secondary"
-                      style={{ minHeight: 30, padding: "4px 10px" }}
-                      disabled={isSyncing}
-                      onClick={() =>
-                        void updateShipment(s.shipmentId, "In Transit")
-                      }
-                    >
-                      Mark In Transit
-                    </button>
-                  )}
-                  {isOps && s.status === "In Transit" && (
-                    <>
+                    {canDelivery && s.status === "Delayed" && (
                       <button
                         type="button"
                         className="button secondary"
@@ -706,62 +787,21 @@ export function StockDeliveryTab() {
                           void updateShipment(s.shipmentId, "Out for Delivery")
                         }
                       >
-                        Out for Delivery
+                        Resolve Delay
                       </button>
-                      <button
-                        type="button"
-                        className="button quiet"
-                        style={{ minHeight: 30, padding: "4px 10px" }}
-                        disabled={isSyncing}
-                        onClick={() =>
-                          void updateShipment(
-                            s.shipmentId,
-                            "Delayed",
-                            "Hub weather delay",
-                          )
-                        }
-                      >
-                        Flag Delay
-                      </button>
-                    </>
-                  )}
-                  {isOps && s.status === "Out for Delivery" && (
-                    <button
-                      type="button"
-                      className="button primary"
-                      style={{ minHeight: 30, padding: "4px 10px" }}
-                      disabled={isSyncing}
-                      onClick={() =>
-                        void updateShipment(s.shipmentId, "Delivered")
-                      }
-                    >
-                      Mark Delivered
-                    </button>
-                  )}
-                  {isOps && s.status === "Delayed" && (
-                    <button
-                      type="button"
-                      className="button secondary"
-                      style={{ minHeight: 30, padding: "4px 10px" }}
-                      disabled={isSyncing}
-                      onClick={() =>
-                        void updateShipment(s.shipmentId, "Out for Delivery")
-                      }
-                    >
-                      Resolve Delay
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {!visibleDeliveries.length && (
-            <EmptyState title="No shipments in this filter">
-              Switch filter above to view other 3PL partner deliveries.
-            </EmptyState>
-          )}
-        </div>
-      </section>
+              );
+            })}
+            {!visibleDeliveries.length && (
+              <EmptyState title="No shipments in this filter">
+                Switch filter above to view other 3PL partner deliveries.
+              </EmptyState>
+            )}
+          </div>
+        </section>
+      )}
 
       {detailItem && (
         <Modal
@@ -871,11 +911,13 @@ export function StockDeliveryTab() {
               <div className="stock-card-footer">
                 <span>
                   {detailItem.unitsSoldPOS + detailItem.unitsSoldOnline} units
-                  sold · {formatPHP(detailItem.revenueTotal)} total revenue
+                  sold
+                  {!inventoryOnly &&
+                    ` · ${formatPHP(detailItem.revenueTotal)} total revenue`}
                 </span>
               </div>
 
-              {isOps && (
+              {canInventory && (
                 <div className="transfer-strip">
                   <strong>
                     <ArrowLeftRight size={13} /> Transfer Stock Between Channels
@@ -887,9 +929,7 @@ export function StockDeliveryTab() {
                       disabled={isSyncing}
                       onChange={(e) => {
                         const nextFrom = e.target.value as
-                          | "Manila"
-                          | "Cebu"
-                          | "Online";
+                          "Manila" | "Cebu" | "Online";
                         if (nextFrom === transferTo) {
                           setTransferTo(transferFrom);
                         }
@@ -907,9 +947,7 @@ export function StockDeliveryTab() {
                       disabled={isSyncing}
                       onChange={(e) => {
                         const nextTo = e.target.value as
-                          | "Manila"
-                          | "Cebu"
-                          | "Online";
+                          "Manila" | "Cebu" | "Online";
                         if (nextTo === transferFrom) {
                           setTransferFrom(transferTo);
                         }
@@ -951,32 +989,35 @@ export function StockDeliveryTab() {
                 </div>
               )}
 
-              {canPOS && (
+              {(canPOS || canInventory) && (
                 <div className="form-actions" style={{ marginTop: 4 }}>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    disabled={isSyncing}
-                    onClick={() => {
-                      setSku(detailItem.sku);
-                      setDetailSku(null);
-                      setSaleChannel("POS");
-                      setBranch(branchScope || "Manila");
-                      setSaleModalOpen(true);
-                    }}
-                  >
-                    <Plus size={14} />
-                    Record Sale
-                  </button>
-                  <button
-                    type="button"
-                    className={`button ${detailItem.stockStatus !== "Synced" ? "primary" : "secondary"}`}
-                    disabled={isSyncing}
-                    onClick={() => void restockSKU(detailItem.sku, 20)}
-                  >
-                    <Plus size={14} />
-                    +20 Restock
-                  </button>
+                  {canPOS && (
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={isSyncing}
+                      onClick={() => {
+                        setSku(detailItem.sku);
+                        setDetailSku(null);
+                        setBranch(branchScope || "Manila");
+                        setSaleModalOpen(true);
+                      }}
+                    >
+                      <Plus size={14} />
+                      Record Sale
+                    </button>
+                  )}
+                  {canInventory && (
+                    <button
+                      type="button"
+                      className={`button ${detailItem.stockStatus !== "Synced" ? "primary" : "secondary"}`}
+                      disabled={isSyncing}
+                      onClick={() => void restockSKU(detailItem.sku, 20)}
+                    >
+                      <Plus size={14} />
+                      +20 Restock
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1044,7 +1085,9 @@ export function StockDeliveryTab() {
                 Fetching 7-Evelyn catalog metadata and product photos.
               </EmptyState>
             ) : catalogError ? (
-              <EmptyState title="Could not load catalog">{catalogError}</EmptyState>
+              <EmptyState title="Could not load catalog">
+                {catalogError}
+              </EmptyState>
             ) : !filteredCatalog.length ? (
               <EmptyState title="No matching products">
                 Try another search term or switch the category filter.
@@ -1114,30 +1157,20 @@ export function StockDeliveryTab() {
 
       {saleModalOpen && (
         <Modal
-          title="Record Custom Store or Online Sale"
+          title="Record In-Store Sale"
           onClose={() => setSaleModalOpen(false)}
         >
           <form
             className="modal-body"
             onSubmit={async (e) => {
               e.preventDefault();
-              const ok =
-                saleChannel === "POS"
-                  ? await recordPOSSale({
-                      branch: branchScope || branch,
-                      sku: activeSku,
-                      customerId,
-                      quantity,
-                      paymentMethod,
-                    })
-                  : await recordOnlineOrder({
-                      sku: activeSku,
-                      customerId,
-                      quantity,
-                      carrier,
-                      paymentMethod:
-                        paymentMethod === "Cash" ? "Maya" : paymentMethod,
-                    });
+              const ok = await recordPOSSale({
+                branch: branchScope || branch,
+                sku: activeSku,
+                customerId,
+                quantity,
+                paymentMethod,
+              });
               if (ok) setSaleModalOpen(false);
             }}
           >
@@ -1153,61 +1186,31 @@ export function StockDeliveryTab() {
                 <div>
                   <strong>{previewSaleItem.productName}</strong>
                   <small className="muted">
-                    {formatPHP(previewSaleItem.unitPrice)} · Manila{" "}
-                    {previewSaleItem.manilaStock} / Cebu{" "}
-                    {previewSaleItem.cebuStock} / Online{" "}
-                    {previewSaleItem.warehouseStock}
+                    {formatPHP(previewSaleItem.unitPrice)} ·{" "}
+                    {branchScope || branch} stock{" "}
+                    {(branchScope || branch) === "Manila"
+                      ? previewSaleItem.manilaStock
+                      : previewSaleItem.cebuStock}
                   </small>
                 </div>
               </div>
             )}
 
             <div className="form-grid">
-              {isOps && (
-                <label>
-                  Channel
-                  <select
-                    value={saleChannel}
-                    onChange={(e) =>
-                      setSaleChannel(e.target.value as "POS" | "ONLINE")
-                    }
-                  >
-                    <option value="POS">In-Store POS</option>
-                    <option value="ONLINE">Online Storefront + 3PL</option>
-                  </select>
-                </label>
-              )}
-
-              {saleChannel === "POS" ? (
-                <label>
-                  POS Branch
-                  <select
-                    value={branchScope || branch}
-                    disabled={Boolean(branchScope)}
-                    onChange={(e) => setBranch(e.target.value as Branch)}
-                  >
-                    {BRANCHES.map((b) => (
-                      <option key={b} value={b}>
-                        {b} POS
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <label>
-                  3PL Courier
-                  <select
-                    value={carrier}
-                    onChange={(e) => setCarrier(e.target.value as Carrier)}
-                  >
-                    {CARRIERS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              <label>
+                POS Branch
+                <select
+                  value={branchScope || branch}
+                  disabled={Boolean(branchScope)}
+                  onChange={(e) => setBranch(e.target.value as Branch)}
+                >
+                  {BRANCHES.map((b) => (
+                    <option key={b} value={b}>
+                      {b} POS
+                    </option>
+                  ))}
+                </select>
+              </label>
 
               <label>
                 Product
@@ -1234,9 +1237,7 @@ export function StockDeliveryTab() {
                       {c.fullName} ({c.customerId})
                     </option>
                   ))}
-                  {saleChannel === "POS" && (
-                    <option value="WALKIN-01">Walk-In Guest</option>
-                  )}
+                  <option value={WALK_IN_CUSTOMER_ID}>Walk-In Guest</option>
                 </select>
               </label>
 
@@ -1265,9 +1266,7 @@ export function StockDeliveryTab() {
                 >
                   <option value="Card">Credit / Debit Card</option>
                   <option value="GCash">GCash</option>
-                  <option value="Cash">
-                    {saleChannel === "ONLINE" ? "Maya" : "Cash"}
-                  </option>
+                  <option value="Cash">Cash</option>
                 </select>
               </label>
             </div>
@@ -1280,8 +1279,12 @@ export function StockDeliveryTab() {
               >
                 Cancel
               </button>
-              <button type="submit" className="button primary" disabled={isSyncing}>
-                {saleChannel === "POS" ? "Sync POS Sale" : "Place Online Order"}
+              <button
+                type="submit"
+                className="button primary"
+                disabled={isSyncing}
+              >
+                Sync POS Sale
               </button>
             </div>
           </form>

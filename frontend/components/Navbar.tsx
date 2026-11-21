@@ -4,6 +4,7 @@ import {
   Workflow,
   ShoppingCart,
   Package,
+  Truck,
   Users,
   ShieldCheck,
   ClipboardCheck,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
 import { ROLE_LABELS } from "@/shared/retail";
+import { isSpecialist } from "@/shared/access";
 import { workspaceTabs, type TabId } from "@/frontend/lib/workspaceAccess";
 import { ThemeToggle } from "./ThemeToggle";
 import { BrandMark } from "./BrandMark";
@@ -29,6 +31,12 @@ const tabs = [
     icon: Package,
   },
   {
+    id: "delivery",
+    label: "Website Deliveries",
+    short: "Delivery",
+    icon: Truck,
+  },
+  {
     id: "customers",
     label: "Customers",
     short: "Customers",
@@ -41,7 +49,12 @@ const tabs = [
     icon: ShieldCheck,
   },
   { id: "flow", label: "Data Flow", short: "Flow", icon: Workflow },
-  { id: "quality", label: "Data Quality", short: "Quality", icon: ClipboardCheck },
+  {
+    id: "quality",
+    label: "Data Quality",
+    short: "Quality",
+    icon: ClipboardCheck,
+  },
 ] as const;
 
 function cleanActorName(raw: string): string {
@@ -66,18 +79,23 @@ export function Navbar({
   setActiveTab: (tab: TabId) => void;
   openArchitecture: () => void;
 }) {
-  const {
-    currentRole,
-    actorName,
-    isSyncing,
-    isLoading,
-    signOut,
-  } = useEDM();
+  const { currentRole, branchScope, actorName, isSyncing, isLoading, signOut } =
+    useEDM();
 
   const allowed = workspaceTabs(currentRole);
   const visibleTabs = isLoading
     ? []
-    : allowed.map((id) => tabs.find((t) => t.id === id)!);
+    : allowed.map((id) => {
+        const tab = tabs.find((t) => t.id === id)!;
+        return id === "stock" && currentRole === "INVENTORY_STAFF"
+          ? { ...tab, label: "Inventory", short: "Inventory" }
+          : tab;
+      });
+  const roleLabel =
+    currentRole === "CASHIER" && branchScope
+      ? `${branchScope} Cashier`
+      : ROLE_LABELS[currentRole];
+  const showArchitecture = !isLoading && !isSpecialist(currentRole);
 
   const displayName = cleanActorName(actorName);
 
@@ -125,7 +143,7 @@ export function Navbar({
               <Store size={21} />
             </Link>
           )}
-          {!isLoading && (
+          {showArchitecture && (
             <button
               className="rail-tool"
               aria-label="Data pipeline map"
@@ -171,7 +189,7 @@ export function Navbar({
                 <Store size={18} />
               </Link>
             )}
-            {!isLoading && (
+            {showArchitecture && (
               <button
                 className="icon-button mobile-matrix"
                 aria-label="Data pipeline map"
@@ -198,7 +216,7 @@ export function Navbar({
                 </span>
                 <div className="workspace-user-meta">
                   <strong>{displayName}</strong>
-                  <span>{ROLE_LABELS[currentRole]}</span>
+                  <span>{roleLabel}</span>
                 </div>
               </div>
             )}

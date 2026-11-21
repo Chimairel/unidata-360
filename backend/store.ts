@@ -13,7 +13,7 @@ import {
 } from "./data/dummyJsonCatalog";
 import { runRetailIntegration } from "./etl/pipeline";
 import { applyRetailGovernance, maskPaymentCard } from "./governance/masking";
-import { branchScope, ownAuditOnly } from "./access";
+import { branchScope, isAssignedCashierSale, isSpecialist, ownAuditOnly } from "@/shared/access";
 import type {
   AccessIdentity,
   AuditLogEntry,
@@ -29,19 +29,23 @@ import type {
   POSRecord,
   RetailSnapshot,
   SalesSummary,
+  ShopProduct,
   ShopSnapshot,
   ShopperSummary,
   UnifiedCustomerRecord,
   UnifiedStockItem,
   UserRole,
 } from "@/shared/types";
-import type { Branch, Carrier, ProductCategory } from "@/shared/retail";
+import { WALK_IN_CUSTOMER_ID, type Branch, type Carrier, type ProductCategory } from "@/shared/retail";
 
 export const actors: Record<UserRole, string> = {
   OPS_MANAGER: "Lourdes Bautista (Store Operations)",
   MARKETING_CRM: "Camille Reyes (Marketing)",
   BRANCH_MANAGER: "Marco Villanueva (Manila Branch)",
   COMPLIANCE_AUDITOR: "Atty. Gabriel Torres (Auditor)",
+  CASHIER: "Store Cashier",
+  INVENTORY_STAFF: "Iris Mendoza (Inventory)",
+  DELIVERY_COORDINATOR: "Rafael Cruz (Delivery)",
 };
 
 type Value = string | number | null;
@@ -368,7 +372,7 @@ export async function recordPOSSale(
   inv.lastUpdated = now;
 
   const txId = `POS-${Date.now().toString().slice(-4)}`;
-  const customerId = input.customerId.trim().toUpperCase() || "WALKIN-01";
+  const customerId = input.customerId.trim().toUpperCase() || WALK_IN_CUSTOMER_ID;
   const tx: POSRecord = {
     txId,
     branch,
@@ -412,96 +416,6 @@ export async function recordPOSSale(
     "POS_SALE",
     tx.txId,
     `Recorded ${branch} POS sale for ${inv.sku} × ${qty} (${customerId}).`,
-    "ALLOWED",
-    identity,
-  );
-}
-
-export async function recordOnlineOrder(
-  role: UserRole,
-  identity: AccessIdentity | undefined,
-  input: {
-    sku: string;
-    customerId: string;
-    quantity: number;
-    carrier: Carrier;
-    paymentMethod: "Card" | "GCash" | "Maya";
-  },
-) {
-  const skuKey = input.sku.trim().toUpperCase();
-  const invRow = await first<PayloadRow>(
-    "SELECT payload FROM retail_sources WHERE feed='INVENTORY' AND record_key=?",
-    skuKey,
-  );
-  if (!invRow) throw new Error(`SKU ${skuKey} was not found in Inventory.`);
-  const inv = JSON.parse(invRow.payload) as InventoryRecord;
-  const qty = Math.max(1, Math.min(50, Math.round(input.quantity)));
-
-  const now = new Date().toISOString();
-  inv.warehouseStock -= qty;
-  inv.lastUpdated = now;
-
-  const suffix = Date.now().toString().slice(-4);
-  const orderId = `ORD-${suffix}`;
-  const shipmentId = `SHP-${suffix}`;
-  const customerId = input.customerId.trim().toUpperCase() || "CUST-001";
-
-  const order: OnlineOrderRecord = {
-    orderId,
-    customerId,
-    sku: inv.sku,
-    productName: inv.productName,
-    quantity: qty,
-    totalAmount: inv.unitPrice * qty,
-    paymentMethod: input.paymentMethod,
-    cardNumber:
-      input.paymentMethod === "Card"
-        ? `5412-7512-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`
-        : "N/A",
-    promoCode: "KARTOWEB",
-    orderStatus: "Shipped",
-    orderedAt: now,
-  };
-
-  const eta = new Date(Date.now() + 2 * 86400_000).toISOString().slice(0, 10);
-  const shipment: LogisticsRecord = {
-    shipmentId,
-    orderId,
-    customerId,
-    carrier: input.carrier,
-    trackingNumber: `${input.carrier.slice(0, 3).toUpperCase().replace(/[^A-Z]/g, "X")}-${suffix}91`,
-    status: "Label Created",
-    estimatedDelivery: eta,
-    updatedAt: now,
-  };
-
-  await upsert("ONLINE", [order]);
-  await upsert("INVENTORY", [inv]);
-  await upsert("LOGISTICS", [shipment]);
-  await appendCDC({
-    timestamp: now,
-    feed: "ONLINE",
-    operation: "INSERT",
-    integrationMethod: "Real-Time API",
-    recordKey: orderId,
-    summary: `Online Storefront captured ${orderId} (${inv.sku} × ${qty}) & booked ${input.carrier}`,
-    latencyMs: 26 + Math.floor(Math.random() * 14),
-  });
-  await appendCDC({
-    timestamp: now,
-    feed: "INVENTORY",
-    operation: "UPDATE",
-    integrationMethod: "CDC",
-    recordKey: inv.sku,
-    summary: `CDC decremented online warehouse stock by ${qty} for ${inv.sku}`,
-    latencyMs: 21 + Math.floor(Math.random() * 12),
-  });
-  await sync();
-  await audit(
-    role,
-    "ONLINE_ORDER",
-    orderId,
-    `Placed online order ${orderId} (${inv.sku} × ${qty}) via ${input.carrier}.`,
     "ALLOWED",
     identity,
   );
@@ -889,6 +803,7 @@ export async function processCheckout(
     paymentMethod: "Card" | "Cash" | "GCash" | "Maya";
     cardNumber?: string;
     carrier?: Carrier;
+    simulated?: true;
     items: Array<{ sku: string; quantity: number }>;
   },
 ): Promise<CheckoutReceipt> {
@@ -899,6 +814,10 @@ export async function processCheckout(
   const scope = branchScope(role, identity);
   const channel = scope ? "POS" : input.channel;
   const branch: Branch = scope || input.branch || "Manila";
+  if (role === "CASHIER" && (input.channel !== "POS" ||
+    !isAssignedCashierSale(identity, input.branch, input.customerId))) {
+    throw new Error("Cashiers can only record walk-in sales at their assigned branch.");
+  }
   const carrier: Carrier = input.carrier || "LBC Express";
   const now = new Date().toISOString();
 
@@ -926,6 +845,10 @@ export async function processCheckout(
   for (const [skuKey, qty] of merged.entries()) {
     const inv = invMap.get(skuKey);
     if (!inv) throw new Error(`SKU ${skuKey} was not found in Inventory.`);
+    const available = branch === "Manila" ? inv.manilaStock : inv.cebuStock;
+    if (role === "CASHIER" && qty > available) {
+      throw new Error(`Only ${Math.max(0, available)} ${inv.productName} available at ${branch}.`);
+    }
     lines.push({
       inv,
       quantity: qty,
@@ -935,16 +858,16 @@ export async function processCheckout(
 
   const customerKey =
     input.customerId.trim().toUpperCase() ||
-    (channel === "POS" ? "WALKIN-01" : "CUST-001");
+    (channel === "POS" ? WALK_IN_CUSTOMER_ID : "CUST-001");
   const crmRow =
-    customerKey === "WALKIN-01"
+    customerKey === WALK_IN_CUSTOMER_ID
       ? undefined
       : await first<PayloadRow>(
           "SELECT payload FROM retail_sources WHERE feed='CRM' AND record_key=?",
           customerKey,
         );
   const member = crmRow ? (JSON.parse(crmRow.payload) as CRMRecord) : undefined;
-  if (customerKey !== "WALKIN-01" && !member) {
+  if (customerKey !== WALK_IN_CUSTOMER_ID && !member) {
     throw new Error(`Customer ${customerKey} was not found in CRM.`);
   }
 
@@ -1094,7 +1017,7 @@ export async function processCheckout(
       operation: "INSERT",
       integrationMethod: "Real-Time API",
       recordKey: referenceIds[0],
-      summary: `Online Storefront captured ${lines.reduce((s, l) => s + l.quantity, 0)} item(s) (₱${totalAmount.toLocaleString()}) & booked ${carrier} (${trackingNumber})`,
+      summary: `${input.simulated ? "Website checkout simulation" : "Online Storefront"} captured ${lines.reduce((s, l) => s + l.quantity, 0)} item(s) (₱${totalAmount.toLocaleString()}) & booked ${carrier} (${trackingNumber})`,
       latencyMs: 28,
     });
   }
@@ -1120,7 +1043,7 @@ export async function processCheckout(
     role,
     "CHECKOUT",
     referenceIds.join(", "),
-    `Completed ${channel}${channel === "POS" ? ` (${branch})` : ` (${carrier})`} checkout: ${lines.reduce((s, l) => s + l.quantity, 0)} unit(s), ₱${totalAmount.toLocaleString()}${discountAmount > 0 ? ` (${promoCode} -₱${discountAmount.toLocaleString()})` : ""}.`,
+    `${input.simulated ? "Simulated" : "Completed"} ${channel}${channel === "POS" ? ` (${branch})` : ` (${carrier})`} checkout: ${lines.reduce((s, l) => s + l.quantity, 0)} unit(s), ₱${totalAmount.toLocaleString()}${discountAmount > 0 ? ` (${promoCode} -₱${discountAmount.toLocaleString()})` : ""}.`,
     "ALLOWED",
     identity,
   );
@@ -1496,7 +1419,8 @@ export function snapshot(
       salesSummary,
     });
 
-    const filteredLogs = ownAuditOnly(role)
+    const specialist = isSpecialist(role);
+    const filteredLogs = specialist ? [] : ownAuditOnly(role)
       ? trail.entries.filter((entry) =>
           identity?.mode === "account"
             ? entry.actorId === identity.userId
@@ -1517,19 +1441,27 @@ export function snapshot(
       logisticsRecords: governed.logisticsRecords,
       stockItems: governed.stockItems,
       customers: governed.customers,
-      cdcEvents,
-      consistencyAlerts,
-      etlReports,
+      cdcEvents: specialist ? [] : cdcEvents,
+      consistencyAlerts: specialist
+        ? consistencyAlerts.filter((alert) => {
+            if (role === "INVENTORY_STAFF") return alert.feed === "INVENTORY";
+            if (role === "DELIVERY_COORDINATOR") {
+              return alert.type === "DELAYED_3PL" || alert.type === "MISSING_TRACKING";
+            }
+            return false;
+          })
+        : consistencyAlerts,
+      etlReports: specialist ? [] : etlReports,
       auditLogs: filteredLogs,
       sourceCounts: {
-        POS: posRecords.length,
-        INVENTORY: inventoryRecords.length,
-        CRM: crmRecords.length,
-        ONLINE: onlineRecords.length,
-        LOGISTICS: logisticsRecords.length,
+        POS: specialist ? 0 : posRecords.length,
+        INVENTORY: specialist ? governed.inventoryRecords.length : inventoryRecords.length,
+        CRM: specialist ? 0 : crmRecords.length,
+        ONLINE: specialist ? 0 : onlineRecords.length,
+        LOGISTICS: specialist ? governed.logisticsRecords.length : logisticsRecords.length,
       },
       salesSummary: governed.salesSummary,
-      auditIntegrity: trail.valid,
+      auditIntegrity: !specialist && trail.valid,
       lastSyncedAt,
     };
   });
@@ -1552,13 +1484,20 @@ export function shopCatalog(): Promise<ShopSnapshot> {
     const masterRows = await rows<{ id: string; payload: string }>(
       "SELECT id, payload FROM retail_master ORDER BY id",
     );
-    let products: UnifiedStockItem[] = [];
+    let products: ShopProduct[] = [];
     let lastSyncedAt = new Date().toISOString();
     const shoppers: ShopperSummary[] = [];
 
     for (const m of masterRows) {
       if (m.id === "meta:stock") {
-        products = JSON.parse(m.payload) as UnifiedStockItem[];
+        const stock = JSON.parse(m.payload) as UnifiedStockItem[];
+        products = stock.map(({
+          sku, productName, category, unitPrice, warehouseStock, unitsSoldOnline,
+          brand, rating, discountPercentage, description, thumbnail, images,
+        }) => ({
+          sku, productName, category, unitPrice, warehouseStock, unitsSoldOnline,
+          brand, rating, discountPercentage, description, thumbnail, images,
+        }));
       } else if (m.id === "meta:sales") {
         const meta = JSON.parse(m.payload) as { lastSyncedAt: string };
         lastSyncedAt = meta.lastSyncedAt;

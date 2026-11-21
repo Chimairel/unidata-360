@@ -36,20 +36,12 @@ interface EDMContextType extends RetailSnapshot {
     quantity: number;
     paymentMethod: "Card" | "Cash" | "GCash";
   }) => Promise<boolean>;
-  recordOnlineOrder: (input: {
-    sku: string;
-    customerId: string;
-    quantity: number;
-    carrier: Carrier;
-    paymentMethod: "Card" | "GCash" | "Maya";
-  }) => Promise<boolean>;
+  simulateWebsiteOrder: () => Promise<boolean>;
   processCheckout: (input: {
-    channel: "POS" | "ONLINE";
-    branch?: Branch;
+    branch: Branch;
     customerId: string;
-    paymentMethod: "Card" | "Cash" | "GCash" | "Maya";
+    paymentMethod: "Card" | "Cash" | "GCash";
     cardNumber?: string;
-    carrier?: Carrier;
     items: Array<{ sku: string; quantity: number }>;
   }) => Promise<CheckoutReceipt | null>;
   createCustomer: (input: {
@@ -339,10 +331,13 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
         executeSync: () => command({ type: "sync" }),
         resetAllData: () => command({ type: "reset" }),
         recordPOSSale: (input) => command({ type: "pos_sale", ...input }),
-        recordOnlineOrder: (input) =>
-          command({ type: "online_order", ...input }),
+        simulateWebsiteOrder: () => command({ type: "simulate_website_order" }),
         processCheckout: async (input) => {
-          const res = await postCommand({ type: "checkout", ...input });
+          const res = await postCommand({
+            type: "checkout",
+            channel: "POS",
+            ...input,
+          });
           return res.ok && res.receipt ? res.receipt : null;
         },
         createCustomer: (input) =>

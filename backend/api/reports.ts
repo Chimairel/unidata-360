@@ -2,7 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { session, AuthenticationRequired } from "@/backend/session";
 import { audit, snapshot } from "@/backend/store";
 import { makeReport } from "@/backend/reports";
-import { canViewAnalytics } from "@/backend/access";
+import { canViewAnalytics, isSpecialist } from "@/shared/access";
 
 function csv(value: string) {
   const safe = /^[=+@\-\t\r]/.test(value) ? `'${value}` : value;
@@ -12,6 +12,12 @@ function csv(value: string) {
 export async function GET(request: Request) {
   try {
     const s = await session();
+    if (isSpecialist(s.role)) {
+      return Response.json(
+        { error: "Report exports are unavailable to this role." },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     const url = new URL(request.url);
     const kind = url.searchParams.get("kind");
     const customerId = url.searchParams.get("customerId");

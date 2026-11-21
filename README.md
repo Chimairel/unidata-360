@@ -14,7 +14,7 @@
    - **Real-Time API** (**Application Programming Interface** — live request/response checkout bridge) and **CDC** (**Change Data Capture** — instant row-level stock & order event stream)
    - **ETL** (**Extract, Transform, Load** — automated pipeline) and **DQM** (**Data Quality Management** — negative stock / oversell detection, duplicate handling, and **CSV** / **JSON**, Comma-Separated Values / JavaScript Object Notation, validation)
 3. **Governance, Privacy & Tamper-Evident Audit:**
-   - **RBAC** (**Role-Based Access Control** — strict permissions for Store Operations, Marketing & CRM, Manila Branch Manager, and Compliance Auditor)
+   - **RBAC** (**Role-Based Access Control**). Manila and Cebu cashiers record in-store sales, Inventory Staff manage stock, and the Delivery Coordinator handles website shipments. Store Operations sees all five feeds and reviews quality alerts and audited staff updates.
    - **PCI DSS** (**Payment Card Industry Data Security Standard**) masking — never exposes raw 16-digit **PAN** (**Primary Account Number**) digits
    - **GDPR** (**General Data Protection Regulation**) enforcement — blocks automated promotions on `Opted Out` customers and masks/pseudonymizes **PII** (**Personally Identifiable Information** — emails and phone numbers)
    - Append-only **PostgreSQL** (**Structured Query Language** relational database) audit log signed with a verifiable **SHA-256** (**Secure Hash Algorithm 256-bit** — tamper-evident hash chain)

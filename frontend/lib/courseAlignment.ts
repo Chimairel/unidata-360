@@ -28,8 +28,8 @@ export const retailSourceMap = [
   },
   {
     source: "Online Storefront",
-    owner: "E-Commerce Web & Mobile App",
-    data: "Web/App checkout orders, promo codes, tokenized card numbers",
+    owner: "Public Storefront Website",
+    data: "Website checkout orders, promo codes, tokenized card numbers",
     integration: "Real-Time Order API + seasonal spike simulator",
     governance: "PCI DSS masking ([PCI DSS Restricted] for Marketing)",
     output: "Unified Sales Analytics & Online fulfillment tracking",
@@ -50,7 +50,7 @@ export const retailChallenges = [
   {
     pillar: "Integration: Real-Time APIs",
     evidence:
-      "Record POS Sale, Place Online Order, +20 Restock, and GDPR Consent toggles run live against PostgreSQL.",
+      "In-store sales, website checkout, +20 Restock, and GDPR Consent toggles run live against PostgreSQL.",
     status: "Live",
   },
   {

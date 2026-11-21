@@ -18,8 +18,9 @@ import {
   type AuditChainRow,
 } from "../backend/store";
 import { accountsRequired } from "../backend/auth";
+import { POST as staffCommand } from "../backend/api/edm";
 import { buildQualityRows } from "../frontend/lib/dataQuality";
-import { workspaceTabs } from "../frontend/lib/workspaceAccess";
+import { defaultWorkspaceTab, effectiveWorkspaceTab, workspaceTabs } from "../frontend/lib/workspaceAccess";
 import {
   buildQuickCashAmounts,
   convertUsdToPhp,
@@ -27,12 +28,43 @@ import {
 } from "../shared/retail";
 import {
   branchScope,
+  canManageDeliveries,
+  canManageInventory,
   canManageOps,
   canRecordPOSSale,
   canToggleGDPR,
   canViewAnalytics,
+  isAssignedCashierSale,
   ownAuditOnly,
-} from "../backend/access";
+} from "../shared/access";
+
+test("staff commands reject manually entered delivery orders", async () => {
+  const origin = process.env.EDM_PUBLIC_ORIGIN || "http://localhost:3005";
+  const items = [{ sku: "SKU-102", quantity: 1 }];
+  const delivery = {
+    customerId: "CUST-002",
+    paymentMethod: "Card",
+    carrier: "LBC Express",
+  };
+  const commands = [
+    { type: "checkout", channel: "ONLINE", ...delivery, items },
+    { type: "checkout", channel: "POS", branch: "Cebu", ...delivery, items },
+    { type: "online_order", ...delivery, ...items[0] },
+    { type: "simulate_website_order", ...delivery, items },
+  ];
+
+  for (const command of commands) {
+    const response = await staffCommand(
+      new Request(`${origin}/api/edm`, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify(command),
+      }),
+    );
+    assert.equal(response.status, 400, JSON.stringify(command));
+    assert.match((await response.json()).error, /^Invalid request payload/);
+  }
+});
 
 test("5-source retail integration reconciles stock, offers, sales summary, and consistency alerts", () => {
   const result = runRetailIntegration(
@@ -242,6 +274,48 @@ test("Role governance isolates Manila Branch Manager, masks Marketing opt-outs, 
   assert.ok(auditor.posRecords.every((p) => p.cardNumber === "[PCI DSS Masked]" || p.cardNumber === "Cash / E-Wallet"));
 });
 
+test("specialist snapshots expose only task data", () => {
+  const integrated = runRetailIntegration(
+    initialPOSRecords, initialInventoryRecords, initialCRMRecords,
+    initialOnlineRecords, initialLogisticsRecords,
+  );
+  const data = {
+    posRecords: initialPOSRecords,
+    inventoryRecords: initialInventoryRecords,
+    crmRecords: initialCRMRecords,
+    onlineRecords: initialOnlineRecords,
+    logisticsRecords: initialLogisticsRecords,
+    stockItems: integrated.stockItems,
+    customers: integrated.customers,
+    salesSummary: integrated.salesSummary,
+  };
+  const cashier = applyRetailGovernance("CASHIER", { mode: "account", branch: "Cebu" }, data);
+  assert.equal(cashier.branchScope, "Cebu");
+  assert.equal(cashier.stockItems[0].cebuStock, data.stockItems[0].cebuStock);
+  assert.equal(cashier.stockItems[0].manilaStock, 0);
+  assert.equal(cashier.stockItems[0].warehouseStock, 0);
+  assert.equal(cashier.stockItems[0].totalStock, cashier.stockItems[0].cebuStock);
+  assert.deepEqual(applyRetailGovernance("CASHIER", undefined, data).stockItems, []);
+
+  const inventory = applyRetailGovernance("INVENTORY_STAFF", undefined, data);
+  assert.deepEqual(inventory.inventoryRecords, data.inventoryRecords);
+  assert.equal(inventory.stockItems[0].revenueTotal, 0);
+  assert.deepEqual(inventory.logisticsRecords, []);
+
+  const delivery = applyRetailGovernance("DELIVERY_COORDINATOR", undefined, data);
+  assert.deepEqual(delivery.logisticsRecords, data.logisticsRecords);
+  assert.deepEqual(delivery.stockItems, []);
+  assert.equal(delivery.salesSummary.delayedShipments, data.salesSummary.delayedShipments);
+
+  for (const specialist of [cashier, inventory, delivery]) {
+    assert.deepEqual(specialist.customers, []);
+    assert.deepEqual(specialist.crmRecords, []);
+    assert.deepEqual(specialist.onlineRecords, []);
+    assert.deepEqual(specialist.posRecords, []);
+    assert.equal(specialist.salesSummary.totalRevenue, 0);
+  }
+});
+
 test("CSV and JSON validation accepts valid 5-feed imports and rejects bad rows", () => {
   const posCsv = [
     "txId,branch,customerId,sku,productName,quantity,unitPrice,totalAmount,paymentMethod,cardNumber,timestamp",
@@ -326,6 +400,22 @@ test("Access control helpers enforce retail role capabilities", () => {
   assert.equal(branchScope("OPS_MANAGER", { mode: "demo" }), undefined);
   assert.equal(ownAuditOnly("OPS_MANAGER"), false);
   assert.equal(ownAuditOnly("MARKETING_CRM"), true);
+  assert.equal(canRecordPOSSale("CASHIER"), true);
+  assert.equal(canRecordPOSSale("DELIVERY_COORDINATOR"), false);
+  assert.equal(canManageInventory("INVENTORY_STAFF"), true);
+  assert.equal(canManageInventory("CASHIER"), false);
+  assert.equal(canManageDeliveries("DELIVERY_COORDINATOR"), true);
+  assert.equal(canManageDeliveries("INVENTORY_STAFF"), false);
+  const cebu = { mode: "account", branch: "Cebu" } as const;
+  assert.equal(isAssignedCashierSale(cebu, "Cebu", "WALKIN-01"), true);
+  assert.equal(isAssignedCashierSale(cebu, "Manila", "WALKIN-01"), false);
+  assert.equal(isAssignedCashierSale(cebu, "Cebu", "CUST-001"), false);
+  assert.equal(isAssignedCashierSale(undefined, "Cebu", "WALKIN-01"), false);
+  assert.deepEqual(workspaceTabs("CASHIER"), ["checkout"]);
+  assert.deepEqual(workspaceTabs("INVENTORY_STAFF"), ["stock"]);
+  assert.deepEqual(workspaceTabs("DELIVERY_COORDINATOR"), ["delivery"]);
+  assert.equal(defaultWorkspaceTab("OPS_MANAGER"), "stock");
+  assert.equal(effectiveWorkspaceTab("CASHIER", "quality"), "checkout");
 });
 
 test("accountsRequired always enforces real account sign-in", () => {

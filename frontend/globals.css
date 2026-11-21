@@ -4881,10 +4881,13 @@ body {
 /* Metric Strip (Flat hairline-divided KPI band) */
 .metric-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--metric-columns, 3), minmax(0, 1fr));
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
+}
+.metric-strip.cols-2 {
+  --metric-columns: 2;
 }
 .metric-cell {
   padding: 18px 22px;
@@ -5820,16 +5823,6 @@ body {
   background: var(--primary);
   color: var(--on-primary);
   border-color: var(--primary);
-}
-.tender-courier-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.tender-courier-strip > span {
-  font-size: 12px;
 }
 .cash-tender-section {
   display: flex;

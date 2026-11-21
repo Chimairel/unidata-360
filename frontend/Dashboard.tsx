@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
+import { isSpecialist } from "@/shared/access";
 import { EDMProvider, useEDM } from "@/frontend/lib/context/EDMContext";
 import { Navbar } from "@/frontend/components/Navbar";
 import {
+  defaultWorkspaceTab,
   effectiveWorkspaceTab,
   type TabId,
 } from "@/frontend/lib/workspaceAccess";
@@ -18,7 +20,7 @@ import { SignIn } from "@/frontend/components/SignIn";
 import { MercuryBackdrop } from "@/frontend/components/ui/neural-access-login";
 
 function Workspace() {
-  const [selectedTab, setSelectedTab] = useState<TabId>("checkout");
+  const [selectedTab, setSelectedTab] = useState<TabId>();
   const [architecture, setArchitecture] = useState(false);
   const {
     isLoading,
@@ -33,7 +35,10 @@ function Workspace() {
 
   if (requiresSignIn) return <SignIn onSignedIn={() => void refresh()} />;
 
-  const activeTab = effectiveWorkspaceTab(currentRole, selectedTab);
+  const activeTab = effectiveWorkspaceTab(
+    currentRole,
+    selectedTab ?? defaultWorkspaceTab(currentRole),
+  );
 
   return (
     <div className="app-shell">
@@ -87,7 +92,9 @@ function Workspace() {
             {activeTab === "checkout" && (
               <CheckoutTab onNavigate={(tab) => setSelectedTab(tab)} />
             )}
-            {activeTab === "stock" && <StockDeliveryTab />}
+            {(activeTab === "stock" || activeTab === "delivery") && (
+              <StockDeliveryTab />
+            )}
             {activeTab === "customers" && <CustomersOffersTab />}
             {activeTab === "sales" && <SalesPrivacyTab />}
             {activeTab === "quality" && <DataQualityTab />}
@@ -96,14 +103,15 @@ function Workspace() {
       </main>
       <footer className="app-footer">
         <span>
-          Karto <span className="footer-dot">·</span> Retail &amp; E-Commerce EDM
+          Karto <span className="footer-dot">·</span> Retail &amp; E-Commerce
+          EDM
         </span>
         <span>
           PCI DSS &amp; GDPR Enforced <span className="footer-dot">·</span>{" "}
           {actorName}
         </span>
       </footer>
-      {architecture && !isLoading && (
+      {architecture && !isLoading && !isSpecialist(currentRole) && (
         <SystemArchitectureModal
           isOpen
           onClose={() => setArchitecture(false)}

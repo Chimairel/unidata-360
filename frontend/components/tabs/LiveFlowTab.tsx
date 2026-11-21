@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEDM } from "@/frontend/lib/context/EDMContext";
-import { formatPHP, ROLE_LABELS } from "@/shared/retail";
+import { formatPHP, ROLE_LABELS, WEBSITE_ORDER_DEMO } from "@/shared/retail";
 import { formatTime } from "@/frontend/components/ui";
 import type { TabId } from "@/frontend/lib/workspaceAccess";
 import type { Feed } from "@/shared/types";
@@ -39,7 +39,7 @@ export function LiveFlowTab({
     auditIntegrity,
     isSyncing,
     recordPOSSale,
-    recordOnlineOrder,
+    simulateWebsiteOrder,
     simulateSeasonalSpike,
     restockSKU,
     resetAllData,
@@ -57,7 +57,9 @@ export function LiveFlowTab({
   const alertCount = stockItems.length - syncedCount;
   const oversoldItem = stockItems.find((s) => s.stockStatus === "Oversell Risk");
   const sku101 = stockItems.find((s) => s.sku === "SKU-101");
-  const sku102 = stockItems.find((s) => s.sku === "SKU-102");
+  const websiteDemoProduct = stockItems.find(
+    (s) => s.sku === WEBSITE_ORDER_DEMO.sku,
+  );
   const sku103 = stockItems.find((s) => s.sku === "SKU-103");
 
   const activeOffers = customers.filter(
@@ -83,7 +85,7 @@ export function LiveFlowTab({
     intro:
       "All 5 retail systems are connected and syncing live across Manila POS, Cebu POS, Online Storefront, and 3PL couriers.",
     pos: `Manila POS sold 1 ${sku101?.productName || "Apple Airpods"} (${formatPHP(sku101?.unitPrice ?? 7280)}) via Real-Time API, deducted Manila stock via CDC, tokenized Clara's card (•••• 4242), and updated Unified Sales.`,
-    online: `Online Storefront placed Mateo's ${sku102?.productName || "Chanel Coco Noir Eau De"} order (${formatPHP(sku102?.unitPrice ?? 7280)}), deducted warehouse stock, booked an LBC Express shipment, and updated Personalized Offers.`,
+    online: `The website order simulation sold ${websiteDemoProduct?.productName || "Chanel Coco Noir Eau De"}, deducted online warehouse stock, and created a sample ${WEBSITE_ORDER_DEMO.carrier} shipment.`,
     spike: `11.11 Flash Sale fired 6 concurrent orders across POS and Online, pushing ${sku103?.productName || "Eyeshadow Palette with Mirror"} negative (-3) and flagging J&T Express congestion in CDC.`,
     restock:
       "Restocked +20 units (+6 Manila, +6 Cebu, +8 Online Warehouse), clearing channel Oversell Risk back to Synced in one transactional commit.",
@@ -116,7 +118,7 @@ export function LiveFlowTab({
     {
       feed: "ONLINE" as Feed,
       name: "Online Store",
-      desc: "Web & mobile checkout",
+      desc: "Public website checkout",
       count: sourceCounts.ONLINE,
       icon: Globe,
     },
@@ -165,20 +167,14 @@ export function LiveFlowTab({
             type="button"
             className={`button ${scenario === "online" ? "primary" : "secondary"}`}
             disabled={!isOps || isSyncing}
-            title={`Mateo orders 1 ${sku102?.productName || "Chanel Coco Noir Eau De"} online via LBC Express`}
+            title="Simulate a customer checkout and courier shipment from the public website"
             onClick={async () => {
-              const ok = await recordOnlineOrder({
-                sku: "SKU-102",
-                customerId: "CUST-002",
-                quantity: 1,
-                carrier: "LBC Express",
-                paymentMethod: "Card",
-              });
+              const ok = await simulateWebsiteOrder();
               if (ok) setScenario("online");
             }}
           >
             <Globe size={15} />
-            Online Order + 3PL
+            Simulate Online Order + 3PL
           </button>
 
           <button

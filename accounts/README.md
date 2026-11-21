@@ -4,14 +4,25 @@
 
 ## Seeded Staff Roles (Demo Password: `123456`)
 
-All four accounts use real **RBAC** (**Role-Based Access Control** — job-specific permissions) and **PCI DSS** (**Payment Card Industry Data Security Standard** — payment card protection) / **GDPR** (**General Data Protection Regulation** — personal data privacy) masking enforced on the backend:
+Staff accounts use **RBAC** (Role-Based Access Control), **PCI DSS** (Payment Card Industry Data Security Standard) masking, and **GDPR** (General Data Protection Regulation) privacy controls. The backend enforces permissions for both data access and updates.
 
 | Staff Member | Work Email | Password | Role & Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Lourdes Bautista** | `ops@karto.ph` | `123456` | Store Operations Manager — Full access across all 5 data feeds, **POS** (**Point of Sale** — physical cash register) checkouts, stock sync, **3PL** (**Third-Party Logistics** — courier tracking), 11.11 stress test, masked card logs, and dataset reset. |
+| **Lourdes Bautista** | `ops@karto.ph` | `123456` | Store Operations Manager. Opens the combined stock and delivery view. Reviews all five feeds, data quality, and audited staff updates. Runs the 11.11 simulation. |
+| **Bea Santos** | `cashier.manila@karto.ph` | `123456` | Manila Cashier. Records walk-in sales and prints receipts at the Manila **POS** (Point of Sale) register. |
+| **Nico Lim** | `cashier.cebu@karto.ph` | `123456` | Cebu Cashier. Records walk-in sales and prints receipts at the Cebu register. |
+| **Iris Mendoza** | `inventory@karto.ph` | `123456` | Inventory Staff. Checks stock, restocks products, and transfers units between Manila, Cebu, and the online warehouse. |
+| **Rafael Cruz** | `delivery@karto.ph` | `123456` | Delivery Coordinator. Dispatches website orders and updates **3PL** (Third-Party Logistics) shipments, tracking, and delays. |
 | **Camille Reyes** | `marketing@karto.ph` | `123456` | Marketing & **CRM** (**Customer Relationship Management** — loyalty profiles & promotions) — Manages opted-in personalized campaigns and consents; cardholder payment numbers are restricted and **GDPR** opt-out customers are hidden. |
 | **Marco Villanueva** | `manila@karto.ph` | `123456` | Manila Branch Manager — Scoped strictly to Manila **POS** checkouts and Manila store stock; Cebu branch, Online totals, and **PII** (**Personally Identifiable Information** — customer emails & phone numbers) are masked. |
 | **Atty. Gabriel Torres** | `auditor@karto.ph` | `123456` | Compliance Auditor — Strictly read-only inspection across all tabs; customer identities are pseudonymized, **PII** and full **PAN** (**Primary Account Number** — full 16-digit card numbers) are masked, and every action is verified against the **SHA-256** (**Secure Hash Algorithm 256-bit** — tamper-evident cryptographic hash) audit chain. |
+
+## Presentation walkthrough
+
+1. Record a walk-in sale as the Manila or Cebu cashier. The receipt shows the branch, and only that branch's stock decreases.
+2. Open `/shop` as a customer and place an order. Online warehouse stock decreases and the receipt includes courier tracking. Sign in as the Delivery Coordinator to move the shipment to **In Transit** and flag a delay.
+3. Sign in as Inventory Staff to inspect the new counts and demonstrate a restock or stock transfer.
+4. Sign in as Operations and open **Stock**, **Sales & Audit**, and **Quality**. Show the updated counts, the staff account credited with each change, and the flagged shipment.
 
 ## Environment & Database Notes
 
@@ -22,7 +33,7 @@ All four accounts use real **RBAC** (**Role-Based Access Control** — job-speci
 
 The [live Karto demo](https://karto-edm.vercel.app/login) uses the same staff emails and password as the local demo. The Render Blueprint enables this with `EDM_DEMO_STAFF_PASSWORDS=true`.
 
-Hosting with demo passwords disabled uses a separate generated password for each staff role. Retrieve those passwords from the API service's Environment page in the Render dashboard.
+Hosting with demo passwords disabled uses a separate configured password for each staff role. Add the specialist password variables to seed the specialist accounts on a non-demo host. Both cashier accounts use the cashier password variable. On Render, manage them in the backend service's Environment page.
 
 | Staff email | Render environment variable |
 | --- | --- |
@@ -30,3 +41,6 @@ Hosting with demo passwords disabled uses a separate generated password for each
 | `marketing@karto.ph` | `EDM_STAFF_MARKETING_CRM_PASSWORD` |
 | `manila@karto.ph` | `EDM_STAFF_BRANCH_MANAGER_PASSWORD` |
 | `auditor@karto.ph` | `EDM_STAFF_COMPLIANCE_AUDITOR_PASSWORD` |
+| `cashier.manila@karto.ph`, `cashier.cebu@karto.ph` | `EDM_STAFF_CASHIER_PASSWORD` |
+| `inventory@karto.ph` | `EDM_STAFF_INVENTORY_STAFF_PASSWORD` |
+| `delivery@karto.ph` | `EDM_STAFF_DELIVERY_COORDINATOR_PASSWORD` |

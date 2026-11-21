@@ -8,6 +8,7 @@ import {
 } from "node:crypto";
 import { execute, first, transaction } from "./store";
 import type { AccessIdentity, UserRole } from "@/shared/types";
+import { isSpecialist, requiresBranch } from "@/shared/access";
 import {
   DEMO_ACCOUNTS,
   DEMO_PASSWORD,
@@ -67,6 +68,17 @@ export async function verifyPassword(password: string, encoded: string) {
 
 let seededUsersPromise: Promise<void> | undefined;
 
+function specialistConfigured(role: UserRole): boolean {
+  if (
+    !isSpecialist(role) ||
+    process.env.EDM_SECURE_COOKIES !== "true" ||
+    process.env.EDM_DEMO_STAFF_PASSWORDS === "true"
+  )
+    return true;
+  const password = process.env[`EDM_STAFF_${role}_PASSWORD`];
+  return Boolean(password && password.length >= 16 && password.length <= 128);
+}
+
 export async function ensureDemoUsers() {
   if (!seededUsersPromise) {
     seededUsersPromise = (async () => {
@@ -74,6 +86,7 @@ export async function ensureDemoUsers() {
       const demoPasswords = process.env.EDM_DEMO_STAFF_PASSWORDS === "true";
       const requireHostedPasswords = hosted && !demoPasswords;
       for (const account of DEMO_ACCOUNTS) {
+        if (!specialistConfigured(account.role)) continue;
         const key = `EDM_STAFF_${account.role}_PASSWORD`;
         const password = requireHostedPasswords
           ? process.env[key]
@@ -155,7 +168,10 @@ export async function issueSession(
     if (
       userId &&
       !options?.skipUserCheck &&
-      !(await first("SELECT 1 FROM retail_users WHERE id=? AND active=1", userId))
+      !(await first(
+        "SELECT 1 FROM retail_users WHERE id=? AND active=1",
+        userId,
+      ))
     ) {
       throw new Error("Account is not ready to sign in.");
     }
@@ -204,9 +220,13 @@ function sessionIdentityFromRow(
   if (!row) return null;
   if (now !== undefined && Number(row.expires_at) <= now) return null;
   if (row.user_id) {
-    if (!row.active || !row.account_role) return null;
-    if (row.account_role === "BRANCH_MANAGER" && !isBranch(row.branch))
+    if (
+      !row.active ||
+      !row.account_role ||
+      !specialistConfigured(row.account_role)
+    )
       return null;
+    if (requiresBranch(row.account_role) && !isBranch(row.branch)) return null;
     return {
       id: row.id,
       role: row.account_role,
@@ -253,12 +273,12 @@ export async function revokeAndReadSession(
   return sessionIdentityFromRow(row, now);
 }
 
-const dummyHash =
-  "scrypt:00000000000000000000000000000000:" + "00".repeat(64);
+const dummyHash = "scrypt:00000000000000000000000000000000:" + "00".repeat(64);
 
 type LoginAttempt = { failures: number; retry_at: string | number };
 
-export type AuthFailureReason = "locked" | "not_found" | "disabled" | "invalid_password";
+export type AuthFailureReason =
+  "locked" | "not_found" | "disabled" | "invalid_password";
 
 export type AuthResult =
   | {
@@ -312,7 +332,11 @@ export async function authenticate(
         normalized,
       );
 
-  if (attempt && attempt.failures >= 5 && Number(attempt.retry_at) > Date.now()) {
+  if (
+    attempt &&
+    attempt.failures >= 5 &&
+    Number(attempt.retry_at) > Date.now()
+  ) {
     const retryMinutes = Math.max(
       1,
       Math.ceil((Number(attempt.retry_at) - Date.now()) / 60000),
@@ -382,8 +406,17 @@ export async function authenticate(
     };
   }
 
+  if (
+    !specialistConfigured(user.role) ||
+    (requiresBranch(user.role) && !isBranch(user.branch))
+  ) {
+    return { ok: false, locked: false, reason: "disabled" };
+  }
   if (attempt) {
-    await execute("DELETE FROM retail_login_attempts WHERE email=?", normalized);
+    await execute(
+      "DELETE FROM retail_login_attempts WHERE email=?",
+      normalized,
+    );
   }
   return {
     ok: true,
