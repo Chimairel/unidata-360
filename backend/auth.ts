@@ -39,7 +39,7 @@ const SCRYPT2_OPTIONS: ScryptOptions = {
 export type SessionIdentity = AccessIdentity & { id: string; role: UserRole };
 
 export function accountsRequired(): boolean {
-  return process.env.EDM_AUTH_MODE === "strict";
+  return true;
 }
 
 export async function hashPassword(password: string) {

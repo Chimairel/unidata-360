@@ -18,9 +18,6 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [accountsRequired, setAccountsRequired] = useState<boolean | null>(
-    null,
-  );
   const [signedInUser, setSignedInUser] = useState<{
     displayName?: string;
     role?: string;
@@ -35,7 +32,6 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
       })
       .then((s) => {
         if (!active) return;
-        setAccountsRequired(s.accountsRequired);
         setSignedInUser(s.authenticated ? s.identity || {} : null);
       })
       .catch(() => {
@@ -174,8 +170,8 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
             </NeuralSubmit>
           </form>
 
-          <div className="demo-role-box" aria-label="Demo roles quick-fill">
-            <span className="small muted">Demo roles — click to fill</span>
+          <div className="demo-role-box" aria-label="Staff accounts quick-fill">
+            <span className="small muted">Staff accounts — click to fill</span>
             <div className="demo-role-grid">
               {DEMO_ACCOUNTS.map((acct) => {
                 const selected =
@@ -203,13 +199,6 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
             </div>
           </div>
         </>
-      )}
-      {accountsRequired === false && (
-        <div className="sign-in-demo">
-          <Link className="text-link" href="/">
-            Open demo
-          </Link>
-        </div>
       )}
     </AccountAccess>
   );

@@ -69,7 +69,6 @@ export function Navbar({
     actorName,
     isSyncing,
     isLoading,
-    accessMode,
     signOut,
   } = useEDM();
 
@@ -134,7 +133,7 @@ export function Navbar({
               <Network size={23} />
             </button>
           )}
-          {accessMode === "account" && (
+          {!isLoading && (
             <button
               className="rail-tool"
               aria-label="Sign out"
@@ -177,6 +176,17 @@ export function Navbar({
                 onClick={openArchitecture}
               >
                 <Network size={18} />
+              </button>
+            )}
+            {!isLoading && (
+              <button
+                className="icon-button mobile-matrix"
+                aria-label="Sign out"
+                title="Sign out"
+                disabled={isSyncing}
+                onClick={() => void signOut()}
+              >
+                <LogOut size={18} />
               </button>
             )}
             {!isLoading && (

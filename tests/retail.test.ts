@@ -291,12 +291,14 @@ test("Access control helpers enforce retail role capabilities", () => {
   assert.equal(ownAuditOnly("MARKETING_CRM"), true);
 });
 
-test("accountsRequired defaults to false for frictionless demo access", () => {
+test("accountsRequired always enforces real account sign-in", () => {
   const prevMode = process.env.EDM_AUTH_MODE;
   delete process.env.EDM_AUTH_MODE;
-  assert.equal(accountsRequired(), false);
+  assert.equal(accountsRequired(), true);
+  process.env.EDM_AUTH_MODE = "demo";
+  assert.equal(accountsRequired(), true);
   process.env.EDM_AUTH_MODE = "accounts";
-  assert.equal(accountsRequired(), false);
+  assert.equal(accountsRequired(), true);
   process.env.EDM_AUTH_MODE = "strict";
   assert.equal(accountsRequired(), true);
   if (prevMode === undefined) delete process.env.EDM_AUTH_MODE;
