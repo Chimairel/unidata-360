@@ -25,7 +25,7 @@ Requires **Node.js 24+** and **PostgreSQL** (such as Neon cloud PostgreSQL).
 
 ```powershell
 Copy-Item backend/.env.example backend/.env.local
-npm install
+npm ci --include=dev
 ```
 
 Set `DATABASE_URL` (**URL** — Uniform Resource Locator connection string) inside `backend/.env.local` (your local environment configuration file; keep it out of Git). For local PostgreSQL without **TLS** (**Transport Layer Security** encryption), append `?sslmode=disable`.
