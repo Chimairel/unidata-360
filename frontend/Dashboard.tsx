@@ -12,6 +12,7 @@ import { CheckoutTab } from "@/frontend/components/tabs/CheckoutTab";
 import { StockDeliveryTab } from "@/frontend/components/tabs/StockDeliveryTab";
 import { CustomersOffersTab } from "@/frontend/components/tabs/CustomersOffersTab";
 import { SalesPrivacyTab } from "@/frontend/components/tabs/SalesPrivacyTab";
+import { DataQualityTab } from "@/frontend/components/tabs/DataQualityTab";
 import { SystemArchitectureModal } from "@/frontend/components/SystemArchitectureModal";
 import { SignIn } from "@/frontend/components/SignIn";
 import { MercuryBackdrop } from "@/frontend/components/ui/neural-access-login";
@@ -89,6 +90,7 @@ function Workspace() {
             {activeTab === "stock" && <StockDeliveryTab />}
             {activeTab === "customers" && <CustomersOffersTab />}
             {activeTab === "sales" && <SalesPrivacyTab />}
+            {activeTab === "quality" && <DataQualityTab />}
           </>
         )}
       </main>

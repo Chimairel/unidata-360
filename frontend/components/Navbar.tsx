@@ -6,6 +6,7 @@ import {
   Package,
   Users,
   ShieldCheck,
+  ClipboardCheck,
   Network,
   Store,
   LogOut,
@@ -40,6 +41,7 @@ const tabs = [
     icon: ShieldCheck,
   },
   { id: "flow", label: "Data Flow", short: "Flow", icon: Workflow },
+  { id: "quality", label: "Data Quality", short: "Quality", icon: ClipboardCheck },
 ] as const;
 
 function cleanActorName(raw: string): string {

@@ -18,6 +18,8 @@ import {
   type AuditChainRow,
 } from "../backend/store";
 import { accountsRequired } from "../backend/auth";
+import { buildQualityRows } from "../frontend/lib/dataQuality";
+import { workspaceTabs } from "../frontend/lib/workspaceAccess";
 import {
   buildQuickCashAmounts,
   convertUsdToPhp,
@@ -95,6 +97,41 @@ test("Stock Sync flags Oversell Risk when warehouse stock drops below zero durin
         a.referenceKey === "SKU-103",
     ),
   );
+});
+
+test("quality view connects feed warnings to the right record and checks invalid values", () => {
+  const { consistencyAlerts } = runRetailIntegration(
+    initialPOSRecords,
+    initialInventoryRecords,
+    initialCRMRecords,
+    initialOnlineRecords,
+    initialLogisticsRecords,
+  );
+  const rows = buildQualityRows({
+    posRecords: initialPOSRecords,
+    inventoryRecords: initialInventoryRecords,
+    crmRecords: initialCRMRecords,
+    onlineRecords: initialOnlineRecords.map((order) =>
+      order.orderId === "ORD-5006" ? { ...order, quantity: 0 } : order,
+    ),
+    logisticsRecords: initialLogisticsRecords,
+    consistencyAlerts,
+  });
+  const missing = rows.find((row) => row.key === "ONLINE:ORD-5006");
+  assert.equal(missing?.status, "critical");
+  assert.equal(missing.fields["Shipment record"], "Missing");
+  assert.ok(missing.issues.some((issue) =>
+    issue.dimension === "Completeness" && issue.field === "Shipment record",
+  ));
+  assert.ok(missing.issues.some((issue) =>
+    issue.dimension === "Validity" && issue.field === "Quantity",
+  ));
+  const walkIn = rows.find((row) => row.key === "POS:POS-1006");
+  assert.ok(walkIn);
+  assert.equal(walkIn.issues.some((issue) => issue.field === "Customer"), false);
+  assert.equal(Object.hasOwn(missing.fields, "cardNumber"), false);
+  assert.ok(workspaceTabs("OPS_MANAGER").includes("quality"));
+  assert.equal(workspaceTabs("COMPLIANCE_AUDITOR").includes("quality"), false);
 });
 
 test("Personalized Offer engine activates for Opted In and suppresses for Opted Out customers", () => {

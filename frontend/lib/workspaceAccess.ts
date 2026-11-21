@@ -1,6 +1,6 @@
 import type { UserRole } from "@/shared/types";
 
-export type TabId = "flow" | "checkout" | "stock" | "customers" | "sales";
+export type TabId = "flow" | "checkout" | "stock" | "customers" | "sales" | "quality";
 
 const allTabs: readonly TabId[] = [
   "checkout",
@@ -11,7 +11,7 @@ const allTabs: readonly TabId[] = [
 ];
 
 const roleTabs: Record<UserRole, readonly TabId[]> = {
-  OPS_MANAGER: allTabs,
+  OPS_MANAGER: [...allTabs, "quality"],
   MARKETING_CRM: allTabs,
   BRANCH_MANAGER: allTabs,
   COMPLIANCE_AUDITOR: allTabs,
