@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, AlertCircle, Eye, EyeOff, LogOut } from "lucide-react";
 import { AccountAccess } from "./AccountAccess";
 import { NeuralSubmit } from "./ui/neural-access-login";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "@/shared/retail";
 import "./AuthControls.css";
 
 export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
@@ -91,114 +90,83 @@ export function SignIn({ onSignedIn }: { onSignedIn?: () => void } = {}) {
           </div>
         </div>
       ) : (
-        <>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setPending(true);
-              setError("");
-              try {
-                const response = await fetch("/api/auth", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email, password }),
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error);
-                setPassword("");
-                if (onSignedIn) onSignedIn();
-                else router.replace("/");
-              } catch (e) {
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : "Unable to sign in. Try again.",
-                );
-              } finally {
-                setPending(false);
-              }
-            }}
-            className="sign-in-form"
-          >
-            <label htmlFor={emailId}>
-              Work email
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setPending(true);
+            setError("");
+            try {
+              const response = await fetch("/api/auth", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+              });
+              const result = await response.json();
+              if (!response.ok) throw new Error(result.error);
+              setPassword("");
+              if (onSignedIn) onSignedIn();
+              else router.replace("/");
+            } catch (e) {
+              setError(
+                e instanceof Error
+                  ? e.message
+                  : "Unable to sign in. Try again.",
+              );
+            } finally {
+              setPending(false);
+            }
+          }}
+          className="sign-in-form"
+        >
+          <label htmlFor={emailId}>
+            Work email
+            <input
+              id={emailId}
+              name="email"
+              type="email"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              maxLength={200}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ops@karto.ph"
+              disabled={pending}
+            />
+          </label>
+          <label htmlFor={passwordId}>
+            Password
+            <div className="password-input-wrap">
               <input
-                id={emailId}
-                name="email"
-                type="email"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
+                id={passwordId}
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 required
-                maxLength={200}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ops@karto.ph"
+                maxLength={128}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={pending}
               />
-            </label>
-            <label htmlFor={passwordId}>
-              Password
-              <div className="password-input-wrap">
-                <input
-                  id={passwordId}
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  maxLength={128}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={pending}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  disabled={pending}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </label>
-            <NeuralSubmit>
-              <button className="button primary" disabled={pending}>
-                {pending ? "Signing in…" : "Sign in"}
-                <ArrowRight size={16} />
+              <button
+                type="button"
+                className="password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((prev) => !prev)}
+                disabled={pending}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            </NeuralSubmit>
-          </form>
-
-          <div className="demo-role-box" aria-label="Staff accounts quick-fill">
-            <span className="small muted">Staff accounts — click to fill</span>
-            <div className="demo-role-grid">
-              {DEMO_ACCOUNTS.map((acct) => {
-                const selected =
-                  email.trim().toLowerCase() === acct.email.toLowerCase();
-                return (
-                  <button
-                    key={acct.email}
-                    type="button"
-                    className={`demo-role-pill${selected ? " is-selected" : ""}`}
-                    disabled={pending}
-                    onClick={() => {
-                      setEmail(acct.email);
-                      setPassword(DEMO_PASSWORD);
-                      setError("");
-                    }}
-                  >
-                    <div className="demo-role-head">
-                      <strong>{acct.displayName}</strong>
-                      <span>{acct.badge}</span>
-                    </div>
-                    <small>{acct.scopeSummary}</small>
-                  </button>
-                );
-              })}
             </div>
-          </div>
-        </>
+          </label>
+          <NeuralSubmit>
+            <button className="button primary" disabled={pending}>
+              {pending ? "Signing in…" : "Sign in"}
+              <ArrowRight size={16} />
+            </button>
+          </NeuralSubmit>
+        </form>
       )}
     </AccountAccess>
   );
