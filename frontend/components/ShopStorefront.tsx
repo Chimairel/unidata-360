@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -21,6 +21,7 @@ import type {
 } from "@/shared/types";
 import { BrandMark } from "./BrandMark";
 import { ProductImage } from "./ui";
+import { broadcastDataChange, subscribeDataChanges } from "@/frontend/lib/liveSync";
 import "./ShopStorefront.css";
 
 interface BagLine {
@@ -132,6 +133,13 @@ export function ShopStorefront() {
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<CheckoutReceipt | null>(null);
 
+  const submittingRef = useRef(false);
+  const refreshingRef = useRef(false);
+
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
+
   useEffect(() => {
     let active = true;
     void fetch("/api/shop", { cache: "no-store" })
@@ -156,6 +164,36 @@ export function ShopStorefront() {
       });
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const stop = subscribeDataChanges(
+      () => {
+        if (submittingRef.current || refreshingRef.current) return;
+        refreshingRef.current = true;
+        void fetch("/api/shop", { cache: "no-store" })
+          .then(async (res) => {
+            if (!res.ok) return null;
+            return (await res.json()) as ShopSnapshot;
+          })
+          .then((data) => {
+            if (!active || !data || submittingRef.current) return;
+            setSnapshot(data);
+          })
+          .catch(() => {
+            // Silent retry on next sync tick or focus event.
+          })
+          .finally(() => {
+            refreshingRef.current = false;
+          });
+      },
+      { pollMs: 10000 },
+    );
+    return () => {
+      active = false;
+      stop();
     };
   }, []);
 
@@ -297,6 +335,7 @@ export function ShopStorefront() {
       setReceipt(data.receipt as CheckoutReceipt);
       setBag([]);
       setToast(data.message || "Online order synced to Karto Hub.");
+      broadcastDataChange("shop");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Order could not be placed.");
     } finally {

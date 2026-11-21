@@ -1,5 +1,11 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type {
   CRMRecord,
   CheckoutReceipt,
@@ -9,6 +15,7 @@ import type {
   UserRole,
 } from "@/shared/types";
 import type { Branch, Carrier, ProductCategory } from "@/shared/retail";
+import { broadcastDataChange, subscribeDataChanges } from "@/frontend/lib/liveSync";
 import { useRouter } from "next/navigation";
 
 interface EDMContextType extends RetailSnapshot {
@@ -128,6 +135,18 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [requiresSignIn, setRequiresSignIn] = useState(false);
 
+  const syncingRef = useRef(false);
+  const requiresSignInRef = useRef(false);
+  const backgroundInFlightRef = useRef(false);
+
+  useEffect(() => {
+    syncingRef.current = isSyncing;
+  }, [isSyncing]);
+
+  useEffect(() => {
+    requiresSignInRef.current = requiresSignIn;
+  }, [requiresSignIn]);
+
   const refresh = async () => {
     setLoading(true);
     setError(null);
@@ -172,6 +191,47 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (requiresSignIn) return;
+    let active = true;
+    const stop = subscribeDataChanges(
+      () => {
+        if (
+          syncingRef.current ||
+          requiresSignInRef.current ||
+          backgroundInFlightRef.current
+        ) {
+          return;
+        }
+        backgroundInFlightRef.current = true;
+        void fetchSnapshot()
+          .then((result) => {
+            if (!active || syncingRef.current) return;
+            setData(result);
+            setRequiresSignIn(false);
+          })
+          .catch((e) => {
+            if (
+              active &&
+              e instanceof Error &&
+              e.name === "AuthenticationRequired"
+            ) {
+              setData(empty);
+              setRequiresSignIn(true);
+            }
+          })
+          .finally(() => {
+            backgroundInFlightRef.current = false;
+          });
+      },
+      { pollMs: 8000 },
+    );
+    return () => {
+      active = false;
+      stop();
+    };
+  }, [requiresSignIn]);
+
   const postCommand = async (
     body: { type: string; [key: string]: unknown },
     hide = false,
@@ -196,6 +256,7 @@ export function EDMProvider({ children }: { children: React.ReactNode }) {
       }
       if (result.snapshot) {
         setData(result.snapshot);
+        if (body.type !== "view") broadcastDataChange("hub");
       } else if (result.auditEntry) {
         setData((current) => ({
           ...current,
