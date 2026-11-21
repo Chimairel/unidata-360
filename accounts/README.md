@@ -2,7 +2,7 @@
 
 **Karto** uses **PostgreSQL** (**Structured Query Language** relational database) authentication (`retail_users` and `retail_sessions`) seeded automatically on first database startup. Opening `http://localhost:3005` always requires signing in at `/login`, while the customer storefront at `http://localhost:3005/shop` stays public for online shoppers.
 
-## Seeded Staff Roles (Local Demo Password: `123456`)
+## Seeded Staff Roles (Demo Password: `123456`)
 
 All four accounts use real **RBAC** (**Role-Based Access Control** — job-specific permissions) and **PCI DSS** (**Payment Card Industry Data Security Standard** — payment card protection) / **GDPR** (**General Data Protection Regulation** — personal data privacy) masking enforced on the backend:
 
@@ -20,7 +20,9 @@ All four accounts use real **RBAC** (**Role-Based Access Control** — job-speci
 
 ## Hosted Staff Passwords
 
-Render generates a password for each staff role when the Blueprint is first applied. Use the same work emails shown above and get the matching password from the API service's Environment page in the Render dashboard.
+The [live Karto demo](https://karto-edm.vercel.app/login) uses the same staff emails and password as the local demo. The Render Blueprint enables this with `EDM_DEMO_STAFF_PASSWORDS=true`.
+
+Hosting with demo passwords disabled uses a separate generated password for each staff role. Retrieve those passwords from the API service's Environment page in the Render dashboard.
 
 | Staff email | Render environment variable |
 | --- | --- |

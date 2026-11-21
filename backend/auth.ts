@@ -71,12 +71,17 @@ export async function ensureDemoUsers() {
   if (!seededUsersPromise) {
     seededUsersPromise = (async () => {
       const hosted = process.env.EDM_SECURE_COOKIES === "true";
+      const demoPasswords = process.env.EDM_DEMO_STAFF_PASSWORDS === "true";
+      const requireHostedPasswords = hosted && !demoPasswords;
       for (const account of DEMO_ACCOUNTS) {
         const key = `EDM_STAFF_${account.role}_PASSWORD`;
-        const password = hosted ? process.env[key] : DEMO_PASSWORD;
+        const password = requireHostedPasswords
+          ? process.env[key]
+          : DEMO_PASSWORD;
         if (
           !password ||
-          (hosted && (password.length < 16 || password.length > 128))
+          (requireHostedPasswords &&
+            (password.length < 16 || password.length > 128))
         ) {
           throw new Error(`Set ${key} to a password of 16–128 characters.`);
         }
@@ -86,8 +91,9 @@ export async function ensureDemoUsers() {
         );
         if (existing) {
           if (
-            hosted &&
-            (await verifyPassword(DEMO_PASSWORD, existing.password_hash))
+            (hosted || demoPasswords) &&
+            demoPasswords !==
+              (await verifyPassword(DEMO_PASSWORD, existing.password_hash))
           ) {
             await transaction(async () => {
               const changed = await first(
@@ -100,6 +106,10 @@ export async function ensureDemoUsers() {
                 await execute(
                   "DELETE FROM retail_sessions WHERE user_id=?",
                   existing.id,
+                );
+                await execute(
+                  "DELETE FROM retail_login_attempts WHERE email=?",
+                  account.email,
                 );
               }
             });

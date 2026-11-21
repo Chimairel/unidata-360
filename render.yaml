@@ -6,6 +6,8 @@ services:
     region: singapore
     healthCheckPath: /api/health
     envVars:
+      - key: EDM_DEMO_STAFF_PASSWORDS
+        value: "true"
       - key: EDM_PUBLIC_ORIGIN
         sync: false
       - key: DATABASE_URL
