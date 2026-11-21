@@ -2,6 +2,7 @@
 import { useState } from "react";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeftRight,
   Globe,
   Plus,
@@ -22,7 +23,12 @@ import {
   type Carrier,
   type ProductCategory,
 } from "@/shared/retail";
-import type { CatalogProduct, UnifiedStockItem } from "@/shared/types";
+import type {
+  CatalogProduct,
+  ConsistencyAlert,
+  LogisticsRecord,
+  UnifiedStockItem,
+} from "@/shared/types";
 import {
   Badge,
   EmptyState,
@@ -31,6 +37,48 @@ import {
   ProductImage,
   StockStatusBadge,
 } from "@/frontend/components/ui";
+import "./StockDeliveryAlerts.css";
+
+const stockPriority = { "Oversell Risk": 0, "Low Stock": 1, Synced: 2 };
+const deliveryPriority = {
+  Delayed: 0,
+  "Awaiting pickup": 1,
+  "Out for Delivery": 2,
+  "In Transit": 3,
+  "Label Created": 4,
+  Delivered: 5,
+};
+type DeliveryRow =
+  | {
+      status: LogisticsRecord["status"];
+      shipment: LogisticsRecord;
+      alert?: never;
+    }
+  | { status: "Awaiting pickup"; alert: ConsistencyAlert; shipment?: never };
+
+function stockWarning(item: UnifiedStockItem) {
+  const channels = [
+    { name: "Manila", count: item.manilaStock },
+    { name: "Cebu", count: item.cebuStock },
+    { name: "Online", count: item.warehouseStock },
+  ];
+
+  if (item.stockStatus === "Oversell Risk") {
+    const shortages = channels
+      .filter(({ count }) => count < 0)
+      .map(({ name, count }) => `${name} is ${Math.abs(count)} short`);
+    return shortages.length
+      ? shortages.join(" · ")
+      : "No units available across channels";
+  }
+
+  const lowChannels = channels
+    .filter(({ count }) => count <= 4)
+    .map(({ name, count }) => `${name} has ${count} left`);
+  return lowChannels.length
+    ? lowChannels.join(" · ")
+    : "Total stock is at or below the reorder point";
+}
 
 export function StockDeliveryTab() {
   const {
@@ -39,6 +87,7 @@ export function StockDeliveryTab() {
     stockItems,
     inventoryRecords,
     crmRecords,
+    onlineRecords,
     logisticsRecords,
     consistencyAlerts,
     salesSummary,
@@ -86,7 +135,7 @@ export function StockDeliveryTab() {
   const [catalogLimit, setCatalogLimit] = useState(12);
 
   const [deliveryFilter, setDeliveryFilter] = useState<
-    "ALL" | "IN_TRANSIT" | "Delivered" | "Delayed"
+    "ALL" | "IN_TRANSIT" | "Delivered" | "Delayed" | "Awaiting pickup"
   >("ALL");
   const [dispatchCarriers, setDispatchCarriers] = useState<
     Record<string, Carrier>
@@ -167,21 +216,52 @@ export function StockDeliveryTab() {
   });
 
   const totalUnits = stockItems.reduce((sum, s) => sum + s.totalStock, 0);
-  const restockCount = stockItems.filter(
-    (s) => s.stockStatus !== "Synced",
+  const prioritizedStock = [...stockItems].sort(
+    (a, b) => stockPriority[a.stockStatus] - stockPriority[b.stockStatus],
+  );
+  const oversold = prioritizedStock.filter(
+    (item) => item.stockStatus === "Oversell Risk",
+  );
+  const lowStock = prioritizedStock.filter(
+    (item) => item.stockStatus === "Low Stock",
+  );
+  const restockCount = oversold.length + lowStock.length;
+  const delayedCount = logisticsRecords.filter(
+    (shipment) => shipment.status === "Delayed",
   ).length;
 
-  const customerMap = new Map(crmRecords.map((c) => [c.customerId, c.fullName]));
+  const customerMap = new Map(
+    crmRecords.map((c) => [c.customerId, c.fullName]),
+  );
+  const visibleOrderIds = new Set(onlineRecords.map((order) => order.orderId));
   const missingTrackingAlerts = consistencyAlerts.filter(
-    (a) => a.type === "MISSING_TRACKING",
+    (a) => a.type === "MISSING_TRACKING" && visibleOrderIds.has(a.referenceKey),
   );
 
-  const filteredShipments = logisticsRecords.filter((s) => {
-    if (deliveryFilter === "ALL") return true;
-    if (deliveryFilter === "IN_TRANSIT")
-      return s.status !== "Delivered" && s.status !== "Delayed";
-    return s.status === deliveryFilter;
-  });
+  const deliveries: DeliveryRow[] = [
+    ...logisticsRecords.map((shipment) => ({
+      status: shipment.status,
+      shipment,
+    })),
+    ...missingTrackingAlerts.map((alert) => ({
+      status: "Awaiting pickup" as const,
+      alert,
+    })),
+  ];
+  const visibleDeliveries = deliveries
+    .filter(({ status }) => {
+      if (deliveryFilter === "ALL") return true;
+      if (deliveryFilter === "IN_TRANSIT")
+        return (
+          status !== "Delivered" &&
+          status !== "Delayed" &&
+          status !== "Awaiting pickup"
+        );
+      return status === deliveryFilter;
+    })
+    .sort((a, b) => deliveryPriority[a.status] - deliveryPriority[b.status]);
+  const priorityTotal =
+    restockCount + delayedCount + missingTrackingAlerts.length;
 
   return (
     <div className="page-stack">
@@ -246,6 +326,71 @@ export function StockDeliveryTab() {
         }
       />
 
+      {priorityTotal > 0 && (
+        <section
+          className={`stock-attention${oversold.length ? " is-critical" : ""}`}
+          aria-labelledby="stock-attention-heading"
+        >
+          <div className="stock-attention-heading">
+            <AlertTriangle aria-hidden="true" size={21} />
+            <h2 id="stock-attention-heading">Needs attention</h2>
+            <span role="status">
+              {priorityTotal} {priorityTotal === 1 ? "issue" : "issues"}
+            </span>
+          </div>
+          <div className="stock-attention-links">
+            {restockCount > 0 && (
+              <a href="#stock-products" className="stock-attention-link">
+                <div>
+                  <strong>
+                    {oversold.length > 0
+                      ? `${oversold.length} oversell risk${oversold.length === 1 ? "" : "s"}`
+                      : `${lowStock.length} low-stock product${lowStock.length === 1 ? "" : "s"}`}
+                  </strong>
+                  <span>
+                    {oversold.length
+                      ? `${oversold[0].productName} · ${stockWarning(oversold[0])}${lowStock.length ? ` · ${lowStock.length} also low in stock` : ""}`
+                      : `${lowStock[0].productName} · ${stockWarning(lowStock[0])}`}
+                  </span>
+                </div>
+                <ArrowDown aria-hidden="true" size={16} />
+              </a>
+            )}
+            {delayedCount > 0 && (
+              <a
+                href="#partner-deliveries"
+                className="stock-attention-link"
+                onClick={() => setDeliveryFilter("Delayed")}
+              >
+                <div>
+                  <strong>
+                    {delayedCount} delayed{" "}
+                    {delayedCount === 1 ? "shipment" : "shipments"}
+                  </strong>
+                  <span>Review delayed deliveries</span>
+                </div>
+                <ArrowDown aria-hidden="true" size={16} />
+              </a>
+            )}
+            {missingTrackingAlerts.length > 0 && (
+              <a
+                href="#partner-deliveries"
+                className="stock-attention-link"
+                onClick={() => setDeliveryFilter("Awaiting pickup")}
+              >
+                <div>
+                  <strong>
+                    {missingTrackingAlerts.length} awaiting courier pickup
+                  </strong>
+                  <span>Review orders without shipment tracking</span>
+                </div>
+                <ArrowDown aria-hidden="true" size={16} />
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+
       <dl className="metric-strip cols-3">
         <div className="metric-cell">
           <dt>Total units in stock</dt>
@@ -267,20 +412,35 @@ export function StockDeliveryTab() {
         </div>
       </dl>
 
-      <section aria-label="Live product stock cards">
+      <section
+        id="stock-products"
+        aria-label="Live product stock cards"
+        tabIndex={-1}
+      >
         <div className="section-subhead">
           <h2>Live Product Stock</h2>
-          <p>Click any product to inspect photos, pricing, and channel counts</p>
+          <p>
+            Click any product to inspect photos, pricing, and channel counts
+          </p>
         </div>
 
         <div className="stock-card-grid">
-          {stockItems.map((item) => {
+          {prioritizedStock.map((item) => {
             const urgent = item.stockStatus !== "Synced";
             return (
               <article
                 key={item.sku}
                 className={`stock-card${item.stockStatus === "Oversell Risk" ? " is-danger" : item.stockStatus === "Low Stock" ? " is-warning" : ""}`}
               >
+                {urgent && (
+                  <div className="stock-card-alert">
+                    <AlertTriangle aria-hidden="true" size={16} />
+                    <div>
+                      <strong>{item.stockStatus}</strong>
+                      <span>{stockWarning(item)}</span>
+                    </div>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="stock-card-media"
@@ -313,14 +473,20 @@ export function StockDeliveryTab() {
                           : ""}
                       </small>
                     </div>
-                    <StockStatusBadge status={item.stockStatus} />
+                    {!urgent && <StockStatusBadge status={item.stockStatus} />}
                   </div>
 
                   <div className="channel-stock-strip">
                     <div>
                       <span>Manila</span>
                       <strong
-                        className={item.manilaStock <= 4 ? "text-warning" : ""}
+                        className={
+                          item.manilaStock < 0
+                            ? "text-danger"
+                            : item.manilaStock <= 4
+                              ? "text-warning"
+                              : ""
+                        }
                       >
                         {item.manilaStock}
                       </strong>
@@ -328,7 +494,13 @@ export function StockDeliveryTab() {
                     <div>
                       <span>Cebu</span>
                       <strong
-                        className={item.cebuStock <= 4 ? "text-warning" : ""}
+                        className={
+                          item.cebuStock < 0
+                            ? "text-danger"
+                            : item.cebuStock <= 4
+                              ? "text-warning"
+                              : ""
+                        }
                       >
                         {item.cebuStock}
                       </strong>
@@ -374,17 +546,28 @@ export function StockDeliveryTab() {
         </div>
       </section>
 
-      <section className="panel">
+      <section
+        id="partner-deliveries"
+        className="panel"
+        aria-labelledby="partner-deliveries-heading"
+        tabIndex={-1}
+      >
         <div className="panel-header">
           <div>
-            <h2>3PL Partner Deliveries</h2>
+            <h2 id="partner-deliveries-heading">3PL Partner Deliveries</h2>
             <p>
-              Shipments tracked across LBC Express, J&amp;T Express, GrabExpress,
-              and DHL
+              Shipments tracked across LBC Express, J&amp;T Express,
+              GrabExpress, and DHL
             </p>
           </div>
-          <div className="feed-tabs" role="tablist" aria-label="Filter deliveries">
-            {(["ALL", "IN_TRANSIT", "Delivered", "Delayed"] as const).map(
+          <div
+            className="feed-tabs"
+            role="tablist"
+            aria-label="Filter deliveries"
+          >
+            {(
+              ["ALL", "Delayed", "Awaiting pickup", "IN_TRANSIT", "Delivered"] as const
+            ).map(
               (f) => (
                 <button
                   key={f}
@@ -401,71 +584,77 @@ export function StockDeliveryTab() {
         </div>
 
         <div className="hairline-list">
-          {missingTrackingAlerts.map((alert) => {
-            const selectedCarrier =
-              dispatchCarriers[alert.referenceKey] || "LBC Express";
+          {visibleDeliveries.map(({ alert, shipment: s }) => {
+            if (alert) {
+              const selectedCarrier =
+                dispatchCarriers[alert.referenceKey] || "LBC Express";
+              return (
+                <div
+                  key={alert.id}
+                  className="hairline-list-row delivery-row is-awaiting"
+                >
+                  <div className="delivery-main">
+                    <strong>
+                      <AlertTriangle size={14} className="text-warning" /> Order{" "}
+                      {alert.referenceKey} awaiting courier pickup
+                    </strong>
+                    <small>{alert.message}</small>
+                  </div>
+                  <div className="shipment-actions">
+                    {isOps ? (
+                      <div className="shipment-dispatch-inline">
+                        <select
+                          aria-label={`Select carrier for ${alert.referenceKey}`}
+                          value={selectedCarrier}
+                          disabled={isSyncing}
+                          onChange={(e) =>
+                            setDispatchCarriers((prev) => ({
+                              ...prev,
+                              [alert.referenceKey]: e.target.value as Carrier,
+                            }))
+                          }
+                        >
+                          {CARRIERS.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          style={{ minHeight: 32, padding: "4px 10px" }}
+                          disabled={isSyncing}
+                          onClick={() =>
+                            void dispatchOrder(
+                              alert.referenceKey,
+                              selectedCarrier,
+                            )
+                          }
+                        >
+                          Dispatch 3PL
+                        </button>
+                      </div>
+                    ) : (
+                      <Badge tone="warning">Missing 3PL Tracking</Badge>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             return (
-              <div key={alert.id} className="hairline-list-row">
+              <div
+                key={s.shipmentId}
+                className={`hairline-list-row delivery-row${s.status === "Delayed" ? " is-delayed" : ""}`}
+              >
                 <div className="delivery-main">
                   <strong>
-                    <AlertTriangle size={14} className="text-warning" /> Order{" "}
-                    {alert.referenceKey} awaiting courier pickup
-                  </strong>
-                  <small>{alert.message}</small>
-                </div>
-                <div className="shipment-actions">
-                  {isOps ? (
-                    <div className="shipment-dispatch-inline">
-                      <select
-                        aria-label={`Select carrier for ${alert.referenceKey}`}
-                        value={selectedCarrier}
-                        disabled={isSyncing}
-                        onChange={(e) =>
-                          setDispatchCarriers((prev) => ({
-                            ...prev,
-                            [alert.referenceKey]: e.target.value as Carrier,
-                          }))
-                        }
-                      >
-                        {CARRIERS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="button secondary"
-                        style={{ minHeight: 32, padding: "4px 10px" }}
-                        disabled={isSyncing}
-                        onClick={() =>
-                          void dispatchOrder(
-                            alert.referenceKey,
-                            selectedCarrier,
-                          )
-                        }
-                      >
-                        Dispatch 3PL
-                      </button>
-                    </div>
-                  ) : (
-                    <Badge tone="warning">Missing 3PL Tracking</Badge>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {!filteredShipments.length ? (
-            <EmptyState title="No shipments in this filter">
-              Switch filter above to view other 3PL partner deliveries.
-            </EmptyState>
-          ) : (
-            filteredShipments.map((s) => (
-              <div key={s.shipmentId} className="hairline-list-row">
-                <div className="delivery-main">
-                  <strong>
-                    <Truck size={14} /> {s.carrier} ·{" "}
+                    {s.status === "Delayed" ? (
+                      <AlertTriangle aria-hidden="true" size={15} />
+                    ) : (
+                      <Truck aria-hidden="true" size={14} />
+                    )}
+                    {s.carrier} ·{" "}
                     {customerMap.get(s.customerId) || s.customerId}
                   </strong>
                   <small>
@@ -564,7 +753,12 @@ export function StockDeliveryTab() {
                   )}
                 </div>
               </div>
-            ))
+            );
+          })}
+          {!visibleDeliveries.length && (
+            <EmptyState title="No shipments in this filter">
+              Switch filter above to view other 3PL partner deliveries.
+            </EmptyState>
           )}
         </div>
       </section>

@@ -1,0 +1,154 @@
+.stock-attention {
+  --attention-color: var(--warning);
+  --attention-fill: color-mix(in srgb, var(--warning) 9%, var(--background));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--attention-color) 36%, var(--line));
+  border-radius: 12px;
+  background: var(--attention-fill);
+}
+
+.stock-attention.is-critical {
+  --attention-color: var(--danger);
+  --attention-fill: color-mix(in srgb, var(--danger) 12%, var(--background));
+}
+
+.stock-attention-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 18px 13px;
+  color: var(--attention-color);
+}
+
+.stock-attention-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 720;
+}
+
+.stock-attention-heading > span {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.stock-attention-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--attention-color) 22%, var(--line));
+}
+
+.stock-attention-link {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 18px 14px;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.stock-attention-link:hover,
+.stock-attention-link:focus-visible {
+  background: color-mix(in srgb, var(--attention-color) 14%, var(--background));
+}
+
+.stock-attention-link:focus-visible {
+  outline-offset: -3px;
+}
+
+.stock-attention-link strong,
+.stock-attention-link span {
+  display: block;
+}
+
+.stock-attention-link strong {
+  font-size: 13px;
+}
+
+.stock-attention-link span {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.stock-attention-link svg {
+  flex-shrink: 0;
+  color: var(--attention-color);
+}
+
+#stock-products,
+#partner-deliveries {
+  scroll-margin-top: 24px;
+}
+
+.stock-card-alert {
+  --stock-alert-color: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--stock-alert-color) 15%, var(--surface));
+  color: var(--stock-alert-color);
+}
+
+.is-danger .stock-card-alert {
+  --stock-alert-color: var(--danger);
+}
+
+.stock-card-alert svg,
+.delivery-main strong svg {
+  flex-shrink: 0;
+}
+
+.stock-card-alert strong,
+.stock-card-alert span {
+  display: block;
+}
+
+.stock-card-alert strong {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.stock-card-alert span {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.delivery-row.is-delayed {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+}
+
+.delivery-row.is-delayed .delivery-main strong svg,
+.delivery-row.is-delayed .delivery-main small.text-danger {
+  color: var(--danger);
+}
+
+.delivery-row.is-delayed .delivery-main small.text-danger {
+  font-weight: 650;
+}
+
+.delivery-row.is-awaiting {
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+
+@media (max-width: 680px) {
+  .stock-attention-links {
+    gap: 0;
+  }
+
+  .stock-attention-link {
+    flex-basis: 100%;
+  }
+
+  .stock-attention-link + .stock-attention-link {
+    border-top: 1px solid
+      color-mix(in srgb, var(--attention-color) 22%, var(--line));
+  }
+}
