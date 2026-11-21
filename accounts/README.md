@@ -1,33 +1,19 @@
-# Estante demo accounts
+# Karto Staff Accounts
 
-Students may also [register themselves](../docs/STUDENT_REGISTRATION.md) using an existing university student ID and matching email, then activate their account through email verification. Staff accounts are created by System Admin in the Accounts dashboard; the CLI remains available for initial setup. Registrar and Dean are application roles, separate from the person who provisions accounts.
+**Karto** uses **PostgreSQL** (**Structured Query Language** relational database) authentication (`retail_users` and `retail_sessions`) seeded automatically on first database startup. Opening `http://localhost:3005` always requires signing in at `/login`, while the customer storefront at `http://localhost:3005/shop` stays public for online shoppers.
 
-Local and online Estante use the same PostgreSQL database and these nine synthetic accounts across six roles.
+## Seeded Staff Roles (Default Password: `123456`)
 
-| Role | Sign-in | Access |
-| --- | --- | --- |
-| System Admin | admin@cpc.edu | Manage staff accounts and account activity; no student records. |
-| Registrar | registrar@cpc.edu | School-wide records, imports, ETL and system audits. |
-| BSIT Dean | dean@cpc.edu | BSIT academic records, analytics and follow-ups. |
-| BEED Dean | dean.beed@cpc.edu | BEED academic records, analytics and follow-ups. |
-| BSED Dean | dean.bsed@cpc.edu | BSED academic records, analytics and follow-ups. |
-| BSHM Dean | dean.bshm@cpc.edu | BSHM academic records, analytics and follow-ups. |
-| Academic Advisor | advisor@cpc.edu | View masked student records and create advisor follow-ups. |
-| Student | **School ID: STU-2024-001** (recovery email: student@cpc.edu) | View and export the linked student record, STU-2024-001. |
-| Compliance Auditor | auditor@cpc.edu | View restricted student projections and export audit history. |
+All four accounts use real **RBAC** (**Role-Based Access Control** — job-specific permissions) and **PCI DSS** (**Payment Card Industry Data Security Standard** — payment card protection) / **GDPR** (**General Data Protection Regulation** — personal data privacy) masking enforced on the backend:
 
-Run `npm run school:setup` once against the shared database to upgrade the classroom accounts and synthetic departments. Existing passwords are preserved; new passwords are written only to the private files below. The existing `dean@cpc.edu` becomes the BSIT Dean. See [school setup](../docs/SCHOOL_SETUP.md).
+| Staff Member | Work Email | Password | Role & Access Scope |
+| :--- | :--- | :--- | :--- |
+| **Lourdes Bautista** | `ops@karto.ph` | `123456` | Store Operations Manager — Full access across all 5 data feeds, **POS** (**Point of Sale** — physical cash register) checkouts, stock sync, **3PL** (**Third-Party Logistics** — courier tracking), 11.11 stress test, masked card logs, and dataset reset. |
+| **Camille Reyes** | `marketing@karto.ph` | `123456` | Marketing & **CRM** (**Customer Relationship Management** — loyalty profiles & promotions) — Manages opted-in personalized campaigns and consents; cardholder payment numbers are restricted and **GDPR** opt-out customers are hidden. |
+| **Marco Villanueva** | `manila@karto.ph` | `123456` | Manila Branch Manager — Scoped strictly to Manila **POS** checkouts and Manila store stock; Cebu branch, Online totals, and **PII** (**Personally Identifiable Information** — customer emails & phone numbers) are masked. |
+| **Atty. Gabriel Torres** | `auditor@karto.ph` | `123456` | Compliance Auditor — Strictly read-only inspection across all tabs; customer identities are pseudonymized, **PII** and full **PAN** (**Primary Account Number** — full 16-digit card numbers) are masked, and every action is verified against the **SHA-256** (**Secure Hash Algorithm 256-bit** — tamper-evident cryptographic hash) audit chain. |
 
-Students sign in with their **school ID and existing password**. Staff sign in with the listed email and password. A student email address is for verification/recovery and is no longer accepted as the sign-in name. No accounts need to be recreated.
+## Environment & Database Notes
 
-Students who forget their password can use `/reset-password`; staff contact the project administrator. Recovery requires working email delivery or the local classroom preview.
-
-Run `npm run admin:setup` once to provision the System Admin. The generated credential is saved in `admin.private.txt` and appended to the shared private account guides; no existing password is changed. The command is repeatable. See [Admin guide](../docs/ADMIN_ACCOUNTS.md).
-
-## Password files
-
-On the original device, `shared.private.txt` holds the passwords for both http://localhost:3005/login and https://unidata-360.vercel.app/login. This file is excluded from Git; share it privately with your group. The `development.private.txt` and `online.private.txt` files on the original device are also updated copies of the shared credentials; older copies on other devices are no longer current.
-
-For local use, place the shared database connection settings in `backend/.env.local` on each device. The shared `.env.local` is excluded from Git and must be transferred privately. Changes made locally are visible online because they use the same database.
-
-To create accounts in another PostgreSQL database, configure that database connection and run `npm run account:create` from the project root. Run `npm run account:password` to reset a password. Creating or resetting an account updates PostgreSQL. Keep the corresponding private password file current.
+- Database credentials live exclusively in `backend/.env.local` (your local environment configuration file, which is excluded from Git by `.gitignore`). Copy `backend/.env.local` privately to any presentation device running against the same Neon **PostgreSQL** instance.
+- All devices configured with the same `DATABASE_URL` (**URL** — Uniform Resource Locator database connection string) share the same live users, orders, inventory counts, and append-only audit trail.

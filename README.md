@@ -1,162 +1,59 @@
-# Estante · Enterprise Data Management
+# Karto · Retail & E-Commerce EDM
 
-A full-stack classroom demonstration of the Education / Universities EDM lifecycle:
+**Karto** is a full-stack omnichannel retail **EDM** (**Enterprise Data Management** — unifying and governing data across company systems as one trusted truth) platform combining a public customer e-commerce storefront (`/shop`) with a role-protected operations hub (`/`).
 
-**SIS, LMS, Library → validated ingestion & ETL → role-based governance → Student 360 & academic analytics.**
+## Integrated Architecture
 
-## Run locally
+1. **5 Connected Retail Source Feeds:**
+   - **POS** (**Point of Sale** — physical store checkout registers in Manila & Cebu)
+   - **Inventory** (branch shelves, online warehouse stock, and catalog metadata)
+   - **CRM** (**Customer Relationship Management** — loyalty tiers, points balance, favorite categories, and consent)
+   - **Online Storefront** (`/shop` web orders and real-time checkout)
+   - **3PL Delivery** (**Third-Party Logistics** — courier tracking across LBC Express, J&T Express, GrabExpress, and DHL)
+2. **Real-Time Integration & Data Quality:**
+   - **Real-Time API** (**Application Programming Interface** — live request/response checkout bridge) and **CDC** (**Change Data Capture** — instant row-level stock & order event stream)
+   - **ETL** (**Extract, Transform, Load** — automated pipeline) and **DQM** (**Data Quality Management** — negative stock / oversell detection, duplicate handling, and **CSV** / **JSON**, Comma-Separated Values / JavaScript Object Notation, validation)
+3. **Governance, Privacy & Tamper-Evident Audit:**
+   - **RBAC** (**Role-Based Access Control** — strict permissions for Store Operations, Marketing & CRM, Manila Branch Manager, and Compliance Auditor)
+   - **PCI DSS** (**Payment Card Industry Data Security Standard**) masking — never exposes raw 16-digit **PAN** (**Primary Account Number**) digits
+   - **GDPR** (**General Data Protection Regulation**) enforcement — blocks automated promotions on `Opted Out` customers and masks/pseudonymizes **PII** (**Personally Identifiable Information** — emails and phone numbers)
+   - Append-only **PostgreSQL** (**Structured Query Language** relational database) audit log signed with a verifiable **SHA-256** (**Secure Hash Algorithm 256-bit** — tamper-evident hash chain)
 
-Requires **Node.js 24 or newer** and a **PostgreSQL 14 or newer** database. The classroom setup uses the shared Neon database for local and online access.
+## Run Locally
+
+Requires **Node.js 24+** and **PostgreSQL** (such as Neon cloud PostgreSQL).
 
 ```powershell
 Copy-Item backend/.env.example backend/.env.local
-npm ci
+npm install
 ```
 
-Set `DATABASE_URL` in `backend/.env.local` to the shared database's connection string. For Neon, use the pooled connection string. Transfer the existing private `backend/.env.local` to each presentation device; Git does not include it. For a local PostgreSQL server without TLS, use the loopback address and append `?sslmode=disable`. Then run `npm run dev` from the root.
+Set `DATABASE_URL` (**URL** — Uniform Resource Locator connection string) inside `backend/.env.local` (your local environment configuration file; keep it out of Git). For local PostgreSQL without **TLS** (**Transport Layer Security** encryption), append `?sslmode=disable`.
 
-Open **http://localhost:3005**. The frontend runs on **3005**, and its API requests are forwarded to the backend on **3006**. Run `npm run dev` once from the root to start both.
-
-You can also start each service in its own terminal:
+Start both the frontend (**http://localhost:3005**) and backend (**http://localhost:3006**):
 
 ```powershell
-cd backend
 npm run dev
 ```
 
-```powershell
-cd frontend
-npm run dev
-```
-
-Use either the root command or the two separate terminals. Stop the running servers with Ctrl+C before starting them again.
-
-Estante creates the schema and seeds the synthetic student feeds on first use. Keep your connection string and real `.env` files outside Git. Local and hosted applications share accounts and records when configured with the shared database; changes in either appear in both.
-
-For the production build:
+Or run the production build:
 
 ```powershell
 npm run build
 npm start
 ```
 
-The root `npm run build` builds both applications, and `npm start` starts them on the same two ports.
-
-## Deploy online
-
-See [deployment instructions](docs/DEPLOYMENT.md) for the Vercel deployment and Neon PostgreSQL database. The hosted app requires provisioned accounts and starts with a fresh synthetic dataset. The Railway container remains available for a future deployment.
-
-## What is implemented
-
-- **Persistent PostgreSQL:** source rows, golden master records, ETL run history, sessions, advisor follow-ups and audit history survive reloads and server restarts.
-- **Ingestion:** drag-and-drop or file-picker upload for SIS, LMS and Library CSV/JSON files. Download a matching template from the integration tab. Files are limited to 2 MB and 1,000 rows; malformed batches produce row-level errors without partial writes.
-- **ETL:** validate incoming types and ranges, normalize names/emails, deduplicate feed keys, reconcile by `studentId`, record orphan/missing-source notices, and load master records transactionally.
-- **Student 360:** searchable/filterable directory with compact list, sortable table and card views, explicit risk filters and an advisor-attention shortcut, detailed academic and campus dossiers, role-scoped JSON and downloadable printable PDF reports. The statistics column compares permitted students by GPA or LMS attendance and shows source completeness and an attention queue.
-- **Analytics:** GPA bands, program averages, probation counts, current enrollment snapshot, explainable warning rules and persisted internal advisor follow-ups.
-- **Governance:** server-applied field masking, student self-access, role-gated writes/exports, hash-chained append-only audit trail, action filters and CSV export.
-- **Data quality:** persistent issue stewardship, staged identity corrections, automatic ETL rechecks/resolution, source receipt metadata, source/field mapping and recent run history. Source completeness counts the three feeds actually present.
-- **Advising cases:** real staff assignment, private follow-up notes, due dates, priority, resolution outcomes and reopening history, scoped to each permitted role. See [workflow guide](docs/WORKFLOWS.md).
-- **Account access:** school ID/password sign-in for students and assigned email/password sign-in for staff, fixed server-assigned roles, linked student identities, salted password hashes, hashed session tokens, sign-out revocation and login throttling. Demo mode remains available for class.
-- **Student activation.** Registrar SIS imports provision pending accounts. Students verify the enrollment email, set their first password, and sign in with their school ID. See the [activation guide](docs/STUDENT_REGISTRATION.md).
-- **Presentation:** ten classroom slides, the supplied comparative industry matrix, a five-source university responsibility map, enrollment-to-alumni scope, integration trade-offs, speaker notes, previous/next controls, direct slide selection, arrow/PageUp/PageDown/Home/End keys and optional fullscreen.
-- **UI:** reference-inspired light workspace with a black navigation rail, full-viewport white workspace, soft gray student rows and black actions; compact mobile navigation and single-column records, keyboard-accessible dialogs, visible focus states, loading/error/empty feedback and reduced-motion support. Ingestion, analytics, governance, sign-in and presentation share the monochrome theme.
-
-The school configuration includes **BSIT, BEED, BSED and BSHM**. Registrar and Dean are separate roles. See [school setup](docs/SCHOOL_SETUP.md) for the account upgrade and department policy.
-
-## System Admin
-
-Run `npm run admin:setup` once against the shared classroom database to create `admin@cpc.edu`. Its generated password is written only to Git-ignored `accounts/admin.private.txt` and appended to the private classroom guides. Sign in by email and use **Accounts** to create staff, assign roles/Dean departments, activate or disable access, and set new staff passwords. Admin accounts are protected from changes in that screen. System Admin cannot view student records, sources or academic reports. See [Admin guide](docs/ADMIN_ACCOUNTS.md).
-
-## A five-minute classroom walkthrough
-
-### Workspaces by role
-
-| Role | Workspace and limits |
-| --- | --- |
-| Registrar | Student directory, pipeline/imports, data quality, advising cases, analytics and system audit. Can stage corrections, run ETL and coordinate cases. |
-| System Admin | Staff account creation, access updates, activation/disablement, password resets and account activity. No student-data workspace. |
-| Dean | Assigned department’s masked student records, analytics, advising cases and own activity. No imports, ETL, source-quality workspace or access to other departments. |
-| Academic Advisor | Masked student directory, analytics, permitted cases and own activity. Manages assigned cases; cannot assign a peer or access source quality/imports/ETL. |
-| Student | Personal record, courses, attendance, library clearance and own PDF report. No pipeline, cohort analytics, audit trail or internal staff follow-ups. |
-| Compliance Auditor | Starts on governance/audit; read-only data quality, masked student summaries and permitted exports. No pipeline, academic analytics, case notes or data changes. |
-
-Both desktop and mobile navigation follow this policy. Account roles remain fixed; the separate classroom demo mode permits persona switching. Server endpoints independently reject actions and exports outside each role's permissions.
-
-1. Select **Integration pipeline** and **Registrar**. Inspect SIS, LMS and Library rows.
-2. Download a CSV or JSON template and import it, or use **Add demo student**. Imports update staged source feeds; they do not immediately change Student 360.
-3. **Run pipeline**, inspect its reconciliation report, then open the student dossier in **Student 360**. A student without LMS data is marked incomplete rather than automatically treated as absent.
-4. Switch **Demo persona** to Academic Advisor and open the same dossier to see restricted fields. Download a PDF with those restrictions applied. Student mode can access only Marcus Vance's demonstration record.
-5. Sign in with an actual Advisor, Dean or Registrar account for **Advising cases**. Open a support case from the early-warning radar, record a note and resolve it with an outcome. Demo personas cannot manage staff workflows. Saving cases does not send email. A Registrar can also inspect and correct source relationships in **Data quality**; ETL confirms resolution.
-6. Inspect **Governance & audit**, filter actions, verify the chain status, and export CSV.
-7. Select **Present** for the ten-slide class walkthrough, or **Course matrix** for the industry comparison and five-source university lifecycle map. Restore the seed dataset from the integration tab when needed; the confirmation explains what is replaced. Audit and ETL history are retained.
-
-## Architecture
-
-The `EDM-Semifinals` root contains both application layers:
-
-- `frontend/` is a Next.js application with its own package, config, pages, dashboard, sign-in components, styling, and browser state.
-- `backend/` is a separate Next.js application with its own package, config, API routes, PostgreSQL storage, authentication, ETL, governance, and reports.
-- `shared/` defines the data types exchanged between the two.
-
-The root is an npm workspace. Install dependencies once from the root with `npm ci`. The frontend uses `BACKEND_URL` from `frontend/.env.local`, defaulting to `http://localhost:3006`. A template is supplied in `frontend/.env.example`. PostgreSQL credentials and account settings belong in `backend/.env.local`.
-
-```text
-Frontend Next.js server :3005 (EDMProvider fetches server snapshots)
-           ↓ /api requests forwarded to BACKEND_URL
-Backend Next.js server :3006
-  ├─ GET/POST/DELETE /api/auth → access mode / sign-in / sign-out
-  ├─ GET /api/edm       → current permitted snapshot
-  ├─ POST /api/edm      → role / import / sync / view / intervention / reset
-  ├─ GET/POST /api/cases → permitted cases / staff assignment / follow-up / resolution
-  ├─ GET/POST /api/quality → quality issues / stewardship / staged identity correction
-  └─ GET /api/reports   → student PDF / analytics PDF / dossier JSON / audit CSV
-           ↓
-  HttpOnly session → server access policy → validation / ETL / reports
-           ↓
-  PostgreSQL: sources, source_metadata, master, etl_runs, quality_issues, quality_state,
-              audit, interventions (case payloads), sessions, users, login_attempts
-```
-
-`backend/storage.ts` connects to PostgreSQL using `DATABASE_URL` and initializes the schema and synthetic feeds on first use. Cloud connections verify the database server's TLS certificate.
-
-Source upsert keys are `studentId` for SIS/Library and `studentId:courseCode` for LMS. Repeated keys use the last submitted row. All CSV headers must match the template. JSON contains an array. Dates use `YYYY-MM-DD`, with an optional `HH:mm` time for LMS activity. GPA ranges from 0 to 4, and percentages range from 0 to 100. Orphan LMS/Library rows remain inspectable in their source feed, are excluded from the golden master, and are reported by ETL.
-
-The PostgreSQL audit trigger rejects `UPDATE`, `DELETE`, and `TRUNCATE`. Each event includes a UUID, UTC timestamp, and SHA-256 hash linked to the previous event. The UI displays times in Asia/Singapore. The chain provides application-level evidence of changes to audit history.
-
-## Demonstration scope
-
-All seed students and records are **synthetic**. The default demo mode permits classroom persona switching and is not authentication. Account mode is available for administrator-provisioned local credentials. Institutional identity, consent/legal workflows, infrastructure controls and operational review are still required before using real student data.
-
-## Account mode
-
-The [demo account guide](accounts/README.md) lists the six application roles and sign-in details. The original development device stores their passwords in Git-ignored `accounts/*.private.txt` files. Share the relevant password file privately when setting up another device.
-
-1. Run `npm run account:create` in an interactive terminal. Enter an email, display name, one of the six role codes, and a password of 12–128 characters. Password input is hidden. There are no default accounts or passwords. Student accounts require an existing student ID from the master store.
-2. Set `EDM_AUTH_MODE=accounts` in `backend/.env.local`, or set `$env:EDM_AUTH_MODE='accounts'` in PowerShell before starting the servers. Restart the backend on port 3006. The default is `demo` when unset.
-3. Open **http://localhost:3005/login**. Anonymous API requests are rejected in account mode. The account role cannot be changed through the persona endpoint. A student account can only access its linked student record, including reports.
-4. Run `npm run account:password` to reset a provisioned account's password. This revokes all its existing sessions and clears its login lockout. Both account commands load `DATABASE_URL` from the backend environment files.
-
-Passwords use salted scrypt hashes, and PostgreSQL stores SHA-256 hashes of session tokens. Account sessions expire after 8 hours, and sign-out revokes the server session. Five failed logins for an account trigger a persistent 15-minute lockout. Advisor audit views filter by account identity. Sign-in and sign-out events record the display name and account ID.
-
-Set `EDM_SECURE_COOKIES=true` when serving over HTTPS and false for local HTTP. Set `EDM_PUBLIC_ORIGIN` to the frontend origin in the backend environment. It defaults to `http://localhost:3005` for local runs. The frontend proxies cookies and API responses, so browser requests use the frontend address. System Admin manages staff accounts and password resets in the Accounts screen; the CLI remains available for bootstrap and recovery. Students can recover their password through `/reset-password` using their school ID and registered email. Disabling an account with `active=0` revokes access on subsequent requests.
-
-FERPA and GDPR are the course's governance context; this project demonstrates selected technical controls and does not certify compliance. Risk categories are transparent classroom rules for human review, not predictions or automated student decisions. Current enrollment is a snapshot, not a measured retention rate.
-
-The supplied course matrix also includes HR, Alumni CRM, Data Fabric, and vendor APIs. The app implements three synthetic feeds, a Next.js API, CSV/JSON ingestion and ETL; it does not claim a live Canvas/vendor connection or implemented HR/alumni connectors.
-
-## Validation
+### Verification Commands
 
 ```powershell
-npm test         # set EDM_TEST_DATABASE_URL to include database checks
-npm run test:api # run against a local demo backed by a disposable database
-npm run test:auth -- --hosted
-npm run test:workflows # disposable EDM_TEST_DATABASE_URL; starts both production services
+npm test
 npm run lint
 npm run build
 ```
 
-`test:api` is intended for the synthetic local demo: it stages seed rows, creates a follow-up, changes its own session persona, checks reports, and restores seed sources/follow-ups. Its audit and ETL events remain. It saves sample masked PDFs in ignored `tmp/pdfs/` for visual inspection.
+## Key Routes & Documentation
 
-Set `EDM_TEST_DATABASE_URL` in the terminal to a fresh, empty PostgreSQL database for the database checks in `npm test` and for `test:auth`. Use a separate empty database for each run. Without this variable, `npm test` runs the checks that require no database. Build both applications and free ports 3005 and 3006 before running `test:auth`. It starts both servers, verifies all five roles, imports, ETL, reports, access controls, and audit integrity through the frontend proxy, then stops both process trees. The test accounts and events are written to the disposable database.
-
-The current dependency audit reports development-tool advisories through the existing Next.js ESLint configuration (`braces` / `micromatch` / `fast-glob`). The suggested automatic fix downgrades Next.js lint tooling across major versions; it has not been applied. `npm audit --omit=dev` checks runtime dependencies separately.
+- **Online Storefront (public):** `http://localhost:3005/shop`
+- **Operations Hub (staff login required):** `http://localhost:3005` (`/login`)
+- **Staff Accounts Guide:** [accounts/README.md](accounts/README.md)
+- **Software Requirements Specification (SRS, version 2.1):** [docs/Karto_Software_Requirements_Specification.docx](docs/Karto_Software_Requirements_Specification.docx)
