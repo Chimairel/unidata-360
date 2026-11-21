@@ -46,15 +46,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/api/:path*", destination: backendUrl + "/api/:path*" }];
   },
-  turbopack: {
-    root: path.resolve(__dirname, ".."),
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
+  turbopack: { root: path.resolve(__dirname, "..") },
 };
 
 export default nextConfig;
